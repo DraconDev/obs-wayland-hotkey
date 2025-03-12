@@ -3,6 +3,7 @@ try:
     import json
     import keyboard
     import time
+    from hotkeys import HOTKEYS, ACTION_DESCRIPTIONS
 except ModuleNotFoundError as e:
     print(f"Error: {e}")
     print("\nMissing required dependencies. Please install them with:")
@@ -15,13 +16,26 @@ except ModuleNotFoundError as e:
 ws_url = "ws://localhost:4455"  # Port 4455, no authentication
 ws_password = None  # No password
 
-# Hotkey definitions (you can change these)
-toggle_recording_hotkey = "insert"
-toggle_pause_hotkey = "pause"
-
 obs_connected = False
 ws = None
 
+# Available actions
+def toggle_recording():
+    print("Toggling recording...")
+    send_request("ToggleRecord")
+
+def toggle_pause():
+    print("Toggling record pause...")
+    send_request("ToggleRecordPause")
+
+# Action registry - maps action names to functions
+ACTIONS = {
+    'toggle_recording': toggle_recording,
+    'toggle_pause': toggle_pause,
+    # Add more actions here as needed
+}
+
+# Connection and communication functions
 def connect_to_obs():
     global ws, obs_connected
     try:
@@ -92,21 +106,16 @@ def send_request(request_type, data=None):
         obs_connected = False
         return None
 
-def toggle_recording():
-    print("Toggling recording...")
-    send_request("ToggleRecord")
+# Register all configured hotkeys
+print("OBS Hotkey Script Started:")
+for action_name, hotkey in HOTKEYS.items():
+    if action_name in ACTIONS:
+        keyboard.add_hotkey(hotkey, ACTIONS[action_name])
+        description = ACTION_DESCRIPTIONS.get(action_name, action_name.replace('_', ' ').title())
+        print(f"- {hotkey}: {description}")
+    else:
+        print(f"Warning: Action '{action_name}' not found, hotkey '{hotkey}' will not work")
 
-def toggle_pause():
-    print("Toggling record pause...")
-    send_request("ToggleRecordPause")
-
-# Hotkey assignments
-keyboard.add_hotkey(toggle_recording_hotkey, toggle_recording)
-keyboard.add_hotkey(toggle_pause_hotkey, toggle_pause)
-
-print(f"OBS Hotkey Script Started:")
-print(f"- {toggle_recording_hotkey}: Toggle Recording")
-print(f"- {toggle_pause_hotkey}: Toggle Pause/Resume Recording")
 print(f"Connecting to OBS Websocket at {ws_url} (no auth)...")
 
 connect_to_obs()  # Initial connection attempt
