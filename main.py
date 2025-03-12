@@ -47,70 +47,112 @@ def get_record_status():
         if not connect_to_obs():
             return None  # Indicate failure to get status
 
-    get_status_request = {
-        "requestType": "GetRecordStatus",
-        "requestId": "get_record_status"
-    }
     try:
+        # Proper message format for OBS WebSocket v5
+        get_status_request = {
+            "op": 6,  # RequestBatchOperation
+            "d": {
+                "requests": [{
+                    "requestType": "GetRecordStatus",
+                    "requestId": "get_record_status"
+                }]
+            }
+        }
+        
         ws.send(json.dumps(get_status_request))
-        status_response = json.loads(ws.recv())
-        if status_response["status"] == "ok":
-            return status_response["responseData"]
+        response = json.loads(ws.recv())
+        
+        # Debug the response
+        print(f"Debug - Response received: {response}")
+        
+        if "d" in response and "responseData" in response["d"]:
+            return response["d"]["responseData"]
         else:
-            print(f"Error getting record status: {status_response['error']}")
+            print(f"Unexpected response format: {response}")
             return None
     except Exception as e:
         print(f"Error during GetRecordStatus request: {e}")
-        obs_connected = False # Assume connection issue
+        obs_connected = False  # Assume connection issue
         return None
 
 def toggle_recording():
     global obs_connected
     status = get_record_status()
     if status:
-        if status["outputActive"]:
+        if status.get("outputActive", False):
             print("Stopping Recording...")
-            action_request = {"requestType": "StopRecording", "requestId": "stop_recording"}
+            action_request = {
+                "op": 6,  # RequestBatchOperation
+                "d": {
+                    "requests": [{
+                        "requestType": "StopRecording",
+                        "requestId": "stop_recording"
+                    }]
+                }
+            }
         else:
             print("Starting Recording...")
-            action_request = {"requestType": "StartRecording", "requestId": "start_recording"}
+            action_request = {
+                "op": 6,  # RequestBatchOperation
+                "d": {
+                    "requests": [{
+                        "requestType": "StartRecording",
+                        "requestId": "start_recording"
+                    }]
+                }
+            }
 
-        if obs_connected: # Double check connection before sending action
+        if obs_connected:  # Double check connection before sending action
             try:
                 ws.send(json.dumps(action_request))
                 action_response = json.loads(ws.recv())
-                if action_response["status"] != "ok":
-                    print(f"Error toggling recording: {action_response['error']}")
+                if "error" in action_response.get("d", {}):
+                    print(f"Error toggling recording: {action_response['d']['error']}")
             except Exception as e:
                 print(f"Error sending recording action: {e}")
                 obs_connected = False
         else:
             print("OBS connection lost, cannot toggle recording.")
 
-
 def toggle_pause():
     global obs_connected
     status = get_record_status()
-    if status and status["outputActive"]: # Only toggle pause if recording is active
-        if status["outputPaused"]:
+    if status and status.get("outputActive", False):  # Only toggle pause if recording is active
+        if status.get("outputPaused", False):
             print("Resuming Recording...")
-            action_request = {"requestType": "ResumeRecording", "requestId": "resume_recording"}
+            action_request = {
+                "op": 6,  # RequestBatchOperation
+                "d": {
+                    "requests": [{
+                        "requestType": "ResumeRecording",
+                        "requestId": "resume_recording"
+                    }]
+                }
+            }
         else:
             print("Pausing Recording...")
-            action_request = {"requestType": "PauseRecording", "requestId": "pause_recording"}
+            action_request = {
+                "op": 6,  # RequestBatchOperation
+                "d": {
+                    "requests": [{
+                        "requestType": "PauseRecording",
+                        "requestId": "pause_recording"
+                    }]
+                }
+            }
 
-        if obs_connected: # Double check connection before sending action
+        if obs_connected:  # Double check connection before sending action
             try:
                 ws.send(json.dumps(action_request))
                 action_response = json.loads(ws.recv())
-                if action_response["status"] != "ok":
-                    print(f"Error toggling pause: {action_response['error']}")
+                if "error" in action_response.get("d", {}):
+                    print(f"Error toggling pause: {action_response['d']['error']}")
             except Exception as e:
                 print(f"Error sending pause action: {e}")
                 obs_connected = False
         else:
             print("OBS connection lost, cannot toggle pause.")
-    elif status and not status["outputActive"]:
+    elif status and not status.get("outputActive", False):
         print("Recording is not active, cannot toggle pause.")
     else:
         print("Could not get recording status, cannot toggle pause.")
