@@ -5,11 +5,13 @@ This guide provides detailed instructions for using OBS-Hotkey specifically on L
 ## Initial Setup
 
 1. Make the run script executable (if not already):
+
    ```bash
    chmod +x run.sh
    ```
 
 2. Create your Python virtual environment:
+
    ```bash
    python3 -m venv venv
    source venv/bin/activate
@@ -26,6 +28,7 @@ This guide provides detailed instructions for using OBS-Hotkey specifically on L
 ## Running OBS-Hotkey
 
 Basic usage:
+
 ```bash
 ./run.sh
 ```
@@ -39,11 +42,13 @@ To automatically start OBS-Hotkey when you launch OBS:
 ### Method 1: Desktop entry
 
 1. Create a desktop entry file:
+
    ```bash
    nano ~/.local/share/applications/obs-hotkey.desktop
    ```
 
 2. Add the following content:
+
    ```
    [Desktop Entry]
    Type=Application
@@ -56,6 +61,7 @@ To automatically start OBS-Hotkey when you launch OBS:
    ```
 
 3. Make it executable:
+
    ```bash
    chmod +x ~/.local/share/applications/obs-hotkey.desktop
    ```
@@ -65,12 +71,14 @@ To automatically start OBS-Hotkey when you launch OBS:
 ### Method 2: Systemd user service
 
 1. Create a systemd service file:
+
    ```bash
    mkdir -p ~/.config/systemd/user/
    nano ~/.config/systemd/user/obs-hotkey.service
    ```
 
 2. Add the following content:
+
    ```
    [Unit]
    Description=OBS Studio Hotkeys
@@ -86,6 +94,7 @@ To automatically start OBS-Hotkey when you launch OBS:
    ```
 
 3. Enable and start the service:
+
    ```bash
    systemctl --user daemon-reload
    systemctl --user enable obs-hotkey.service
@@ -103,11 +112,13 @@ To automatically start OBS-Hotkey when you launch OBS:
 You might see a password prompt each time you run the script. To avoid this, you can configure sudo to allow running the script without a password:
 
 1. Open the sudoers file:
+
    ```bash
    sudo visudo -f /etc/sudoers.d/obs-hotkey
    ```
 
 2. Add the following line:
+
    ```
    your_username ALL=(root) NOPASSWD: /home/dracon/_Dev/obs-hotkey/venv/bin/python /home/dracon/_Dev/obs-hotkey/main.py
    ```
