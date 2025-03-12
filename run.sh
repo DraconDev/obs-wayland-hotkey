@@ -7,4 +7,4 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 VENV_PYTHON="${SCRIPT_DIR}/venv/bin/python"
 
 echo "Running with sudo as keyboard input capture requires root privileges on Linux"
-sudo "${VENV_PYTHON}" "${SCRIPT_DIR}/main.py" "$@"
+"${VENV_PYTHON}" "${SCRIPT_DIR}/main.py" "$@"
