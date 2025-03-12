@@ -7,7 +7,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Default installation directory
-DEFAULT_INSTALL_DIR="$HOME/.local/bin/obs-hokkey"
+DEFAULT_INSTALL_DIR="$HOME/.local/bin/obs-hotkey"
 
 # Ask for installation directory if not the default
 if [ -n "$1" ]; then
@@ -17,7 +17,7 @@ else
     INSTALL_DIR=${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}
 fi
 
-echo -e "${YELLOW}Validating OBS-Hokkey installation at $INSTALL_DIR${NC}"
+echo -e "${YELLOW}Validating OBS-Hotkey installation at $INSTALL_DIR${NC}"
 echo "=================================================="
 
 # Check if installation directory exists
@@ -65,7 +65,7 @@ else
 fi
 
 # Check desktop entry
-DESKTOP_ENTRY="$HOME/.local/share/applications/obs-hokkey.desktop"
+DESKTOP_ENTRY="$HOME/.local/share/applications/obs-hotkey.desktop"
 if [ -f "$DESKTOP_ENTRY" ]; then
     echo -e "${GREEN}✓ Desktop entry exists${NC}"
     
@@ -79,17 +79,17 @@ else
 fi
 
 # Check systemd user service
-SERVICE_FILE="$HOME/.config/systemd/user/obs-hokkey.service"
+SERVICE_FILE="$HOME/.config/systemd/user/obs-hotkey.service"
 if [ -f "$SERVICE_FILE" ]; then
     echo -e "${GREEN}✓ Systemd user service file exists${NC}"
     
-    if systemctl --user is-enabled obs-hokkey.service &>/dev/null; then
+    if systemctl --user is-enabled obs-hotkey.service &>/dev/null; then
         echo -e "${GREEN}✓ Service is enabled${NC}"
     else
         echo -e "${YELLOW}! Service is not enabled${NC}"
     fi
     
-    if systemctl --user is-active obs-hokkey.service &>/dev/null; then
+    if systemctl --user is-active obs-hotkey.service &>/dev/null; then
         echo -e "${GREEN}✓ Service is running${NC}"
     else
         echo -e "${YELLOW}! Service is not running${NC}"
@@ -99,22 +99,22 @@ else
 fi
 
 # Check sudo configuration
-SUDO_CONFIG="/etc/sudoers.d/obs-hokkey"
+SUDO_CONFIG="/etc/sudoers.d/obs-hotkey"
 if [ -f "$SUDO_CONFIG" ]; then
     echo -e "${GREEN}✓ Sudo config exists for passwordless execution${NC}"
 else
     echo -e "${YELLOW}! No passwordless sudo config found (optional)${NC}"
-    echo -e "  You may need to enter password each time obs-hokkey runs"
+    echo -e "  You may need to enter password each time obs-hotkey runs"
     echo -e "  To set up passwordless execution, see background.md"
 fi
 
 # Final assessment
 echo -e "\n${YELLOW}Installation Assessment:${NC}"
 if $ALL_FILES_PRESENT && [ -d "$INSTALL_DIR/venv" ]; then
-    echo -e "${GREEN}✓ OBS-Hokkey appears to be installed correctly!${NC}"
+    echo -e "${GREEN}✓ OBS-Hotkey appears to be installed correctly!${NC}"
     echo -e "  You can run it with: $INSTALL_DIR/run.sh"
 else
-    echo -e "${RED}✗ OBS-Hokkey installation appears incomplete or damaged${NC}"
+    echo -e "${RED}✗ OBS-Hotkey installation appears incomplete or damaged${NC}"
     echo -e "  Try running the installer again: ./install.sh"
 fi
 
@@ -138,7 +138,7 @@ if pgrep -x "obs" >/dev/null; then
     fi
 else
     echo -e "${RED}✗ OBS Studio is not running${NC}"
-    echo -e "  Start OBS Studio before running obs-hokkey"
+    echo -e "  Start OBS Studio before running obs-hotkey"
 fi
 
 echo -e "\n${YELLOW}For more information on running in background:${NC}"
