@@ -52,8 +52,8 @@ A simple Linux utility for controlling OBS Studio with global hotkeys. This tool
    ./run.sh
    ```
 3. Use the configured hotkeys to control OBS:
-   - `Insert`: Toggle recording start/stop
-   - `Scroll Lock`: Toggle recording pause/resume
+   - `Scroll Lock`: Toggle recording start/stop
+   - `Pause`: Toggle recording pause/resume
    - (And any other hotkeys you've configured)
 
 ## Configuration
@@ -63,8 +63,8 @@ You can easily customize the hotkeys by editing the `hotkeys.py` file:
 ```python
 # Define your hotkeys here
 HOTKEYS = {
-    'toggle_recording': 'insert',
-    'toggle_pause': 'scroll lock',
+    'toggle_recording': 'scroll lock',
+    'toggle_pause': 'pause',
     # Add more hotkeys by uncommenting and configuring these:
     # 'toggle_streaming': 'home',
     # 'toggle_scene': 'page up',
