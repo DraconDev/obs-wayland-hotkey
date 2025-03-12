@@ -1,6 +1,6 @@
-# Using OBS-Hokkey on Linux
+# Using OBS-Hotkey on Linux
 
-This guide provides detailed instructions for using OBS-Hokkey specifically on Linux systems.
+This guide provides detailed instructions for using OBS-Hotkey specifically on Linux systems.
 
 ## Initial Setup
 
@@ -23,7 +23,7 @@ This guide provides detailed instructions for using OBS-Hokkey specifically on L
    - Leave the default port (4455)
    - Disable authentication (or configure it and update the script if needed)
 
-## Running OBS-Hokkey
+## Running OBS-Hotkey
 
 Basic usage:
 ```bash
@@ -34,13 +34,13 @@ This will start the script with sudo permissions, which are required for global 
 
 ## Autostarting with OBS
 
-To automatically start OBS-Hokkey when you launch OBS:
+To automatically start OBS-Hotkey when you launch OBS:
 
 ### Method 1: Desktop entry
 
 1. Create a desktop entry file:
    ```bash
-   nano ~/.local/share/applications/obs-hokkey.desktop
+   nano ~/.local/share/applications/obs-hotkey.desktop
    ```
 
 2. Add the following content:
@@ -49,7 +49,7 @@ To automatically start OBS-Hokkey when you launch OBS:
    Type=Application
    Name=OBS with Hotkeys
    Comment=Launch OBS with global hotkeys
-   Exec=bash -c "cd /home/dracon/_Dev/obs-hokkey && ./run.sh"
+   Exec=bash -c "cd /home/dracon/_Dev/obs-hotkey && ./run.sh"
    Icon=obs
    Terminal=true
    Categories=AudioVideo;Recorder;
@@ -57,7 +57,7 @@ To automatically start OBS-Hokkey when you launch OBS:
 
 3. Make it executable:
    ```bash
-   chmod +x ~/.local/share/applications/obs-hokkey.desktop
+   chmod +x ~/.local/share/applications/obs-hotkey.desktop
    ```
 
 4. Use this launcher instead of your regular OBS launcher
@@ -67,7 +67,7 @@ To automatically start OBS-Hokkey when you launch OBS:
 1. Create a systemd service file:
    ```bash
    mkdir -p ~/.config/systemd/user/
-   nano ~/.config/systemd/user/obs-hokkey.service
+   nano ~/.config/systemd/user/obs-hotkey.service
    ```
 
 2. Add the following content:
@@ -78,7 +78,7 @@ To automatically start OBS-Hokkey when you launch OBS:
    PartOf=graphical-session.target
 
    [Service]
-   ExecStart=/home/dracon/_Dev/obs-hokkey/run.sh
+   ExecStart=/home/dracon/_Dev/obs-hotkey/run.sh
    Restart=on-failure
 
    [Install]
@@ -88,12 +88,12 @@ To automatically start OBS-Hokkey when you launch OBS:
 3. Enable and start the service:
    ```bash
    systemctl --user daemon-reload
-   systemctl --user enable obs-hokkey.service
+   systemctl --user enable obs-hotkey.service
    ```
 
 4. To start it manually:
    ```bash
-   systemctl --user start obs-hokkey.service
+   systemctl --user start obs-hotkey.service
    ```
 
 ## Common Linux Issues
@@ -104,12 +104,12 @@ You might see a password prompt each time you run the script. To avoid this, you
 
 1. Open the sudoers file:
    ```bash
-   sudo visudo -f /etc/sudoers.d/obs-hokkey
+   sudo visudo -f /etc/sudoers.d/obs-hotkey
    ```
 
 2. Add the following line:
    ```
-   your_username ALL=(root) NOPASSWD: /home/dracon/_Dev/obs-hokkey/venv/bin/python /home/dracon/_Dev/obs-hokkey/main.py
+   your_username ALL=(root) NOPASSWD: /home/dracon/_Dev/obs-hotkey/venv/bin/python /home/dracon/_Dev/obs-hotkey/main.py
    ```
 
 3. Save and close the file.
@@ -133,13 +133,13 @@ If you're using Wayland instead of X11, you might experience issues with keyboar
 If you're running into issues, you can redirect the output to a log file:
 
 ```bash
-./run.sh > obs-hokkey.log 2>&1
+./run.sh > obs-hotkey.log 2>&1
 ```
 
 Then check the log file for any error messages:
 
 ```bash
-cat obs-hokkey.log
+cat obs-hotkey.log
 ```
 
 ## Stopping the Script
