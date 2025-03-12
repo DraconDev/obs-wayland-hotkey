@@ -24,7 +24,7 @@ Common key names:
 HOTKEYS = {
     # Format: 'action_name': 'key_name'
     'toggle_recording': 'insert',
-    'toggle_pause': 'pause',
+    'toggle_pause': 'scroll lock',
     # Add more hotkeys as needed
     'toggle_streaming': '',
     'toggle_scene': '',
