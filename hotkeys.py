@@ -26,8 +26,15 @@ HOTKEYS = {
     'toggle_recording': 'insert',
     'toggle_pause': 'pause',
     # Add more hotkeys as needed
-    # 'toggle_streaming': 'home',
-    # 'toggle_scene': 'end',
+    'toggle_streaming': '',
+    'toggle_scene': '',
+    'toggle_mute_mic': '',
+    'screenshot': '',
+    'hide_sources': '',
+    'refresh_browser': '',
+    'toggle_studio_mode': '',
+    'start_replay_buffer': '',
+    'save_replay': '',
 }
 
 # Map actions to their display names
@@ -35,6 +42,13 @@ ACTION_DESCRIPTIONS = {
     'toggle_recording': 'Toggle Recording',
     'toggle_pause': 'Toggle Pause/Resume Recording',
     # Add more descriptions as needed
-    # 'toggle_streaming': 'Toggle Streaming',
-    # 'toggle_scene': 'Switch to Next Scene',
+    'toggle_streaming': 'Start/Stop Streaming',
+    'toggle_scene': 'Switch to Next Scene',
+    'toggle_mute_mic': 'Mute/Unmute Microphone',
+    'screenshot': 'Take Screenshot',
+    'hide_sources': 'Hide/Show Sources',
+    'refresh_browser': 'Refresh Browser Sources',
+    'toggle_studio_mode': 'Toggle Studio Mode',
+    'start_replay_buffer': 'Start Replay Buffer',
+    'save_replay': 'Save Replay',
 }
