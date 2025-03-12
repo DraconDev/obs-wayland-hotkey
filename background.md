@@ -25,7 +25,7 @@ PartOf=graphical-session.target
 Type=simple
 ExecStart=/home/dracon/.local/bin/obs-hotkey/run.sh
 Restart=on-failure
-RestartSec=5s
+RestartSec=10s
 
 [Install]
 WantedBy=graphical-session.target
