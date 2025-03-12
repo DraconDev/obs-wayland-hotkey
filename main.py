@@ -41,10 +41,10 @@ def connect_to_obs():
 
 
 def get_record_status():
+    global obs_connected
     if not obs_connected:
         print("Not connected to OBS. Reconnecting...")
         if not connect_to_obs():
-            return None  # Indicate failure to get status
 
     get_status_request = {
         "requestType": "GetRecordStatus",
