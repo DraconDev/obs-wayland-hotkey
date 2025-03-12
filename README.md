@@ -20,6 +20,22 @@ A simple Linux utility for controlling OBS Studio with global hotkeys. This tool
 
 ## Installation
 
+### Quick Installation
+
+Use the provided installer script to install OBS-Hokkey to your user directory:
+
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+This will:
+- Install the application to `~/.local/bin/obs-hokkey` (or custom location)
+- Set up a Python virtual environment with dependencies
+- Create a desktop entry for easy launching from your application menu
+
+### Manual Installation
+
 1. Clone this repository:
 
    ```bash
