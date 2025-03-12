@@ -7,28 +7,28 @@ DESKTOP_ENTRY_DIR="$HOME/.local/share/applications"
 echo "OBS-Hotkey Installer"
 echo "===================="
 
-# Ask for installation directory
-read -p "Installation directory [$DEFAULT_INSTALL_DIR]: " INSTALL_DIR
+# Ask for installation directory with a timeout
+read -t 30 -p "Installation directory [$DEFAULT_INSTALL_DIR] (30s timeout): " INSTALL_DIR || echo ""
 INSTALL_DIR=${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}
+
+echo "Installing to: $INSTALL_DIR"
 
 # Create installation directory if it doesn't exist
 mkdir -p "$INSTALL_DIR"
 
 # Copy all necessary files
 echo "Copying files to $INSTALL_DIR..."
-cp -r main.py hotkeys.py README.md LINUX_USAGE.md "$INSTALL_DIR/"
+cp -v main.py hotkeys.py README.md LINUX_USAGE.md "$INSTALL_DIR/" 2>/dev/null || cp -v *.py *.md "$INSTALL_DIR/" 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "Warning: Some files could not be copied. Continuing anyway..."
+fi
 
-# Create the virtual environment in the installation directory
-echo "Creating virtual environment..."
-python3 -m venv "$INSTALL_DIR/venv"
-source "$INSTALL_DIR/venv/bin/activate"
-pip install websocket-client keyboard
-deactivate
-
-# Create run script in the installation directory
-cat > "$INSTALL_DIR/run.sh" << EOF
-#!/bin/bash
-
+# Create requirements.txt if not exists for pip installation
+if [ ! -f "requirements.txt" ]; then
+    echo "Creating requirements.txt..."
+    echo "websocket-client==1.6.1" > "$INSTALL_DIR/requirements.txt"
+    echo "keyboard==0.13.5" >> "$INSTALL_DIR/requirements.txt"
+else
 # Get the directory where the script is located
 SCRIPT_DIR="\$( cd "\$( dirname "\${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
