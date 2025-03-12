@@ -1,7 +1,7 @@
 """
 OBS Hotkey Configuration File
 
-This file contains all keyboard shortcuts used to control OBS via the obs-hokkey script.
+This file contains all keyboard shortcuts used to control OBS via the obs-hotkey script.
 Edit this file to customize your hotkeys according to your preferences.
 
 Available actions:
