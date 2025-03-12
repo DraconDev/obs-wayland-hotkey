@@ -30,6 +30,7 @@ chmod +x install.sh
 ```
 
 This will:
+
 - Install the application to `~/.local/bin/obs-hokkey` (or custom location)
 - Set up a Python virtual environment with dependencies
 - Create a desktop entry for easy launching from your application menu
