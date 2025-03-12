@@ -45,6 +45,7 @@ def get_record_status():
     if not obs_connected:
         print("Not connected to OBS. Reconnecting...")
         if not connect_to_obs():
+            return None  # Indicate failure to get status
 
     get_status_request = {
         "requestType": "GetRecordStatus",
@@ -64,6 +65,7 @@ def get_record_status():
         return None
 
 def toggle_recording():
+    global obs_connected
     status = get_record_status()
     if status:
         if status["outputActive"]:
@@ -87,6 +89,7 @@ def toggle_recording():
 
 
 def toggle_pause():
+    global obs_connected
     status = get_record_status()
     if status and status["outputActive"]: # Only toggle pause if recording is active
         if status["outputPaused"]:
