@@ -15,6 +15,8 @@ except ModuleNotFoundError as e:
 # OBS Websocket connection details (adjust if needed)
 ws_url = "ws://localhost:4455"  # Port 4455, no authentication
 ws_password = None  # No password
+MAX_RETRIES = 10  # Maximum number of connection attempts
+RETRY_DELAY = 30  # Seconds between retries
 
 obs_connected = False
 ws = None
@@ -109,20 +111,39 @@ def send_request(request_type, data=None):
 # Register all configured hotkeys
 print("OBS Hotkey Script Started:")
 for action_name, hotkey in HOTKEYS.items():
-    if action_name in ACTIONS:
+    if hotkey and action_name in ACTIONS:  # Only register non-empty hotkeys
         keyboard.add_hotkey(hotkey, ACTIONS[action_name])
         description = ACTION_DESCRIPTIONS.get(action_name, action_name.replace('_', ' ').title())
         print(f"- {hotkey}: {description}")
-    else:
+    elif hotkey:  # Hotkey defined but action not available
         print(f"Warning: Action '{action_name}' not found, hotkey '{hotkey}' will not work")
 
 print(f"Connecting to OBS Websocket at {ws_url} (no auth)...")
 
-connect_to_obs()  # Initial connection attempt
+# Try initial connection
+connect_to_obs()
+
+# If connection failed, keep trying until MAX_RETRIES is reached
+retries = 0
+while not obs_connected and retries < MAX_RETRIES:
+    retries += 1
+    print(f"Connection attempt {retries}/{MAX_RETRIES} failed. Waiting {RETRY_DELAY} seconds before retrying...")
+    time.sleep(RETRY_DELAY)
+    print("Trying to connect to OBS again...")
+    connect_to_obs()
 
 if obs_connected:
     print("Listening for hotkeys...")
     keyboard.wait()  # Keep the script running and listening for hotkeys
 else:
-    print("Failed to connect to OBS on startup. Please ensure OBS is running and Websocket Server is enabled with correct settings.")
-    print("Script will exit.")
+    print(f"Failed to connect to OBS after {MAX_RETRIES} attempts.")
+    print("Hotkeys are ready but will only work when OBS is running.")
+    print("This script will keep running and try to connect when possible.")
+    
+    # Instead of exiting, keep running and periodically try to reconnect
+    while True:
+        time.sleep(60)  # Check every minute
+        print("Attempting to connect to OBS...")
+        if connect_to_obs():
+            print("Successfully connected! Hotkeys are now working.")
+            keyboard.wait()  # If connection breaks, this will end and loop continues
