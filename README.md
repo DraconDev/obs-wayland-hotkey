@@ -21,12 +21,14 @@ A simple Linux utility for controlling OBS Studio with global hotkeys. This tool
 ## Installation
 
 1. Clone this repository:
+
    ```bash
    git clone https://github.com/yourusername/obs-hokkey.git
    cd obs-hokkey
    ```
 
 2. Create and activate a virtual environment:
+
    ```bash
    python3 -m venv venv
    source venv/bin/activate
@@ -40,6 +42,7 @@ A simple Linux utility for controlling OBS Studio with global hotkeys. This tool
 ## Usage
 
 1. Make sure OBS Studio is running with WebSocket server enabled:
+
    - In OBS, go to Tools → WebSocket Server Settings
    - Enable the WebSocket server
    - Default port is 4455 (no authentication required)
@@ -48,7 +51,6 @@ A simple Linux utility for controlling OBS Studio with global hotkeys. This tool
    ```bash
    ./run.sh
    ```
-   
 3. Use the configured hotkeys to control OBS:
    - `Insert`: Toggle recording start/stop
    - `Scroll Lock`: Toggle recording pause/resume
@@ -75,6 +77,7 @@ The file includes documentation on available key names and combinations.
 ### Available Actions
 
 Currently implemented actions:
+
 - `toggle_recording`: Start/stop recording
 - `toggle_pause`: Pause/resume recording
 
