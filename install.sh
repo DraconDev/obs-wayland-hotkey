@@ -29,6 +29,22 @@ if [ ! -f "requirements.txt" ]; then
     echo "websocket-client==1.6.1" > "$INSTALL_DIR/requirements.txt"
     echo "keyboard==0.13.5" >> "$INSTALL_DIR/requirements.txt"
 else
+    echo "Copying requirements.txt..."
+    cp -v requirements.txt "$INSTALL_DIR/"
+fi
+
+# Create the virtual environment in the installation directory
+echo "Creating virtual environment..."
+python3 -m venv "$INSTALL_DIR/venv"
+source "$INSTALL_DIR/venv/bin/activate"
+pip install -r "$INSTALL_DIR/requirements.txt"
+deactivate
+
+# Create run script in the installation directory
+echo "Creating run script..."
+cat > "$INSTALL_DIR/run.sh" << EOF
+#!/bin/bash
+
 # Get the directory where the script is located
 SCRIPT_DIR="\$( cd "\$( dirname "\${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
