@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Define installation locations
-DEFAULT_INSTALL_DIR="$HOME/.local/bin/obs-hokkey"
+DEFAULT_INSTALL_DIR="$HOME/.local/bin/obs-hotkey"
 DESKTOP_ENTRY_DIR="$HOME/.local/share/applications"
 
-echo "OBS-Hokkey Installer"
+echo "OBS-Hotkey Installer"
 echo "===================="
 
 # Ask for installation directory
@@ -45,7 +45,7 @@ chmod +x "$INSTALL_DIR/run.sh"
 # Create a desktop entry for easy launching
 echo "Creating desktop entry..."
 mkdir -p "$DESKTOP_ENTRY_DIR"
-cat > "$DESKTOP_ENTRY_DIR/obs-hokkey.desktop" << EOF
+cat > "$DESKTOP_ENTRY_DIR/obs-hotkey.desktop" << EOF
 [Desktop Entry]
 Type=Application
 Name=OBS Hotkeys
@@ -56,11 +56,11 @@ Categories=AudioVideo;Utility;
 EOF
 
 # Make the desktop entry executable
-chmod +x "$DESKTOP_ENTRY_DIR/obs-hokkey.desktop"
+chmod +x "$DESKTOP_ENTRY_DIR/obs-hotkey.desktop"
 
 echo ""
 echo "Installation complete!"
-echo "You can now run OBS-Hokkey with:"
+echo "You can now run OBS-Hotkey with:"
 echo "  $INSTALL_DIR/run.sh"
 echo ""
 echo "Or launch it from your application menu as 'OBS Hotkeys'"
