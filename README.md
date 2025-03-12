@@ -9,7 +9,7 @@ A simple Linux utility for controlling OBS Studio with global hotkeys. This tool
 - Toggle recording pause/resume
 - Easily customizable hotkey configuration
 - Support for OBS WebSocket v5 protocol
-- No authentication required (works with default OBS WebSocket settings)
+- Continuous reconnection if OBS isn't running
 
 ## Requirements
 
@@ -17,6 +17,19 @@ A simple Linux utility for controlling OBS Studio with global hotkeys. This tool
 - OBS Studio 28+ with WebSocket plugin enabled (built-in since OBS v28)
 - Python 3.6+
 - Root privileges (required for global keyboard capture on Linux)
+
+## Quick Start
+
+1. **Install:**
+   ```bash
+   chmod +x install.sh
+   ./install.sh
+   ```
+
+2. **Set up passwordless sudo:**
+   ```bash
+   sudo visudo -f /etc/sudoers.d/obs-hotkey
+   ```
 
 ## Installation
 
