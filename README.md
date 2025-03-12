@@ -1,4 +1,4 @@
-# OBS-Hokkey
+# OBS-Hotkey
 
 A simple Linux utility for controlling OBS Studio with global hotkeys. This tool connects to OBS via its WebSocket API and allows you to control recording, streaming, and other functions with customizable keyboard shortcuts.
 
@@ -22,7 +22,7 @@ A simple Linux utility for controlling OBS Studio with global hotkeys. This tool
 
 ### Quick Installation
 
-Use the provided installer script to install OBS-Hokkey to your user directory:
+Use the provided installer script to install OBS-Hotkey to your user directory:
 
 ```bash
 chmod +x install.sh
@@ -31,7 +31,7 @@ chmod +x install.sh
 
 This will:
 
-- Install the application to `~/.local/bin/obs-hokkey` (or custom location)
+- Install the application to `~/.local/bin/obs-hotkey` (or custom location)
 - Set up a Python virtual environment with dependencies
 - Create a desktop entry for easy launching from your application menu
 
@@ -40,8 +40,8 @@ This will:
 1. Clone this repository:
 
    ```bash
-   git clone https://github.com/yourusername/obs-hokkey.git
-   cd obs-hokkey
+   git clone https://github.com/yourusername/obs-hotkey.git
+   cd obs-hotkey
    ```
 
 2. Create and activate a virtual environment:
