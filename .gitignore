@@ -1,0 +1,12 @@
+
+
+# Auto-committer ignored files
+*.tmp
+*.temp
+*.log
+*.cache
+*.dll
+*.exe
+*.env
+*.kilocode
+node_modules/
