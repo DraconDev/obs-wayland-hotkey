@@ -49,16 +49,6 @@ type ResponseMessage struct {
 	} `json:"d"`
 }
 
-// Hotkey configuration
-type HotkeyConfig struct {
-	ToggleRecording string
-	TogglePause     string
-}
-
-var config = HotkeyConfig{
-	ToggleRecording: "scroll lock",
-	TogglePause:     "pause",
-}
 
 // Key code mappings
 var keyNames = map[uint16]string{
