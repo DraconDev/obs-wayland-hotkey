@@ -196,19 +196,29 @@ func (c *OBSClient) Close() {
 }
 
 func findKeyboardDevices() ([]*evdev.InputDevice, error) {
-	// Use the built-in ListInputDevices function
-	devices, err := evdev.ListInputDevices("/dev/input/event*")
-	if err != nil {
-		return nil, fmt.Errorf("failed to list input devices: %w", err)
-	}
-
-	// Filter to only keyboard devices
 	keyboards := []*evdev.InputDevice{}
-	for _, device := range devices {
+	
+	// Manually scan /dev/input/event* devices
+	for i := 0; i < 32; i++ {
+		path := fmt.Sprintf("/dev/input/event%d", i)
+		device, err := evdev.Open(path)
+		if err != nil {
+			// Device doesn't exist or can't be opened, skip
+			continue
+		}
+
 		// Check if device has key capabilities
 		caps := device.Capabilities
-		// EV_KEY is type 1 - check if this device has key event capabilities
-		if codes, hasKeys := caps[evdev.CapabilityType{Type: 1}]; hasKeys && len(codes) > 0 {
+		// Look for EV_KEY capability (type 1)
+		hasKeyboard := false
+		for capType := range caps {
+			if capType.Type == 1 { // EV_KEY
+				hasKeyboard = true
+				break
+			}
+		}
+
+		if hasKeyboard {
 			keyboards = append(keyboards, device)
 		} else {
 			device.File.Close()
@@ -331,8 +341,8 @@ func main() {
 			for _, ch := range eventChans {
 				select {
 				case event := <-ch:
-					// Only process key press events (value == 1)
-					if event.Type == evdev.EV_KEY && event.Value == 1 {
+					// Only process key press events (value == 1, not 0 for release or 2 for repeat)
+					if event.Type == 1 && event.Value == 1 { // EV_KEY type is 1
 						if action, ok := hotkeyActions[event.Code]; ok {
 							action()
 						}

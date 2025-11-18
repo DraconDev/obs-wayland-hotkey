@@ -9,11 +9,29 @@ A lightweight Go binary for controlling OBS Studio with global hotkeys on Waylan
 - ✅ **Wayland & X11 Support** - Works on both display servers
 - ✅ **Single Binary** - No dependencies, just 7.7MB
 - ✅ **Global Hotkeys** - Works even when OBS is not in focus
+- ✅ **Auto-start on Login** - Set it and forget it
 - ✅ **Auto-reconnect** - Automatically reconnects to OBS if it restarts
 - ✅ **Multi-keyboard** - Monitors all connected keyboards
 - ✅ **Low Resource Usage** - ~10-20MB RAM, minimal CPU
 
-## Quick Start
+## Quick Install (Recommended)
+
+Run the installer to set up auto-start:
+
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+This will:
+- Install the binary to `/usr/local/bin/`
+- Configure passwordless sudo
+- Create a systemd service that starts automatically on login
+- Enable the service
+
+After installation, it will start automatically when you log in!
+
+## Manual Setup
 
 ### 1. Build
 
@@ -82,45 +100,71 @@ Then run from anywhere:
 sudo obs-hotkey-go
 ```
 
-### Autostart with Systemd
+### Autostart with Systemd (Manual)
 
-Create `~/.config/systemd/user/obs-hotkey.service`:
+If you didn't use the installer, you can manually set up auto-start:
 
-```ini
-[Unit]
-Description=OBS Hotkey Controller
-After=graphical-session.target
+1. Install the binary:
+   ```bash
+   sudo cp obs-hotkey-go /usr/local/bin/
+   sudo chmod +x /usr/local/bin/obs-hotkey-go
+   ```
 
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/obs-hotkey-go
-Restart=on-failure
-RestartSec=10s
+2. Configure passwordless sudo:
+   ```bash
+   sudo visudo -f /etc/sudoers.d/obs-hotkey
+   ```
+   
+   Add (replace `your_username`):
+   ```
+   your_username ALL=(root) NOPASSWD: /usr/local/bin/obs-hotkey-go
+   ```
 
-[Install]
-WantedBy=graphical-session.target
-```
+3. Create systemd service `~/.config/systemd/user/obs-hotkey.service`:
+   ```ini
+   [Unit]
+   Description=OBS Hotkey Controller
+   After=graphical-session.target
 
-Enable and start:
+   [Service]
+   Type=simple
+   ExecStart=/usr/bin/sudo /usr/local/bin/obs-hotkey-go
+   Restart=on-failure
+   RestartSec=10s
+
+   [Install]
+   WantedBy=graphical-session.target
+   ```
+
+4. Enable and start:
+   ```bash
+   systemctl --user daemon-reload
+   systemctl --user enable obs-hotkey.service
+   systemctl --user start obs-hotkey.service
+   ```
+
+## Managing the Service
+
+After installation, use these commands:
+
 ```bash
-systemctl --user daemon-reload
-systemctl --user enable obs-hotkey.service
+# Start the service now
 systemctl --user start obs-hotkey.service
-```
 
-**Note**: You'll need passwordless sudo (see below).
+# Stop the service
+systemctl --user stop obs-hotkey.service
 
-### Passwordless Sudo
+# Check status
+systemctl --user status obs-hotkey.service
 
-To avoid entering password every time:
+# View logs
+journalctl --user -u obs-hotkey.service -f
 
-```bash
-sudo visudo -f /etc/sudoers.d/obs-hotkey
-```
+# Disable auto-start
+systemctl --user disable obs-hotkey.service
 
-Add (replace `your_username`):
-```
-your_username ALL=(root) NOPASSWD: /usr/local/bin/obs-hotkey-go
+# Re-enable auto-start
+systemctl --user enable obs-hotkey.service
 ```
 
 ## Troubleshooting
