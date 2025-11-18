@@ -147,20 +147,30 @@ systemctl --user enable obs-hotkey.service
 
 ## Customizing Hotkeys
 
-Edit the `config` struct in [`main.go`](main.go:1):
+Hotkeys are configured at the top of [`main.go`](main.go:1) (around line 230):
 
 ```go
-var config = HotkeyConfig{
-	ToggleRecording: "scroll lock",
-	TogglePause:     "pause",
+// Load configuration
+cfg := HotkeyConfig{
+	ToggleRecording: "scroll lock",  // Change this key
+	TogglePause:     "pause",        // Change this key
 }
 ```
 
-Then rebuild:
+**To change hotkeys:**
+
+1. Edit the values in [`main.go`](main.go:230-233)
+2. Rebuild: `./build.sh`
+3. Update the installed binary:
+   ```bash
+   systemctl --user stop obs-hotkey.service
+   sudo cp obs-hotkey-go /usr/local/bin/
+   systemctl --user start obs-hotkey.service
+   ```
+
+Or use this one-liner:
 ```bash
-./build.sh
-sudo cp obs-hotkey-go /usr/local/bin/
-systemctl --user restart obs-hotkey.service
+./build.sh && systemctl --user stop obs-hotkey.service && sudo cp obs-hotkey-go /usr/local/bin/ && systemctl --user start obs-hotkey.service
 ```
 
 ### Supported Keys
