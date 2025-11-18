@@ -50,6 +50,12 @@ type ResponseMessage struct {
 }
 
 
+// Hotkey configuration
+type HotkeyConfig struct {
+	ToggleRecording string
+	TogglePause     string
+}
+
 // Key code mappings
 var keyNames = map[uint16]string{
 	evdev.KEY_SCROLLLOCK: "scroll lock",
@@ -226,7 +232,7 @@ func main() {
 		log.Fatal("This program must be run as root (sudo) to access keyboard devices")
 	}
 
-	// Load configuration from config.go
+	// Load configuration
 	cfg := HotkeyConfig{
 		ToggleRecording: "scroll lock",
 		TogglePause:     "pause",
