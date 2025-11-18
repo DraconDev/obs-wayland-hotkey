@@ -1,4 +1,6 @@
-
+# Add the compiled binary to gitignore
+obs-hotkey-go
+go.sum
 
 # Auto-committer ignored files
 *.tmp
