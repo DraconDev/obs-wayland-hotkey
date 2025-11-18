@@ -226,6 +226,9 @@ func main() {
 		log.Fatal("This program must be run as root (sudo) to access keyboard devices")
 	}
 
+	// Load configuration
+	cfg := config
+	
 	// Build hotkey action map
 	hotkeyActions := make(map[uint16]func())
 	
@@ -233,10 +236,10 @@ func main() {
 	defer client.Close()
 
 	for keyCode, keyName := range keyNames {
-		if keyName == config.ToggleRecording {
+		if keyName == cfg.ToggleRecording {
 			hotkeyActions[keyCode] = client.ToggleRecording
 			log.Printf("- %s: Toggle Recording", keyName)
-		} else if keyName == config.TogglePause {
+		} else if keyName == cfg.TogglePause {
 			hotkeyActions[keyCode] = client.TogglePause
 			log.Printf("- %s: Toggle Pause/Resume Recording", keyName)
 		}
