@@ -1,111 +1,222 @@
-# OBS-Hotkey
+# OBS Wayland Hotkey
 
-A simple Linux utility for controlling OBS Studio with global hotkeys. This tool connects to OBS via its WebSocket API and allows you to control recording, streaming, and other functions with customizable keyboard shortcuts.
+A lightweight Go binary for controlling OBS Studio with global hotkeys on Wayland (and X11).
+
+**Works on Wayland!** Uses evdev for direct keyboard input capture, bypassing Wayland's security restrictions.
 
 ## Features
 
-- Global hotkeys that work even when OBS is not in focus
-- Toggle recording start/stop with a single key press
-- Toggle recording pause/resume
-- Easily customizable hotkey configuration
-- Support for OBS WebSocket v5 protocol
-- No authentication required (works with default OBS WebSocket settings)
+- ✅ **Wayland & X11 Support** - Works on both display servers
+- ✅ **Single Binary** - No dependencies, just 7.7MB
+- ✅ **Global Hotkeys** - Works even when OBS is not in focus
+- ✅ **Auto-reconnect** - Automatically reconnects to OBS if it restarts
+- ✅ **Multi-keyboard** - Monitors all connected keyboards
+- ✅ **Low Resource Usage** - ~10-20MB RAM, minimal CPU
 
-## Requirements
+## Quick Start
 
-- Linux system
-- OBS Studio 28+ with WebSocket plugin enabled (built-in since OBS v28)
-- Python 3.6+
-- Root privileges (required for global keyboard capture on Linux)
-
-## Installation
-
-### Quick Installation
-
-Use the provided installer script to install OBS-Hotkey to your user directory:
+### 1. Build
 
 ```bash
-chmod +x install.sh
-./install.sh
+chmod +x build.sh
+./build.sh
 ```
 
-This will:
+This creates the `obs-hotkey-go` binary (~7.7MB).
 
-- Install the application to `~/.local/bin/obs-hotkey` (or custom location)
-- Set up a Python virtual environment with dependencies
-- Create a desktop entry for easy launching from your application menu
+### 2. Configure OBS
 
-### Manual Installation
+1. Open OBS Studio
+2. Go to **Tools → WebSocket Server Settings**
+3. Check **"Enable WebSocket server"**
+4. Use default port **4455**
+5. Disable authentication
 
-1. Clone this repository:
+### 3. Run
 
-   ```bash
-   git clone https://github.com/yourusername/obs-hotkey.git
-   cd obs-hotkey
-   ```
+```bash
+sudo ./obs-hotkey-go
+```
 
-2. Create and activate a virtual environment:
+You'll need sudo for keyboard device access (`/dev/input/`).
 
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
+## Default Hotkeys
 
-3. Install dependencies:
-   ```bash
-   pip install websocket-client keyboard
-   ```
+- **Scroll Lock** - Toggle recording start/stop
+- **Pause** - Toggle recording pause/resume
 
-## Usage
+## Customizing Hotkeys
 
-1. Make sure OBS Studio is running with WebSocket server enabled:
+Edit the `config` struct in [`main.go`](main.go:1):
 
-   - In OBS, go to Tools → WebSocket Server Settings
-   - Enable the WebSocket server
-   - Default port is 4455 (no authentication required)
-
-2. Run the script with sudo (required for keyboard input capture on Linux):
-   ```bash
-   ./run.sh
-   ```
-3. Use the configured hotkeys to control OBS:
-   - `Scroll Lock`: Toggle recording start/stop
-   - `Pause`: Toggle recording pause/resume
-   - (And any other hotkeys you've configured)
-
-## Configuration
-
-You can easily customize the hotkeys by editing the `hotkeys.py` file:
-
-```python
-# Define your hotkeys here
-HOTKEYS = {
-    'toggle_recording': 'scroll lock',
-    'toggle_pause': 'pause',
-    # Add more hotkeys by uncommenting and configuring these:
-    # 'toggle_streaming': 'home',
-    # 'toggle_scene': 'page up',
-    # ...etc
+```go
+var config = HotkeyConfig{
+	ToggleRecording: "scroll lock",
+	TogglePause:     "pause",
 }
 ```
 
-The file includes documentation on available key names and combinations.
+Then rebuild:
+```bash
+./build.sh
+```
 
-### Available Actions
+### Supported Keys
 
-Currently implemented actions:
+- Function keys: `f1`, `f2`, `f3`, `f4`, `f5`, `f6`, `f7`, `f8`, `f9`, `f10`, `f11`, `f12`
+- Special keys: `scroll lock`, `pause`, `home`, `end`, `page up`, `page down`, `insert`, `delete`
 
-- `toggle_recording`: Start/stop recording
-- `toggle_pause`: Pause/resume recording
+To add more keys, edit the `keyNames` map in [`main.go`](main.go:1).
 
-More actions will be added in future updates.
+## Installation
+
+### System-wide Installation
+
+```bash
+sudo cp obs-hotkey-go /usr/local/bin/
+sudo chmod +x /usr/local/bin/obs-hotkey-go
+```
+
+Then run from anywhere:
+```bash
+sudo obs-hotkey-go
+```
+
+### Autostart with Systemd
+
+Create `~/.config/systemd/user/obs-hotkey.service`:
+
+```ini
+[Unit]
+Description=OBS Hotkey Controller
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/obs-hotkey-go
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=graphical-session.target
+```
+
+Enable and start:
+```bash
+systemctl --user daemon-reload
+systemctl --user enable obs-hotkey.service
+systemctl --user start obs-hotkey.service
+```
+
+**Note**: You'll need passwordless sudo (see below).
+
+### Passwordless Sudo
+
+To avoid entering password every time:
+
+```bash
+sudo visudo -f /etc/sudoers.d/obs-hotkey
+```
+
+Add (replace `your_username`):
+```
+your_username ALL=(root) NOPASSWD: /usr/local/bin/obs-hotkey-go
+```
 
 ## Troubleshooting
 
-- **Keyboard shortcuts don't work**: Make sure you're running the script with sudo permissions using `./run.sh`
-- **Connection errors**: Check that OBS is running and the WebSocket server is enabled (Tools → WebSocket Server Settings)
-- **"Action not found" warnings**: Make sure the action name in hotkeys.py matches one of the implemented actions
+### "must be run as root"
+
+Run with sudo:
+```bash
+sudo ./obs-hotkey-go
+```
+
+### "failed to connect to OBS"
+
+1. Make sure OBS is running
+2. Enable WebSocket: Tools → WebSocket Server Settings
+3. Check port 4455 is not blocked
+
+### "No keyboard devices found"
+
+1. Verify you're running with sudo
+2. Check `/dev/input/` permissions:
+   ```bash
+   ls -l /dev/input/
+   ```
+
+### Hotkey not working
+
+1. Check the key is in the `keyNames` map in [`main.go`](main.go:1)
+2. Verify OBS is connected (check terminal output)
+3. Try a different key
+
+## How It Works
+
+On Wayland, traditional keyboard libraries don't work due to security restrictions. This tool uses **evdev** to read keyboard input directly from `/dev/input/` devices at the kernel level, bypassing Wayland's restrictions.
+
+The program:
+1. Scans `/dev/input/` for keyboard devices
+2. Monitors all keyboards for configured key presses
+3. Sends commands to OBS via WebSocket when hotkeys are pressed
+4. Auto-reconnects if OBS restarts or keyboards are unplugged
+
+## Building for Different Architectures
+
+```bash
+# Current system
+go build -o obs-hotkey-go main.go
+
+# Raspberry Pi (32-bit ARM)
+GOARCH=arm GOARM=7 go build -o obs-hotkey-go-arm main.go
+
+# 64-bit ARM
+GOARCH=arm64 go build -o obs-hotkey-go-arm64 main.go
+
+# AMD64
+GOARCH=amd64 go build -o obs-hotkey-go-amd64 main.go
+```
+
+## Adding New Actions
+
+1. Add the OBS command method to `OBSClient`:
+   ```go
+   func (c *OBSClient) YourAction() {
+       log.Println("Doing something...")
+       c.SendRequest("YourOBSCommand")
+   }
+   ```
+
+2. Add to config:
+   ```go
+   var config = HotkeyConfig{
+       YourAction: "f1",
+   }
+   ```
+
+3. Map in `main()`:
+   ```go
+   if keyName == config.YourAction {
+       hotkeyActions[keyCode] = client.YourAction
+   }
+   ```
+
+4. Rebuild: `./build.sh`
+
+## Requirements
+
+- Linux (Wayland or X11)
+- OBS Studio 28+ with WebSocket enabled
+- Go 1.21+ (for building)
+- Root/sudo access (for running)
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License
+
+## Credits
+
+Built with:
+- [gorilla/websocket](https://github.com/gorilla/websocket) - WebSocket client
+- [gvalkov/golang-evdev](https://github.com/gvalkov/golang-evdev) - Linux evdev bindings
