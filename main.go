@@ -226,8 +226,11 @@ func main() {
 		log.Fatal("This program must be run as root (sudo) to access keyboard devices")
 	}
 
-	// Load configuration
-	cfg := config
+	// Load configuration from config.go
+	cfg := HotkeyConfig{
+		ToggleRecording: "scroll lock",
+		TogglePause:     "pause",
+	}
 	
 	// Build hotkey action map
 	hotkeyActions := make(map[uint16]func())
