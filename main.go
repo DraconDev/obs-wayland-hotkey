@@ -232,7 +232,7 @@ func main() {
 		log.Fatal("This program must be run as root (sudo) to access keyboard devices")
 	}
 
-	// Load configuration
+	// Load configuration with validation
 	cfg := HotkeyConfig{
 		ToggleRecording: "scroll lock",
 		TogglePause:     "pause",
@@ -244,18 +244,30 @@ func main() {
 	client := NewOBSClient()
 	defer client.Close()
 
+	// Validate configuration and build action map
+	recordingFound := false
+	pauseFound := false
+	
 	for keyCode, keyName := range keyNames {
 		if keyName == cfg.ToggleRecording {
 			hotkeyActions[keyCode] = client.ToggleRecording
 			log.Printf("- %s: Toggle Recording", keyName)
+			recordingFound = true
 		} else if keyName == cfg.TogglePause {
 			hotkeyActions[keyCode] = client.TogglePause
 			log.Printf("- %s: Toggle Pause/Resume Recording", keyName)
+			pauseFound = true
 		}
 	}
 
-	if len(hotkeyActions) == 0 {
-		log.Fatal("No valid hotkeys configured")
+	// Validate that configured hotkeys exist and provide helpful error messages
+	if !recordingFound {
+		log.Fatalf("Configured hotkey '%s' for recording toggle not found. Available keys: %v", 
+			cfg.ToggleRecording, getAvailableKeyNames())
+	}
+	if !pauseFound {
+		log.Fatalf("Configured hotkey '%s' for pause toggle not found. Available keys: %v", 
+			cfg.TogglePause, getAvailableKeyNames())
 	}
 
 	// Find keyboard devices
