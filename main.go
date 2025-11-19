@@ -80,11 +80,13 @@ var keyNames = map[uint16]string{
 	evdev.KEY_F12:        "f12",
 	
 
+
 }
 
 type OBSClient struct {
 	conn      *websocket.Conn
 	connected bool
+
 }
 
 func NewOBSClient() *OBSClient {
@@ -98,6 +100,7 @@ func (c *OBSClient) Connect() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to OBS: %w", err)
 	}
+	
 
 	c.conn = conn
 
