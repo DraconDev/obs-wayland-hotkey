@@ -140,6 +140,7 @@ func (c *OBSClient) Connect() error {
 	} else {
 		return fmt.Errorf("failed to identify to OBS")
 	}
+	
 
 	return nil
 }
@@ -151,6 +152,8 @@ func (c *OBSClient) SendRequest(requestType string) error {
 			return err
 		}
 	}
+
+	
 
 	request := RequestMessage{
 		Op: 6,
