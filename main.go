@@ -16,6 +16,8 @@ const (
 	wsURL      = "ws://localhost:4455"
 	maxRetries = 10
 	retryDelay = 30 * time.Second
+	
+	
 )
 
 // OBS WebSocket message structures
