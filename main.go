@@ -153,7 +153,7 @@ func (c *OBSClient) SendRequest(requestType string) error {
 		}
 	}
 
-	
+
 
 	request := RequestMessage{
 		Op: 6,
@@ -193,6 +193,7 @@ func (c *OBSClient) TogglePause() {
 	if err := c.SendRequest("ToggleRecordPause"); err != nil {
 		log.Printf("Error toggling pause: %v", err)
 	}
+	
 }
 
 func (c *OBSClient) Close() {
