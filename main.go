@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	wsURL        = "ws://localhost:4455"
-	maxRetries   = 10
-	retryDelay   = 30 * time.Second
+	wsURL      = "ws://localhost:4455"
+	maxRetries = 10
+	retryDelay = 30 * time.Second
 )
 
 // OBS WebSocket message structures
@@ -48,7 +48,6 @@ type ResponseMessage struct {
 		RequestID string `json:"requestId"`
 	} `json:"d"`
 }
-
 
 // Hotkey configuration
 type HotkeyConfig struct {
@@ -193,7 +192,7 @@ func (c *OBSClient) Close() {
 
 func findKeyboardDevices() ([]*evdev.InputDevice, error) {
 	keyboards := []*evdev.InputDevice{}
-	
+
 	// Manually scan /dev/input/event* devices
 	for i := 0; i < 32; i++ {
 		path := fmt.Sprintf("/dev/input/event%d", i)
@@ -232,42 +231,30 @@ func main() {
 		log.Fatal("This program must be run as root (sudo) to access keyboard devices")
 	}
 
-	// Load configuration with validation
+	// Load configuration
 	cfg := HotkeyConfig{
 		ToggleRecording: "scroll lock",
 		TogglePause:     "pause",
 	}
-	
+
 	// Build hotkey action map
 	hotkeyActions := make(map[uint16]func())
-	
+
 	client := NewOBSClient()
 	defer client.Close()
 
-	// Validate configuration and build action map
-	recordingFound := false
-	pauseFound := false
-	
 	for keyCode, keyName := range keyNames {
 		if keyName == cfg.ToggleRecording {
 			hotkeyActions[keyCode] = client.ToggleRecording
 			log.Printf("- %s: Toggle Recording", keyName)
-			recordingFound = true
 		} else if keyName == cfg.TogglePause {
 			hotkeyActions[keyCode] = client.TogglePause
 			log.Printf("- %s: Toggle Pause/Resume Recording", keyName)
-			pauseFound = true
 		}
 	}
 
-	// Validate that configured hotkeys exist and provide helpful error messages
-	if !recordingFound {
-		log.Fatalf("Configured hotkey '%s' for recording toggle not found. Available keys: %v", 
-			cfg.ToggleRecording, getAvailableKeyNames())
-	}
-	if !pauseFound {
-		log.Fatalf("Configured hotkey '%s' for pause toggle not found. Available keys: %v", 
-			cfg.TogglePause, getAvailableKeyNames())
+	if len(hotkeyActions) == 0 {
+		log.Fatal("No valid hotkeys configured")
 	}
 
 	// Find keyboard devices
