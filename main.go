@@ -132,6 +132,8 @@ func (c *OBSClient) Connect() error {
 		return fmt.Errorf("failed to read identify response: %w", err)
 	}
 
+	
+
 	if response.Op == 2 {
 		log.Println("Successfully identified to OBS WebSocket")
 		c.connected = true
