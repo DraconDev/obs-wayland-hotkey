@@ -78,7 +78,7 @@ var keyNames = map[uint16]string{
 	evdev.KEY_F10:        "f10",
 	evdev.KEY_F11:        "f11",
 	evdev.KEY_F12:        "f12",
-	
+
 	}
 
 type OBSClient struct {
