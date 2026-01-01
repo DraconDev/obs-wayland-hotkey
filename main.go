@@ -238,9 +238,9 @@ func main() {
 	log.Println("OBS Hotkey Controller (Go version - Wayland compatible)")
 
 	// Check if running as root
-	if os.Geteuid() != 0 {
-		log.Fatal("This program must be run as root (sudo) to access keyboard devices")
-	}
+	// if os.Geteuid() != 0 {
+	// 	log.Fatal("This program must be run as root (sudo) to access keyboard devices")
+	// }
 
 	// Load configuration
 	cfg := HotkeyConfig{
