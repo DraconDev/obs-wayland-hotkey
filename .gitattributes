@@ -1,0 +1,9 @@
+*.env filter=demon diff=demon
+*.lock binary
+*.png binary
+*.jpg binary
+*.mp4 binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
