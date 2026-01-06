@@ -58,6 +58,8 @@ reference/**
 *.pem
 *.key
 *.p12
-.arcane/shadow/
-.arcane/keys/
+.demon/shadow/
+.demon/keys/
 # --- END ARCANE MANAGED BLOCK ---
+.arcane/keys/
+.arcane/shadow/
