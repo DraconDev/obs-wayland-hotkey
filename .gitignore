@@ -63,3 +63,21 @@ reference/**
 # --- END ARCANE MANAGED BLOCK ---
 .arcane/keys/
 .arcane/shadow/
+
+# --- BEGIN DEMON MANAGED BLOCK ---
+# DANGER: Managed by Demon. Manual changes inside this block will be overwritten.
+# Purpose: patterns for secrets protection & hygiene
+.env
+.env.*
+.demon/
+*.key
+*.age
+*.pem
+*.p12
+.demon/keys/
+.demon/shadow/
+*.log
+npm-debug.log*
+yarn-error.log*
+.DS_Store
+# --- END DEMON MANAGED BLOCK ---

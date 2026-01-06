@@ -7,3 +7,17 @@
 *.ico binary
 *.woff binary
 *.woff2 binary
+
+# --- BEGIN DEMON MANAGED BLOCK ---
+# DANGER: Managed by Demon. Manual changes inside this block will be overwritten.
+# Purpose: settings for filters and binary files
+*.env filter=demon diff=demon
+*.lock binary
+*.png binary
+*.jpg binary
+*.mp4 binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+# --- END DEMON MANAGED BLOCK ---
