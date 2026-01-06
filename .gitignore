@@ -40,7 +40,7 @@ yarn-error.log*
 # --- END DEMON MANAGED BLOCK ---
 
 # --- BEGIN ARCANE MANAGED BLOCK ---
-# DANGER: Content inside this block is managed by Arcane.
+# DANGER: Content inside this block is managed by Demon.
 # Manual changes may be overwritten. Add custom rules ABOVE this block.
 .vscode
 .idea/**
