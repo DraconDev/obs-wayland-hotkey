@@ -26,13 +26,13 @@ node_modules/
 # Purpose: patterns for secrets protection & hygiene
 .env
 .env.*
-.demon/
+demon/
 *.key
 *.age
 *.pem
 *.p12
-.demon/keys/
-.demon/shadow/
+demon/keys/
+demon/shadow/
 *.log
 npm-debug.log*
 yarn-error.log*
