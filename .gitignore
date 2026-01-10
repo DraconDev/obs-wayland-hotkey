@@ -24,8 +24,6 @@ node_modules/
 # --- BEGIN DEMON MANAGED BLOCK ---
 # DANGER: Managed by Demon. Manual changes inside this block will be overwritten.
 # Purpose: patterns for secrets protection & hygiene
-.env
-.env.*
 demon/
 *.key
 *.age
