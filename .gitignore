@@ -23,16 +23,50 @@ node_modules/
 
 # --- BEGIN DEMON MANAGED BLOCK ---
 # DANGER: Managed by Demon. Manual changes inside this block will be overwritten.
-# Purpose: patterns for secrets protection & hygiene
-demon/
-*.key
+# Purpose: patterns for secrets protection, hygiene & build artifacts
+!*.env
+!.env
+!.env.*
+!.gitattributes
+!demon.toml
 *.age
-*.pem
-*.p12
-demon/keys/
-demon/shadow/
+*.cache
+*.dll
+*.exe
+*.key
 *.log
-npm-debug.log*
-yarn-error.log*
+*.p12
+*.pem
+*.pyc
+*.swo
+*.swp
+*.temp
+*.tmp
+*~
 .DS_Store
+.demon/
+.demon/backups/
+.demon/keys/
+.demon/shadow/
+.idea/**
+.next/
+.npm/
+.nuxt/
+.venv/
+.vs/**
+.vscode
+.wxt
+Thumbs.db
+__pycache__/
+build/
+build/**
+dist/
+dist/**
+node_modules/
+node_modules/**
+npm-debug.log*
+target/
+venv/
+yarn-debug.log*
+yarn-error.log*
 # --- END DEMON MANAGED BLOCK ---
