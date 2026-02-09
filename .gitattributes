@@ -25,3 +25,13 @@
 *.yaml filter=demon diff=demon
 *.yml filter=demon diff=demon
 # --- END DEMON MANAGED BLOCK ---
+# --- BEGIN DRACON MANAGED BLOCK ---
+*.env filter=dracon
+.env filter=dracon
+.env.* filter=dracon
+config.json filter=dracon
+*.pem filter=dracon
+*.key filter=dracon
+*.age filter=dracon
+test_secret.txt filter=dracon
+# --- END DRACON MANAGED BLOCK ---

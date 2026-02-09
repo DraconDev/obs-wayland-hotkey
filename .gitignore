@@ -70,3 +70,23 @@ venv/
 yarn-debug.log*
 yarn-error.log*
 # --- END DEMON MANAGED BLOCK ---
+# --- BEGIN DRACON MANAGED BLOCK ---
+!*.env
+!.env
+!.env.*
+!config.json
+!*.pem
+!*.key
+!*.age
+!test_secret.txt
+target/
+node_modules/
+.git/
+*.log
+.DS_Store
+__pycache__/
+dist/
+build/
+.direnv/
+.venv/
+# --- END DRACON MANAGED BLOCK ---
