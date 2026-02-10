@@ -26,12 +26,27 @@
 *.yml filter=demon diff=demon
 # --- END DEMON MANAGED BLOCK ---
 # --- BEGIN DRACON MANAGED BLOCK ---
-*.env filter=dracon
-.env filter=dracon
-.env.* filter=dracon
-config.json filter=dracon
-*.pem filter=dracon
-*.key filter=dracon
-*.age filter=dracon
-test_secret.txt filter=dracon
+# managed by dracon-warden
+*.env filter=dracon diff=dracon merge=dracon
+.env filter=dracon diff=dracon merge=dracon
+.env.* filter=dracon diff=dracon merge=dracon
+config.json filter=dracon diff=dracon merge=dracon
+*.pem filter=dracon diff=dracon merge=dracon
+*.key filter=dracon diff=dracon merge=dracon
+*.age filter=dracon diff=dracon merge=dracon
+test_secret.txt filter=dracon diff=dracon merge=dracon
+secrets/** filter=dracon diff=dracon merge=dracon
+Cargo.lock -filter -diff -merge
+Cargo.toml -filter -diff -merge
+rust-toolchain.toml -filter -diff -merge
+rustfmt.toml -filter -diff -merge
+clippy.toml -filter -diff -merge
+deny.toml -filter -diff -merge
+.cargo/config.toml -filter -diff -merge
+flake.nix -filter -diff -merge
+flake.lock -filter -diff -merge
+.dracon/data/ -filter -diff -merge
+.dracon/data/keys/ -filter -diff -merge
+.dracon/data/keys/*.pub -filter -diff -merge
+*.pub -filter -diff -merge
 # --- END DRACON MANAGED BLOCK ---

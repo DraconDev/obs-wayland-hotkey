@@ -71,14 +71,7 @@ yarn-debug.log*
 yarn-error.log*
 # --- END DEMON MANAGED BLOCK ---
 # --- BEGIN DRACON MANAGED BLOCK ---
-!*.env
-!.env
-!.env.*
-!config.json
-!*.pem
-!*.key
-!*.age
-!test_secret.txt
+# managed by dracon-warden
 target/
 node_modules/
 .git/
@@ -89,4 +82,27 @@ dist/
 build/
 .direnv/
 .venv/
+.dracon/*
+!*.env
+!.env
+!.env.*
+!config.json
+!*.pem
+!*.key
+!*.age
+!test_secret.txt
+!secrets/**
+!Cargo.lock
+!Cargo.toml
+!rust-toolchain.toml
+!rustfmt.toml
+!clippy.toml
+!deny.toml
+!.cargo/config.toml
+!flake.nix
+!flake.lock
+!.dracon/data/
+!.dracon/data/keys/
+!.dracon/data/keys/*.pub
+!*.pub
 # --- END DRACON MANAGED BLOCK ---
