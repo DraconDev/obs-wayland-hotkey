@@ -1,0 +1,47 @@
+{ config, lib, pkgs, ... }:
+
+let
+  obs-hotkey-go = pkgs.buildGoModule {
+    pname = "obs-hotkey-go";
+    version = "1.0.0";
+    src = ./.;
+    vendorHash = null; # Uses vendor directory
+  };
+in
+{
+  options.services.obs-hotkey = {
+    enable = lib.mkEnableOption "OBS Wayland Hotkey Controller";
+  };
+
+  config = lib.mkIf config.services.obs-hotkey.enable {
+    # Install binary system-wide
+    environment.systemPackages = [ obs-hotkey-go ];
+
+    # Create systemd service
+    systemd.user.services.obs-hotkey = {
+      description = "OBS Hotkey Controller (Wayland)";
+      after = [ "graphical-session.target" ];
+      wantedBy = [ "graphical-session.target" ];
+      
+      serviceConfig = {
+        Type = "simple";
+        ExecStart = "${obs-hotkey-go}/bin/obs-hotkey-go";
+        Restart = "on-failure";
+        RestartSec = "10s";
+      };
+    };
+
+    # Allow running without password (needed for /dev/input access)
+    security.sudo.extraRules = [
+      {
+        users = [ "dracon" ];
+        commands = [
+          {
+            command = "${obs-hotkey-go}/bin/obs-hotkey-go";
+            options = [ "NOPASSWD" ];
+          }
+        ];
+      }
+    ];
+  };
+}
