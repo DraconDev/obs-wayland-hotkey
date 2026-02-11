@@ -12,13 +12,9 @@ if ! command -v go &> /dev/null; then
     exit 1
 fi
 
-# Get dependencies
-echo "Downloading dependencies..."
-go mod download
-
-# Build the binary
+# Build the binary using vendored dependencies (no network required)
 echo "Compiling binary..."
-go build -o obs-hotkey-go main.go
+go build -mod=vendor -o obs-hotkey-go main.go
 
 # Make it executable
 chmod +x obs-hotkey-go
