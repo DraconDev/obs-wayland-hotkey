@@ -20,7 +20,7 @@
         let pkgs = pkgsFor system; in
         {
           default = pkgs.buildGoModule {
-            pname = "obs-hotkey-go";
+            pname = "obs-hotkey";
             version = "1.0.0";
             src = ./.;
             vendorHash = null;
