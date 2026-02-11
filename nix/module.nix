@@ -4,7 +4,7 @@ let
   obs-hotkey-go = pkgs.buildGoModule {
     pname = "obs-hotkey-go";
     version = "1.0.0";
-    src = ./.;
+    src = ./..;
     vendorHash = null; # Uses vendor directory
   };
 in
