@@ -16,6 +16,28 @@ A lightweight Go binary for controlling OBS Studio with global hotkeys on Waylan
 
 ## Quick Install (Recommended)
 
+### NixOS
+
+Add to your `configuration.nix` or use the flake:
+
+```nix
+# Using flake (recommended)
+inputs.obs-hotkey.url = "path:/path/to/obs-wayland-hotkey";
+
+# In your configuration:
+imports = [ inputs.obs-hotkey.nixosModules.default ];
+
+services.obs-hotkey.enable = true;
+```
+
+Or build directly:
+```bash
+nix build
+sudo ./result/bin/obs-wayland-hotkey
+```
+
+### Other Linux
+
 Run the installer to set up auto-start:
 
 ```bash
