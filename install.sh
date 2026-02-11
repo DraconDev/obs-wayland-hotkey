@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Installation script for OBS Wayland Hotkey
 
 set -e
