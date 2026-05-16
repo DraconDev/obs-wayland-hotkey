@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -78,8 +81,18 @@ var keyNames = map[uint16]string{
 	evdev.KEY_F10:        "f10",
 	evdev.KEY_F11:        "f11",
 	evdev.KEY_F12:        "f12",
-	
-
+	evdev.KEY_F13:        "f13",
+	evdev.KEY_F14:        "f14",
+	evdev.KEY_F15:        "f15",
+	evdev.KEY_F16:        "f16",
+	evdev.KEY_F17:        "f17",
+	evdev.KEY_F18:        "f18",
+	evdev.KEY_F19:        "f19",
+	evdev.KEY_F20:        "f20",
+	evdev.KEY_F21:        "f21",
+	evdev.KEY_F22:        "f22",
+	evdev.KEY_F23:        "f23",
+	evdev.KEY_F24:        "f24",
 	}
 
 type OBSClient struct {
