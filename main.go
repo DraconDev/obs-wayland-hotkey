@@ -280,9 +280,7 @@ func (c *OBSClient) Connect() error {
 		Op: 1,
 		D: struct {
 			RpcVersion int `json:"rpcVersion"`
-		}{
-			RpcVersion: 1,
-		},
+		}{RpcVersion: 1},
 	}
 
 	if err := conn.WriteJSON(identify); err != nil {
