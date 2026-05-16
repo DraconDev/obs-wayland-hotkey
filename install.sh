@@ -14,15 +14,11 @@ fi
 
 # Detect install location — prefer ~/.local/bin (no sudo needed), fall back to /usr/local/bin
 INSTALL_DIR=""
-if [ -d "$HOME/.local/bin" ] || can_write_dir "$HOME/.local/bin" 2>/dev/null; then
-    INSTALL_DIR="$HOME/.local/bin"
-    mkdir -p "$INSTALL_DIR"
-elif [ -w /usr/local/bin ]; then
+if [ -w /usr/local/bin ] && [ -z "$SUDO_USER" ]; then
     INSTALL_DIR="/usr/local/bin"
 else
-    echo "Error: Cannot write to ~/.local/bin or /usr/local/bin."
-    echo "Please ensure ~/.local/bin exists or you have write access to /usr/local/bin."
-    exit 1
+    INSTALL_DIR="$HOME/.local/bin"
+    mkdir -p "$INSTALL_DIR"
 fi
 
 echo "Installing to $INSTALL_DIR..."
