@@ -16,11 +16,87 @@ import (
 )
 
 const (
-	wsURL      = "ws://localhost:4455"
-	maxRetries = 10
-	retryDelay = 30 * time.Second
-		
+	defaultWSURL    = "ws://localhost:4455"
+	maxRetries       = 10
+	retryDelay       = 30 * time.Second
+	configDirName    = "obs-hotkey"
+	configFileName   = "hotkeys.json"
 )
+
+func getConfigPath() string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return configFileName
+	}
+	return filepath.Join(homeDir, ".config", configDirName, configFileName)
+}
+
+func defaultConfig() AppConfig {
+	return AppConfig{
+		OBSHost: defaultWSURL,
+		Hotkeys: HotkeyConfig{
+			ToggleRecording: "scroll lock",
+			TogglePause:     "pause",
+			ToggleStreaming: "",
+			Screenshot:      "",
+			ToggleMuteMic:   "",
+			ToggleStudioMode: "",
+			ToggleReplayBuf: "",
+			SaveReplay:      "",
+		},
+		ScreenshotDir: "~/Pictures",
+		MicName:      "",
+	}
+}
+
+func loadConfig(path string) (AppConfig, error) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return AppConfig{}, fmt.Errorf("config file not found")
+		}
+		return AppConfig{}, fmt.Errorf("failed to read config: %w", err)
+	}
+
+	var cfg AppConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return AppConfig{}, fmt.Errorf("failed to parse config: %w", err)
+	}
+
+	return cfg, nil
+}
+
+func ensureConfig(dirPath, filePath string) error {
+	if _, err := os.Stat(filePath); err == nil {
+		return nil
+	}
+
+	if err := os.MkdirAll(dirPath, 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	cfg := defaultConfig()
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal default config: %w", err)
+	}
+
+	if err := ioutil.WriteFile(filePath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write default config: %w", err)
+	}
+
+	log.Printf("Created default config at: %s", filePath)
+	return nil
+}
+
+func getKeyCode(keyName string) uint16 {
+	for code, name := range keyNames {
+		if name == keyName {
+			return code
+		}
+	}
+	return 0
+}
 
 // OBS WebSocket message structures
 type HelloMessage struct {
@@ -383,31 +459,58 @@ func findKeyboardDevices() ([]*evdev.InputDevice, error) {
 func main() {
 	log.Println("OBS Hotkey Controller (Go version - Wayland compatible)")
 
-	// Check if running as root
-	// if os.Geteuid() != 0 {
-	// 	log.Fatal("This program must be run as root (sudo) to access keyboard devices")
-	// }
+	configPath := getConfigPath()
+	dirPath := filepath.Dir(configPath)
 
-	// Load configuration
-	cfg := HotkeyConfig{
-		ToggleRecording: "scroll lock",
-		TogglePause:     "pause",
+	if err := ensureConfig(dirPath, configPath); err != nil {
+		log.Printf("Warning: could not ensure config file: %v", err)
 	}
 
-	// Build hotkey action map
+	cfg, err := loadConfig(configPath)
+	if err != nil {
+		log.Fatalf("Failed to load config from %s: %v\nSet your hotkeys in the config file.", configPath)
+	}
+
+	log.Printf("Loaded config from: %s", configPath)
+
+	wsURL := cfg.OBSHost
+	if wsURL == "" {
+		wsURL = defaultWSURL
+	}
+
 	hotkeyActions := make(map[uint16]func())
 
 	client := NewOBSClient()
 	defer client.Close()
 
-	for keyCode, keyName := range keyNames {
-		if keyName == cfg.ToggleRecording {
-			hotkeyActions[keyCode] = client.ToggleRecording
-			log.Printf("- %s: Toggle Recording", keyName)
-		} else if keyName == cfg.TogglePause {
-			hotkeyActions[keyCode] = client.TogglePause
-			log.Printf("- %s: Toggle Pause/Resume Recording", keyName)
+	type hotkeyBinding struct {
+		keyName string
+		action  func()
+		label   string
+	}
+
+	bindings := []hotkeyBinding{
+		{cfg.Hotkeys.ToggleRecording, client.ToggleRecording, "Toggle Recording"},
+		{cfg.Hotkeys.TogglePause, client.TogglePause, "Toggle Pause/Resume"},
+		{cfg.Hotkeys.ToggleStreaming, client.ToggleStreaming, "Toggle Streaming"},
+		{cfg.Hotkeys.Screenshot, func() { client.Screenshot(cfg.ScreenshotSource, cfg.ScreenshotDir) }, "Screenshot"},
+		{cfg.Hotkeys.ToggleMuteMic, func() { client.ToggleMuteMic(cfg.MicName) }, "Toggle Mic Mute"},
+		{cfg.Hotkeys.ToggleStudioMode, client.ToggleStudioMode, "Toggle Studio Mode"},
+		{cfg.Hotkeys.ToggleReplayBuf, client.ToggleReplayBuffer, "Toggle Replay Buffer"},
+		{cfg.Hotkeys.SaveReplay, client.SaveReplay, "Save Replay"},
+	}
+
+	for _, b := range bindings {
+		if b.keyName == "" {
+			continue
 		}
+		keyCode := getKeyCode(b.keyName)
+		if keyCode == 0 {
+			log.Printf("Warning: unknown key '%s' for %s", b.keyName, b.label)
+			continue
+		}
+		hotkeyActions[keyCode] = b.action
+		log.Printf("- %s: %s", b.keyName, b.label)
 	}
 
 	if len(hotkeyActions) == 0 {
