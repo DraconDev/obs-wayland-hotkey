@@ -39,7 +39,7 @@
       apps = forAllSystems (system: {
         default = {
           type = "app";
-          program = "${self.packages.${system}.default}/bin/obs-hotkey";
+          program = "${self.packages.${system}.default}/bin/obs-wayland-hotkey";
         };
       });
     };
