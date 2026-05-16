@@ -12,7 +12,7 @@
       pkgsFor = system: import nixpkgs { inherit system; };
     in
     {
-      nixosModules.default = import ./nix/module.nix;
+      nixosModules.default = import ./nix/module.nix self;
 
       packages = forAllSystems (system:
         let pkgs = pkgsFor system; in

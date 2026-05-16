@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, self, ... }:
 
 let
   cfg = config.services.obs-hotkey;
@@ -8,7 +8,6 @@ in
     enable = lib.mkEnableOption "OBS Hotkey Controller";
     user = lib.mkOption {
       type = lib.types.str;
-      default = "dracon";
       description = "User to run obs-hotkey as";
     };
     configFile = lib.mkOption {
@@ -19,7 +18,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    environment.systemPackages = [ pkgs.obs-hotkey ];
+    environment.systemPackages = [ self.packages.${pkgs.system}.default ];
 
     users.users.${cfg.user}.extraGroups = [ "input" ];
 
@@ -30,7 +29,7 @@ in
 
       serviceConfig = {
         Type = "simple";
-        ExecStart = "${pkgs.obs-hotkey}/bin/obs-hotkey --config ${cfg.configFile}";
+        ExecStart = "${self.packages.${pkgs.system}.default}/bin/obs-hotkey --config ${cfg.configFile}";
         Restart = "on-failure";
         RestartSec = "10s";
       };
