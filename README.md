@@ -31,10 +31,13 @@ services.obs-hotkey.enable = true;
 services.obs-hotkey.user = "your_username";
 ```
 
-Or build directly:
+Or build and run directly:
 ```bash
 nix build
 ./result/bin/obs-hotkey
+
+# Or run without building:
+nix run .#
 ```
 
 ### Other Linux
