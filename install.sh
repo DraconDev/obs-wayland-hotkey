@@ -6,8 +6,11 @@ echo ""
 
 CURRENT_USER=$(whoami)
 
-# Check if binary exists
-if [ ! -f "obs-hotkey" ]; then
+if [ -n "$SUDO_USER" ]; then
+    echo "Error: This script should not be run with sudo. Use 'sudo -E ./install.sh' or run without sudo."
+    exit 1
+fi
+if [ ! -f "./obs-hotkey" ]; then
     echo "Binary not found. Building..."
     ./build.sh
 fi
@@ -23,10 +26,10 @@ fi
 
 echo "Installing to $INSTALL_DIR..."
 if [ "$INSTALL_DIR" = "/usr/local/bin" ]; then
-    sudo cp obs-hotkey "$INSTALL_DIR/"
+    sudo cp ./obs-hotkey "$INSTALL_DIR/"
     sudo chmod +x "$INSTALL_DIR/obs-hotkey"
 else
-    cp obs-hotkey "$INSTALL_DIR/"
+    cp ./obs-hotkey "$INSTALL_DIR/"
     chmod +x "$INSTALL_DIR/obs-hotkey"
 fi
 echo "✓ Binary installed to $INSTALL_DIR/obs-hotkey"

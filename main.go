@@ -257,12 +257,10 @@ func (c *OBSClient) Connect() error {
 		return fmt.Errorf("failed to connect to OBS: %w", err)
 	}
 
-	// Set read deadline for handshake
-	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-
 	c.conn = conn
 
 	// Read hello message
+	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 	var hello HelloMessage
 	if err := conn.ReadJSON(&hello); err != nil {
 		return fmt.Errorf("failed to read hello message: %w", err)
@@ -299,6 +297,10 @@ func (c *OBSClient) Connect() error {
 	if response.Op == 2 {
 		log.Println("Successfully identified to OBS WebSocket")
 		c.connected.Store(true)
+	}
+	c.mu.Unlock()
+
+	if response.Op == 2 {
 		c.QueryStudioMode()
 	} else {
 		return fmt.Errorf("failed to identify to OBS")
@@ -307,6 +309,9 @@ func (c *OBSClient) Connect() error {
 	return nil
 }
 func (c *OBSClient) QueryStudioMode() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	type studioModeResponse struct {
 		Op   int `json:"op"`
 		D    struct {
@@ -356,15 +361,17 @@ func (c *OBSClient) SendRequest(requestType string) error {
 }
 
 func (c *OBSClient) SendRequestWithData(requestType string, requestData map[string]interface{}) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if !c.connected.Load() {
+		c.mu.Unlock() // Release before reconnect
 		log.Println("Not connected to OBS. Reconnecting...")
 		if err := c.Connect(); err != nil {
 			return err
 		}
+		c.mu.Lock() // Re-acquire after reconnect
 	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
 
 	request := RequestMessage{
 		Op: 6,
@@ -498,9 +505,6 @@ func findKeyboardDevices() ([]*evdev.InputDevice, []chan evdev.InputEvent, error
 	}
 
 	for _, entry := range entries {
-		if !entry.Type().IsRegular() {
-			continue
-		}
 		if !eventDevicePath.MatchString(entry.Name()) {
 			continue
 		}
@@ -508,6 +512,7 @@ func findKeyboardDevices() ([]*evdev.InputDevice, []chan evdev.InputEvent, error
 		path := filepath.Join("/dev/input", entry.Name())
 		device, err := evdev.Open(path)
 		if err != nil {
+			log.Printf("Warning: could not open %s: %v", path, err)
 			continue
 		}
 
