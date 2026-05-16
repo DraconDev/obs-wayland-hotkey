@@ -16,12 +16,12 @@ var upgrader = websocket.Upgrader{
 }
 
 type mockOBS struct {
-	server          *httptest.Server
-	handlerConn     *websocket.Conn
-	mut             sync.Mutex
-	helloSent       bool
+	server           *httptest.Server
+	handlerConn      *websocket.Conn
+	mut              sync.Mutex
+	helloSent        bool
 	identifyReceived bool
-	identifyReady   chan struct{}
+	identifyReady    chan struct{}
 }
 
 func newMockOBS() *mockOBS {
@@ -75,21 +75,28 @@ func (m *mockOBS) handler(w http.ResponseWriter, r *http.Request) {
 	})
 	conn.WriteMessage(websocket.TextMessage, identifiedBytes)
 
-	var req map[string]interface{}
-	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-	if err := conn.ReadJSON(&req); err == nil {
+	for {
+		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+		var req map[string]interface{}
+		if err := conn.ReadJSON(&req); err != nil {
+			return
+		}
+		reqId := ""
+		if d, ok := req["d"].(map[string]interface{}); ok {
+			if rid, ok := d["requestId"].(string); ok {
+				reqId = rid
+			}
+		}
 		respBytes, _ := json.Marshal(map[string]interface{}{
 			"op": 7,
 			"d": map[string]interface{}{
-				"requestId":    req["d"].(map[string]interface{})["requestId"],
+				"requestId":     reqId,
 				"requestStatus": map[string]interface{}{"result": true, "code": 200},
 				"responseData":  map[string]interface{}{"studioModeEnabled": false},
 			},
 		})
 		conn.WriteMessage(websocket.TextMessage, respBytes)
 	}
-
-	<-make(chan struct{}) // block forever keeping connection alive
 }
 
 func (m *mockOBS) start() {
