@@ -1,33 +1,28 @@
 #!/usr/bin/env bash
-# Build script for OBS Hotkey Go binary
-
 set -e
 
-echo "Building OBS Hotkey (Go version)..."
+echo "Building OBS Hotkey..."
 
-# Check if Go is installed
 if ! command -v go &> /dev/null; then
     echo "Error: Go is not installed. Please install Go 1.21 or later."
     echo "Visit: https://go.dev/doc/install"
     exit 1
 fi
 
-# Build the binary using vendored dependencies (no network required)
 echo "Compiling binary..."
-go build -mod=vendor -o obs-hotkey-go main.go
+go build -mod=vendor -o obs-hotkey main.go
 
-# Make it executable
-chmod +x obs-hotkey-go
+chmod +x obs-hotkey
 
 echo ""
 echo "Build successful!"
-echo "Binary created: obs-hotkey-go"
+echo "Binary created: obs-hotkey"
 echo ""
 echo "To run:"
-echo "  sudo ./obs-hotkey-go"
+echo "  ./obs-hotkey"
 echo ""
-echo "Or install to /usr/local/bin:"
-echo "  sudo cp obs-hotkey-go /usr/local/bin/"
+echo "Or install with auto-start:"
+echo "  ./install.sh"
 echo ""
 echo "Config file (auto-created on first run):"
 echo "  ~/.config/obs-hotkey/hotkeys.json"
