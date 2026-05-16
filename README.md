@@ -335,8 +335,7 @@ To add a new OBS WebSocket action:
 3. Rebuild and reinstall:
    ```bash
    ./build.sh
-   sudo cp obs-hotkey /usr/local/bin/
-   systemctl --user restart obs-hotkey.service
+   ./install.sh
    ```
 
 For the full list of available OBS WebSocket requests, see the [Available Actions](#available-actions) table or the [OBS WebSocket 5.x Protocol](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md) documentation.
@@ -345,7 +344,7 @@ For the full list of available OBS WebSocket requests, see the [Available Action
 
 - Linux (Wayland or X11)
 - OBS Studio 28+ with WebSocket enabled
-- Go 1.21+ (for building)
+- Go 1.22+ (for building)
 - Membership in the `input` group (for keyboard device access)
 
 ## Uninstall
