@@ -23,6 +23,7 @@
             src = ./.;
             vendorHash = null;
             ldflags = [ "-s" "-w" ];
+            exePath = "/bin/obs-hotkey";
           };
         }
       );
