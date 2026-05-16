@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -317,6 +316,7 @@ func (c *OBSClient) Connect() error {
 	c.QueryStudioMode()
 	return nil
 }
+
 func (c *OBSClient) QueryStudioMode() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -327,7 +327,7 @@ func (c *OBSClient) QueryStudioMode() {
 			RequestID     string `json:"requestId"`
 			RequestStatus struct {
 				Result bool `json:"result"`
-				Code   int  `json:"code"`
+				Code   int    `json:"code"`
 			} `json:"requestStatus"`
 			ResponseData struct {
 				StudioModeEnabled bool `json:"studioModeEnabled"`
@@ -546,20 +546,43 @@ func findKeyboardDevices() ([]*evdev.InputDevice, []chan evdev.InputEvent, error
 	return keyboards, channels, nil
 }
 
-func main() {
-	log.Println("OBS Hotkey Controller - Wayland compatible")
+// --- Subcommand helpers ---
 
-	configFlag := flag.String("config", "", "Path to config file (overrides default location)")
-	installService := flag.Bool("install-service", false, "Write and enable the systemd user service, then exit")
-	flag.Parse()
+type hotkeyBinding struct {
+	keyName string
+	action  func()
+	label   string
+}
 
-	if *installService {
-		exePath, err := os.Executable()
-		if err != nil {
-			log.Fatalf("Failed to determine executable path: %v", err)
-		}
-		cfgDir := filepath.Dir(getConfigPath(""))
-		unitContent := fmt.Sprintf(`[Unit]
+func isAutostartEnabled() bool {
+	err := exec.Command("systemctl", "--user", "is-enabled", "obs-hotkey.service").Run()
+	return err == nil
+}
+
+func runningUnderSystemd() bool {
+	_, hasInvocationID := os.LookupEnv("INVOCATION_ID")
+	_, hasJournalStream := os.LookupEnv("JOURNAL_STREAM")
+	return hasInvocationID || hasJournalStream
+}
+
+func inInputGroup() bool {
+	currentUser := os.Getenv("USER")
+	if currentUser == "" {
+		return false
+	}
+	out, err := exec.Command("groups", currentUser).Output()
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(out), "input")
+}
+
+func serviceUnitPath() string {
+	return filepath.Join(os.Getenv("HOME"), ".config", "systemd", "user", "obs-hotkey.service")
+}
+
+func writeServiceFile(exePath, cfgDir string) error {
+	content := fmt.Sprintf(`[Unit]
 Description=OBS Hotkey Controller
 After=graphical-session.target
 
@@ -573,24 +596,175 @@ RestartSec=10s
 WantedBy=graphical-session.target
 `, exePath, cfgDir)
 
-		unitPath := filepath.Join(os.Getenv("HOME"), ".config", "systemd", "user", "obs-hotkey.service")
-		if err := os.WriteFile(unitPath, []byte(unitContent), 0644); err != nil {
-			log.Fatalf("Failed to write service file to %s: %v", unitPath, err)
-		}
-		log.Printf("Service file written to %s", unitPath)
+	path := serviceUnitPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return fmt.Errorf("failed to create systemd directory: %w", err)
+	}
+	return os.WriteFile(path, []byte(content), 0644)
+}
 
-		if err := exec.Command("systemctl", "--user", "daemon-reload").Run(); err != nil {
-			log.Printf("Warning: failed to reload systemd: %v", err)
-		}
-		if err := exec.Command("systemctl", "--user", "enable", "obs-hotkey.service").Run(); err != nil {
-			log.Fatalf("Failed to enable service: %v", err)
-		}
-		log.Println("Service enabled and ready to start on next login.")
-		log.Println("Start now with: systemctl --user start obs-hotkey.service")
-		return
+func runSetup(configPath string) {
+	if !inInputGroup() {
+		fmt.Println("Warning: you are not in the 'input' group.")
+		fmt.Println("  On NixOS: add 'users.users.\"$USER\".extraGroups = [ \"input\" ];' to your configuration.nix")
+		fmt.Println("  On others: run: sudo usermod -aG input $USER")
+		fmt.Println("  Then log out and back in for changes to take effect.")
+		fmt.Println("")
 	}
 
-	configPath := getConfigPath(*configFlag)
+	oldUnit := filepath.Join(os.Getenv("HOME"), ".config", "systemd", "user", "obs-wayland-hotkey.service")
+	if _, err := os.Stat(oldUnit); err == nil {
+		fmt.Println("Found old obs-wayland-hotkey.service, removing...")
+		exec.Command("systemctl", "--user", "stop", "obs-wayland-hotkey.service").Run()
+		exec.Command("systemctl", "--user", "disable", "obs-wayland-hotkey.service").Run()
+		os.Remove(oldUnit)
+	}
+
+	exePath, err := os.Executable()
+	if err != nil {
+		log.Fatalf("Failed to determine executable path: %v", err)
+	}
+	cfgDir := filepath.Dir(getConfigPath(""))
+
+	if err := writeServiceFile(exePath, cfgDir); err != nil {
+		log.Fatalf("Failed to write service file: %v", err)
+	}
+	log.Printf("Service file written to %s", serviceUnitPath())
+
+	if err := exec.Command("systemctl", "--user", "daemon-reload").Run(); err != nil {
+		log.Printf("Warning: failed to reload systemd: %v", err)
+	}
+	if err := exec.Command("systemctl", "--user", "enable", "obs-hotkey.service").Run(); err != nil {
+		log.Fatalf("Failed to enable service: %v", err)
+	}
+
+	fmt.Println("Service enabled. Starting now...")
+	if err := exec.Command("systemctl", "--user", "start", "obs-hotkey.service").Run(); err != nil {
+		log.Printf("Warning: failed to start service: %v", err)
+	}
+
+	fmt.Println("")
+	fmt.Println("=== Setup Complete! ===")
+	fmt.Println("")
+	fmt.Println("1. ENABLE OBS WEBSOCKET SERVER:")
+	fmt.Println("   - Open OBS Studio → Tools → WebSocket Server Settings")
+	fmt.Println("   - Check 'Enable WebSocket server', port 4455, no auth")
+	fmt.Println("")
+	fmt.Println("2. DEFAULT HOTKEYS (already configured):")
+	fmt.Println("   - Scroll Lock → Toggle recording")
+	fmt.Println("   - Pause       → Toggle recording pause")
+	fmt.Println("")
+	fmt.Println("3. VERIFY IT'S WORKING:")
+	fmt.Println("   - Press Scroll Lock — recording should stop/resume")
+	fmt.Println("")
+	fmt.Println("4. VIEW LOGS:     journalctl --user -u obs-hotkey.service -f")
+	fmt.Println("5. SERVICE:       systemctl --user restart obs-hotkey.service")
+	fmt.Println("6. CUSTOMIZE:     ~/.config/obs-hotkey/hotkeys.json")
+}
+
+func runTeardown(purge bool) {
+	fmt.Println("Stopping service...")
+	exec.Command("systemctl", "--user", "stop", "obs-hotkey.service").Run()
+	fmt.Println("Disabling service...")
+	exec.Command("systemctl", "--user", "disable", "obs-hotkey.service").Run()
+
+	unitPath := serviceUnitPath()
+	if _, err := os.Stat(unitPath); err == nil {
+		os.Remove(unitPath)
+		fmt.Println("Service file removed.")
+	} else {
+		fmt.Println("No service file found (already removed?).")
+	}
+
+	exec.Command("systemctl", "--user", "daemon-reload").Run()
+
+	if purge {
+		configDir := filepath.Dir(getConfigPath(""))
+		os.RemoveAll(configDir)
+		fmt.Println("Config directory purged.")
+	}
+
+	fmt.Println("Teardown complete.")
+}
+
+func runStatus(configPath string) {
+	fmt.Println("=== OBS Hotkey Status ===")
+	fmt.Println("")
+
+	autostart := isAutostartEnabled()
+	if autostart {
+		fmt.Println("  Auto-start: enabled (systemd user service)")
+	} else {
+		fmt.Println("  Auto-start: not configured")
+		fmt.Println("               Run 'obs-hotkey setup' to enable")
+	}
+
+	fmt.Print("  Input group: ")
+	if inInputGroup() {
+		fmt.Println("✓ member")
+	} else {
+		fmt.Println("✗ not a member")
+	}
+
+	dirPath := filepath.Dir(configPath)
+	if _, err := os.Stat(configPath); err == nil {
+		fmt.Printf("  Config:      ✓ %s\n", configPath)
+	} else {
+		fmt.Printf("  Config:      ✗ not found (%s)\n", configPath)
+	}
+
+	if _, err := os.Stat(dirPath); err == nil {
+		fmt.Printf("  Config dir: ✓ %s\n", dirPath)
+	} else {
+		fmt.Printf("  Config dir: ✗ not found\n")
+	}
+
+	fmt.Print("  OBS WS:     ")
+	conn, err := net.DialTimeout("tcp", "localhost:4455", 1*time.Second)
+	if err == nil {
+		conn.Close()
+		fmt.Println("✓ reachable (port 4455)")
+	} else {
+		fmt.Println("✗ not reachable (is OBS running?)")
+	}
+
+	fmt.Println("")
+	if !autostart {
+		fmt.Println("Run 'obs-hotkey setup' to enable auto-start on login.")
+	}
+}
+
+// printBanner prints the startup banner with hotkey bindings and autostart state.
+func printBanner(cfg AppConfig, bindings []hotkeyBinding, autostart bool) {
+	fmt.Println("")
+	fmt.Println("OBS Hotkey Controller - Wayland compatible")
+	fmt.Println("")
+	for _, b := range bindings {
+		if b.keyName == "" {
+			continue
+		}
+		keyCode := getKeyCode(b.keyName)
+		if keyCode == 0 {
+			continue
+		}
+		fmt.Printf("  %-12s → %s\n", b.keyName, b.label)
+	}
+	fmt.Println("")
+	if autostart {
+		fmt.Println("  Auto-start: enabled (systemd user service)")
+	} else {
+		fmt.Println("  Auto-start: not configured (run 'obs-hotkey setup' to enable)")
+	}
+	fmt.Println("")
+	if !runningUnderSystemd() {
+		fmt.Println("Listening for hotkeys... (Ctrl+C to exit)")
+	}
+}
+
+// net package is needed for runStatus's TCP dial check
+import "net"
+
+func runDaemon(configPath string) {
 	dirPath := filepath.Dir(configPath)
 
 	if err := ensureConfig(dirPath, configPath); err != nil {
@@ -611,26 +785,43 @@ WantedBy=graphical-session.target
 
 	hotkeyActions := make(map[uint16]func())
 
+	bindings := []hotkeyBinding{
+		{cfg.Hotkeys.ToggleRecording, nil, "Toggle Recording"},
+		{cfg.Hotkeys.TogglePause, nil, "Toggle Pause/Resume"},
+		{cfg.Hotkeys.ToggleStreaming, nil, "Toggle Streaming"},
+		{cfg.Hotkeys.Screenshot, nil, "Screenshot"},
+		{cfg.Hotkeys.ToggleMuteMic, nil, "Toggle Mic Mute"},
+		{cfg.Hotkeys.ToggleStudioMode, nil, "Toggle Studio Mode"},
+		{cfg.Hotkeys.ToggleReplayBuf, nil, "Toggle Replay Buffer"},
+		{cfg.Hotkeys.SaveReplay, nil, "Save Replay"},
+	}
+
 	client := NewOBSClient(wsURL)
 	defer client.Close()
 
-	type hotkeyBinding struct {
-		keyName string
-		action  func()
-		label   string
+	for i := range bindings {
+		bn := &bindings[i]
+		switch bn.label {
+		case "Toggle Recording":
+			bn.action = client.ToggleRecording
+		case "Toggle Pause/Resume":
+			bn.action = client.TogglePause
+		case "Toggle Streaming":
+			bn.action = client.ToggleStreaming
+		case "Screenshot":
+			bn.action = func() { client.Screenshot(cfg.ScreenshotSource, cfg.ScreenshotDir) }
+		case "Toggle Mic Mute":
+			bn.action = func() { client.ToggleMuteMic(cfg.MicName) }
+		case "Toggle Studio Mode":
+			bn.action = client.ToggleStudioMode
+		case "Toggle Replay Buffer":
+			bn.action = client.ToggleReplayBuffer
+		case "Save Replay":
+			bn.action = client.SaveReplay
+		}
 	}
 
-	bindings := []hotkeyBinding{
-		{cfg.Hotkeys.ToggleRecording, client.ToggleRecording, "Toggle Recording"},
-		{cfg.Hotkeys.TogglePause, client.TogglePause, "Toggle Pause/Resume"},
-		{cfg.Hotkeys.ToggleStreaming, client.ToggleStreaming, "Toggle Streaming"},
-		{cfg.Hotkeys.Screenshot, func() { client.Screenshot(cfg.ScreenshotSource, cfg.ScreenshotDir) }, "Screenshot"},
-		{cfg.Hotkeys.ToggleMuteMic, func() { client.ToggleMuteMic(cfg.MicName) }, "Toggle Mic Mute"},
-		{cfg.Hotkeys.ToggleStudioMode, client.ToggleStudioMode, "Toggle Studio Mode"},
-		{cfg.Hotkeys.ToggleReplayBuf, client.ToggleReplayBuffer, "Toggle Replay Buffer"},
-		{cfg.Hotkeys.SaveReplay, client.SaveReplay, "Save Replay"},
-	}
-
+	autostart := isAutostartEnabled()
 	for _, b := range bindings {
 		if b.keyName == "" {
 			continue
@@ -640,9 +831,12 @@ WantedBy=graphical-session.target
 			log.Printf("Warning: unknown key '%s' for %s", b.keyName, b.label)
 			continue
 		}
-		hotkeyActions[keyCode] = b.action
-		log.Printf("- %s: %s", b.keyName, b.label)
+		if b.action != nil {
+			hotkeyActions[keyCode] = b.action
+		}
 	}
+
+	printBanner(cfg, bindings, autostart)
 
 	if len(hotkeyActions) == 0 {
 		log.Fatal("No valid hotkeys configured")
@@ -650,7 +844,6 @@ WantedBy=graphical-session.target
 
 	var eventChans []chan evdev.InputEvent
 
-	// Find keyboard devices
 	log.Println("\nSearching for keyboard devices...")
 	devices, eventChans, err := findKeyboardDevices()
 	if err != nil {
@@ -666,7 +859,6 @@ WantedBy=graphical-session.target
 		log.Printf("  - %s (%s)", device.Name, device.Fn)
 	}
 
-	// Connect to OBS
 	log.Printf("\nConnecting to OBS WebSocket at %s...", wsURL)
 	retries := 0
 	for retries < maxRetries {
@@ -687,13 +879,11 @@ WantedBy=graphical-session.target
 		log.Println("Hotkeys are ready but will only work when OBS is running.")
 	}
 
-	log.Println("\nListening for hotkeys... (Press Ctrl+C to exit)")
+	log.Println("")
 
-	// Set up signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	// Start device readers
 	deviceClosed := make(chan *evdev.InputDevice, len(devices))
 	for i, device := range devices {
 		go func(dev *evdev.InputDevice, ch chan evdev.InputEvent) {
@@ -712,7 +902,6 @@ WantedBy=graphical-session.target
 		}(device, eventChans[i])
 	}
 
-	// Main event loop
 	reconnectTicker := time.NewTicker(60 * time.Second)
 	defer reconnectTicker.Stop()
 
@@ -728,13 +917,10 @@ WantedBy=graphical-session.target
 			return
 
 		case dev := <-deviceClosed:
-			// A device was unplugged or errored; mark it closed so we don't try
-			// to close it again in the shutdown path. We don't re-scan for new
-			// devices — the user must restart the service on hot-plug changes.
 			for i, d := range devices {
 				if d == dev {
-					devices[i] = nil     // mark as closed
-					close(eventChans[i]) // close the channel
+					devices[i] = nil
+					close(eventChans[i])
 				}
 			}
 
@@ -745,24 +931,68 @@ WantedBy=graphical-session.target
 			}
 
 		default:
-			// Check all device channels
 			for _, ch := range eventChans {
 				select {
 				case event, ok := <-ch:
 					if !ok {
 						continue
 					}
-					// Only process key press events (value == 1, not 0 for release or 2 for repeat)
 					if event.Type == 1 && event.Value == 1 {
 						if action, ok := hotkeyActions[event.Code]; ok {
 							action()
 						}
 					}
 				default:
-					// No event, continue
 				}
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
+	}
+}
+
+func main() {
+	if len(os.Args) < 2 {
+		runDaemon(getConfigPath(""))
+		return
+	}
+
+	subcommand := os.Args[1]
+	args := os.Args[2:]
+
+	var configPath string
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--config" && i+1 < len(args) {
+			configPath = args[i+1]
+			args = append(args[:i], args[i+2:]...)
+			i--
+		}
+	}
+
+	if configPath == "" {
+		configPath = getConfigPath("")
+	}
+
+	switch subcommand {
+	case "setup":
+		runSetup(configPath)
+	case "teardown":
+		purge := false
+		for _, a := range args {
+			if a == "--purge" {
+				purge = true
+			}
+		}
+		_ = purge
+		runTeardown(false)
+	case "status":
+		runStatus(configPath)
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown subcommand: %s\n\n", subcommand)
+		fmt.Fprintf(os.Stderr, "Usage: obs-hotkey [setup|teardown|status]\n")
+		fmt.Fprintf(os.Stderr, "       obs-hotkey          # run the daemon (default)\n")
+		fmt.Fprintf(os.Stderr, "       obs-hotkey setup    # enable auto-start on login\n")
+		fmt.Fprintf(os.Stderr, "       obs-hotkey teardown # undo setup\n")
+		fmt.Fprintf(os.Stderr, "       obs-hotkey status   # show service state\n")
+		os.Exit(1)
 	}
 }
