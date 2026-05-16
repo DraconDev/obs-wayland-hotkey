@@ -59,6 +59,8 @@ This will:
 - **Scroll Lock** - Toggle recording start/stop
 - **Pause** - Toggle recording pause/resume
 
+**Note:** Default hotkeys are set in the config file at `~/.config/obs-hotkey/hotkeys.json`. On first run, a default config is created automatically.
+
 ## Manual Setup
 
 ### 1. Build

@@ -482,7 +482,7 @@ func main() {
 
 	hotkeyActions := make(map[uint16]func())
 
-	client := NewOBSClient()
+	client := NewOBSClient(wsURL)
 	defer client.Close()
 
 	type hotkeyBinding struct {
