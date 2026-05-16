@@ -148,8 +148,8 @@ type HelloMessage struct {
 }
 
 type IdentifyMessage struct {
-	Op   int `json:"op"`
-	D    IdentifyMessageData `json:"d"`
+	Op int                 `json:"op"`
+	D  IdentifyMessageData `json:"d"`
 }
 
 type IdentifyMessageData struct {
@@ -280,7 +280,7 @@ func (c *OBSClient) Connect() error {
 
 	identify := IdentifyMessage{
 		Op: 1,
-		D:   IdentifyMessageData{RpcVersion: 1},
+		D:  IdentifyMessageData{RpcVersion: 1},
 	}
 
 	if err := conn.WriteJSON(identify); err != nil {
@@ -321,7 +321,7 @@ func (c *OBSClient) QueryStudioMode() {
 			RequestID     string `json:"requestId"`
 			RequestStatus struct {
 				Result bool `json:"result"`
-				Code   int    `json:"code"`
+				Code   int  `json:"code"`
 			} `json:"requestStatus"`
 			ResponseData struct {
 				StudioModeEnabled bool `json:"studioModeEnabled"`
