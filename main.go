@@ -502,9 +502,10 @@ func findKeyboardDevices() ([]*evdev.InputDevice, error) {
 func main() {
 	log.Println("OBS Hotkey Controller - Wayland compatible")
 
+	configFlag := flag.String("config", "", "Path to config file (overrides default location)")
+	flag.Parse()
 	configPath := getConfigPath()
 	dirPath := filepath.Dir(configPath)
-	flag.Parse()
 
 	if err := ensureConfig(dirPath, configPath); err != nil {
 		log.Printf("Warning: could not ensure config file: %v", err)
