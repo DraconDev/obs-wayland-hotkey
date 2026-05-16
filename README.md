@@ -32,13 +32,22 @@ services.obs-hotkey.user = "your_username";
 services.obs-hotkey.configFile = "/home/your_username/.config/obs-hotkey/hotkeys.json";  # optional
 ```
 
-Or build and run directly:
+The module sets up the systemd user service automatically — no extra steps needed.
+
+### Standalone (no module)
+
+If you don't want to import the module, you can still get auto-start by running:
+
 ```bash
+# Build and run directly:
 nix build
 ./result/bin/obs-hotkey
 
 # Or run without building:
 nix run .#
+
+# One-time setup for auto-start as a systemd user service:
+nix run .#install-service
 ```
 
 ### Other Linux

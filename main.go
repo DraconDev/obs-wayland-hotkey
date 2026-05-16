@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"regexp"
@@ -549,7 +550,46 @@ func main() {
 	log.Println("OBS Hotkey Controller - Wayland compatible")
 
 	configFlag := flag.String("config", "", "Path to config file (overrides default location)")
+	installService := flag.Bool("install-service", false, "Write and enable the systemd user service, then exit")
 	flag.Parse()
+
+	if *installService {
+		exePath, err := os.Executable()
+		if err != nil {
+			log.Fatalf("Failed to determine executable path: %v", err)
+		}
+		cfgDir := filepath.Dir(getConfigPath(""))
+		unitContent := fmt.Sprintf(`[Unit]
+Description=OBS Hotkey Controller
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%s --config %s/hotkeys.json
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=graphical-session.target
+`, exePath, cfgDir)
+
+		unitPath := filepath.Join(os.Getenv("HOME"), ".config", "systemd", "user", "obs-hotkey.service")
+		if err := os.WriteFile(unitPath, []byte(unitContent), 0644); err != nil {
+			log.Fatalf("Failed to write service file to %s: %v", unitPath, err)
+		}
+		log.Printf("Service file written to %s", unitPath)
+
+		if err := exec.Command("systemctl", "--user", "daemon-reload").Run(); err != nil {
+			log.Printf("Warning: failed to reload systemd: %v", err)
+		}
+		if err := exec.Command("systemctl", "--user", "enable", "obs-hotkey.service").Run(); err != nil {
+			log.Fatalf("Failed to enable service: %v", err)
+		}
+		log.Println("Service enabled and ready to start on next login.")
+		log.Println("Start now with: systemctl --user start obs-hotkey.service")
+		return
+	}
+
 	configPath := getConfigPath(*configFlag)
 	dirPath := filepath.Dir(configPath)
 
