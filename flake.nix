@@ -23,13 +23,9 @@
             src = ./.;
             vendorHash = null;
             ldflags = [ "-s" "-w" ];
-            overrideAttrs = finalAttrs: {
-              buildPhase = ''
-                runHook preBuild
-                go build -mod=vendor -o obs-hotkey main.go
-                runHook postBuild
-              '';
-            };
+            postBuild = ''
+              mv $out/bin/obs-wayland-hotkey $out/bin/obs-hotkey
+            '';
           };
         }
       );
