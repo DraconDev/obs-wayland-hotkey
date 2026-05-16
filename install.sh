@@ -12,11 +12,28 @@ if [ ! -f "obs-hotkey" ]; then
     ./build.sh
 fi
 
-# Install to /usr/local/bin
-echo "Installing to /usr/local/bin..."
-sudo cp obs-hotkey /usr/local/bin/
-sudo chmod +x /usr/local/bin/obs-hotkey
-echo "✓ Binary installed to /usr/local/bin/obs-hotkey"
+# Detect install location — prefer ~/.local/bin (no sudo needed), fall back to /usr/local/bin
+INSTALL_DIR=""
+if [ -d "$HOME/.local/bin" ] || can_write_dir "$HOME/.local/bin" 2>/dev/null; then
+    INSTALL_DIR="$HOME/.local/bin"
+    mkdir -p "$INSTALL_DIR"
+elif [ -w /usr/local/bin ]; then
+    INSTALL_DIR="/usr/local/bin"
+else
+    echo "Error: Cannot write to ~/.local/bin or /usr/local/bin."
+    echo "Please ensure ~/.local/bin exists or you have write access to /usr/local/bin."
+    exit 1
+fi
+
+echo "Installing to $INSTALL_DIR..."
+if [ "$INSTALL_DIR" = "/usr/local/bin" ]; then
+    sudo cp obs-hotkey "$INSTALL_DIR/"
+    sudo chmod +x "$INSTALL_DIR/obs-hotkey"
+else
+    cp obs-hotkey "$INSTALL_DIR/"
+    chmod +x "$INSTALL_DIR/obs-hotkey"
+fi
+echo "✓ Binary installed to $INSTALL_DIR/obs-hotkey"
 echo ""
 
 # Create config directory
