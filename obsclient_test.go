@@ -161,6 +161,144 @@ func TestConnectAllErrorPathsUnlockMutex(t *testing.T) {
 	}
 }
 
+func connectedClient(t *testing.T, mock *mockOBS) *OBSClient {
+	t.Helper()
+	client := NewOBSClient("ws" + mock.URL()[4:])
+	if err := client.Connect(); err != nil {
+		t.Fatalf("failed to connect: %v", err)
+	}
+	return client
+}
+
+func TestSendRequestSendsSuccessfully(t *testing.T) {
+	mock := newMockOBS()
+	mock.start()
+	defer mock.stop()
+
+	client := connectedClient(t, mock)
+	defer client.Close()
+
+	if err := client.SendRequest("ToggleRecord"); err != nil {
+		t.Errorf("SendRequest(ToggleRecord) error: %v", err)
+	}
+}
+
+func TestSendRequestWithDataSendsSuccessfully(t *testing.T) {
+	mock := newMockOBS()
+	mock.start()
+	defer mock.stop()
+
+	client := connectedClient(t, mock)
+	defer client.Close()
+
+	err := client.SendRequestWithData("ToggleInputMute", map[string]interface{}{"inputName": "mic"})
+	if err != nil {
+		t.Errorf("SendRequestWithData error: %v", err)
+	}
+}
+
+func TestToggleRecordingSendsRequest(t *testing.T) {
+	mock := newMockOBS()
+	mock.start()
+	defer mock.stop()
+
+	client := connectedClient(t, mock)
+	defer client.Close()
+
+	client.ToggleRecording()
+}
+
+func TestTogglePauseSendsRequest(t *testing.T) {
+	mock := newMockOBS()
+	mock.start()
+	defer mock.stop()
+
+	client := connectedClient(t, mock)
+	defer client.Close()
+
+	client.TogglePause()
+}
+
+func TestToggleStreamingSendsRequest(t *testing.T) {
+	mock := newMockOBS()
+	mock.start()
+	defer mock.stop()
+
+	client := connectedClient(t, mock)
+	defer client.Close()
+
+	client.ToggleStreaming()
+}
+
+func TestToggleReplayBufferSendsRequest(t *testing.T) {
+	mock := newMockOBS()
+	mock.start()
+	defer mock.stop()
+
+	client := connectedClient(t, mock)
+	defer client.Close()
+
+	client.ToggleReplayBuffer()
+}
+
+func TestSaveReplaySendsRequest(t *testing.T) {
+	mock := newMockOBS()
+	mock.start()
+	defer mock.stop()
+
+	client := connectedClient(t, mock)
+	defer client.Close()
+
+	client.SaveReplay()
+}
+
+func TestToggleMuteMicSkipsWhenEmpty(t *testing.T) {
+	mock := newMockOBS()
+	mock.start()
+	defer mock.stop()
+
+	client := connectedClient(t, mock)
+	defer client.Close()
+
+	client.ToggleMuteMic("")
+}
+
+func TestToggleMuteMicSendsRequest(t *testing.T) {
+	mock := newMockOBS()
+	mock.start()
+	defer mock.stop()
+
+	client := connectedClient(t, mock)
+	defer client.Close()
+
+	client.ToggleMuteMic("Microphone")
+}
+
+func TestToggleStudioModeSendsRequest(t *testing.T) {
+	mock := newMockOBS()
+	mock.start()
+	defer mock.stop()
+
+	client := connectedClient(t, mock)
+	defer client.Close()
+
+	client.ToggleStudioMode()
+	if !client.studioModeEnabled.Load() {
+		t.Error("expected studioModeEnabled to be true after toggle")
+	}
+}
+
+func TestScreenshotSendsRequest(t *testing.T) {
+	mock := newMockOBS()
+	mock.start()
+	defer mock.stop()
+
+	client := connectedClient(t, mock)
+	defer client.Close()
+
+	client.Screenshot("", t.TempDir())
+}
+
 func TestSendRequestWithDataReconnectPathNoDeadlock(t *testing.T) {
 	mock := newMockOBS()
 	mock.start()
