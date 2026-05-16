@@ -244,7 +244,6 @@ func NewOBSClient(wsURL string) *OBSClient {
 
 func (c *OBSClient) Connect() error {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 
 	if c.conn != nil {
 		c.conn.Close()
