@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -138,7 +139,6 @@ func getKeyCode(keyName string) uint16 {
 	return 0
 }
 
-// OBS WebSocket message structures
 type HelloMessage struct {
 	Op int `json:"op"`
 	D  struct {
@@ -170,7 +170,6 @@ type ResponseMessage struct {
 	} `json:"d"`
 }
 
-// Config file structures
 type HotkeyConfig struct {
 	ToggleRecording  string `json:"toggle_recording"`
 	TogglePause      string `json:"toggle_pause"`
@@ -190,7 +189,6 @@ type AppConfig struct {
 	MicName          string       `json:"mic_name"`
 }
 
-// Key code mappings
 var keyNames = map[uint16]string{
 	evdev.KEY_SCROLLLOCK: "scroll lock",
 	evdev.KEY_PAUSE:      "pause",
@@ -241,13 +239,11 @@ type OBSClient struct {
 	studioModeEnabled atomic.Bool
 	studioModeQueried atomic.Bool
 	wsURL             string
-	mu                sync.Mutex // protects conn during read/write
+	mu                sync.Mutex
 }
 
 func NewOBSClient(wsURL string) *OBSClient {
-	c := &OBSClient{
-		wsURL: wsURL,
-	}
+	c := &OBSClient{wsURL: wsURL}
 	c.connected.Store(false)
 	c.studioModeEnabled.Store(false)
 	c.studioModeQueried.Store(false)
@@ -282,11 +278,7 @@ func (c *OBSClient) Connect() error {
 
 	identify := IdentifyMessage{
 		Op: 1,
-		D: struct {
-			RpcVersion int `json:"rpcVersion"`
-		}{
-			RpcVersion: 1,
-		},
+		D:  IdentifyMessageData{RpcVersion: 1},
 	}
 
 	if err := conn.WriteJSON(identify); err != nil {
@@ -457,9 +449,7 @@ func (c *OBSClient) ToggleMuteMic(inputName string) {
 		return
 	}
 	log.Println("Toggling mic mute...")
-	reqData := map[string]interface{}{
-		"inputName": inputName,
-	}
+	reqData := map[string]interface{}{"inputName": inputName}
 	if err := c.SendRequestWithData("ToggleInputMute", reqData); err != nil {
 		log.Printf("Error toggling mic mute: %v", err)
 	}
@@ -472,9 +462,7 @@ func (c *OBSClient) ToggleStudioMode() {
 		c.QueryStudioMode()
 	}
 	newState := !c.studioModeEnabled.Load()
-	reqData := map[string]interface{}{
-		"studioModeEnabled": newState,
-	}
+	reqData := map[string]interface{}{"studioModeEnabled": newState}
 	if err := c.SendRequestWithData("SetStudioModeEnabled", reqData); err != nil {
 		log.Printf("Error toggling studio mode: %v", err)
 	} else {
@@ -528,7 +516,7 @@ func findKeyboardDevices() ([]*evdev.InputDevice, []chan evdev.InputEvent, error
 
 		hasKeyboard := false
 		for capType := range device.Capabilities {
-			if capType.Type == 1 { // EV_KEY
+			if capType.Type == 1 {
 				hasKeyboard = true
 				break
 			}
@@ -555,8 +543,7 @@ type hotkeyBinding struct {
 }
 
 func isAutostartEnabled() bool {
-	err := exec.Command("systemctl", "--user", "is-enabled", "obs-hotkey.service").Run()
-	return err == nil
+	return exec.Command("systemctl", "--user", "is-enabled", "obs-hotkey.service").Run() == nil
 }
 
 func runningUnderSystemd() bool {
@@ -639,9 +626,7 @@ func runSetup(configPath string) {
 	}
 
 	fmt.Println("Service enabled. Starting now...")
-	if err := exec.Command("systemctl", "--user", "start", "obs-hotkey.service").Run(); err != nil {
-		log.Printf("Warning: failed to start service: %v", err)
-	}
+	exec.Command("systemctl", "--user", "start", "obs-hotkey.service").Run()
 
 	fmt.Println("")
 	fmt.Println("=== Setup Complete! ===")
@@ -657,9 +642,9 @@ func runSetup(configPath string) {
 	fmt.Println("3. VERIFY IT'S WORKING:")
 	fmt.Println("   - Press Scroll Lock — recording should stop/resume")
 	fmt.Println("")
-	fmt.Println("4. VIEW LOGS:     journalctl --user -u obs-hotkey.service -f")
-	fmt.Println("5. SERVICE:       systemctl --user restart obs-hotkey.service")
-	fmt.Println("6. CUSTOMIZE:     ~/.config/obs-hotkey/hotkeys.json")
+	fmt.Println("4. VIEW LOGS:  journalctl --user -u obs-hotkey.service -f")
+	fmt.Println("5. SERVICE:     systemctl --user restart obs-hotkey.service")
+	fmt.Println("6. CUSTOMIZE:   ~/.config/obs-hotkey/hotkeys.json")
 }
 
 func runTeardown(purge bool) {
@@ -691,37 +676,34 @@ func runStatus(configPath string) {
 	fmt.Println("=== OBS Hotkey Status ===")
 	fmt.Println("")
 
-	autostart := isAutostartEnabled()
-	if autostart {
+	if isAutostartEnabled() {
 		fmt.Println("  Auto-start: enabled (systemd user service)")
 	} else {
 		fmt.Println("  Auto-start: not configured")
 		fmt.Println("               Run 'obs-hotkey setup' to enable")
 	}
 
-	fmt.Print("  Input group: ")
 	if inInputGroup() {
-		fmt.Println("✓ member")
+		fmt.Println("  Input group: ✓ member")
 	} else {
-		fmt.Println("✗ not a member")
+		fmt.Println("  Input group: ✗ not a member")
 	}
 
-	dirPath := filepath.Dir(configPath)
 	if _, err := os.Stat(configPath); err == nil {
 		fmt.Printf("  Config:      ✓ %s\n", configPath)
 	} else {
 		fmt.Printf("  Config:      ✗ not found (%s)\n", configPath)
 	}
 
+	dirPath := filepath.Dir(configPath)
 	if _, err := os.Stat(dirPath); err == nil {
 		fmt.Printf("  Config dir: ✓ %s\n", dirPath)
 	} else {
-		fmt.Printf("  Config dir: ✗ not found\n")
+		fmt.Println("  Config dir: ✗ not found")
 	}
 
 	fmt.Print("  OBS WS:     ")
-	conn, err := net.DialTimeout("tcp", "localhost:4455", 1*time.Second)
-	if err == nil {
+	if conn, err := net.DialTimeout("tcp", "localhost:4455", 1*time.Second); err == nil {
 		conn.Close()
 		fmt.Println("✓ reachable (port 4455)")
 	} else {
@@ -729,12 +711,11 @@ func runStatus(configPath string) {
 	}
 
 	fmt.Println("")
-	if !autostart {
+	if !isAutostartEnabled() {
 		fmt.Println("Run 'obs-hotkey setup' to enable auto-start on login.")
 	}
 }
 
-// printBanner prints the startup banner with hotkey bindings and autostart state.
 func printBanner(cfg AppConfig, bindings []hotkeyBinding, autostart bool) {
 	fmt.Println("")
 	fmt.Println("OBS Hotkey Controller - Wayland compatible")
@@ -743,8 +724,7 @@ func printBanner(cfg AppConfig, bindings []hotkeyBinding, autostart bool) {
 		if b.keyName == "" {
 			continue
 		}
-		keyCode := getKeyCode(b.keyName)
-		if keyCode == 0 {
+		if getKeyCode(b.keyName) == 0 {
 			continue
 		}
 		fmt.Printf("  %-12s → %s\n", b.keyName, b.label)
@@ -760,9 +740,6 @@ func printBanner(cfg AppConfig, bindings []hotkeyBinding, autostart bool) {
 		fmt.Println("Listening for hotkeys... (Ctrl+C to exit)")
 	}
 }
-
-// net package is needed for runStatus's TCP dial check
-import "net"
 
 func runDaemon(configPath string) {
 	dirPath := filepath.Dir(configPath)
@@ -822,6 +799,7 @@ func runDaemon(configPath string) {
 	}
 
 	autostart := isAutostartEnabled()
+
 	for _, b := range bindings {
 		if b.keyName == "" {
 			continue
@@ -960,13 +938,16 @@ func main() {
 	args := os.Args[2:]
 
 	var configPath string
+	filteredArgs := make([]string, 0, len(args))
 	for i := 0; i < len(args); i++ {
 		if args[i] == "--config" && i+1 < len(args) {
 			configPath = args[i+1]
-			args = append(args[:i], args[i+2:]...)
-			i--
+			i++
+		} else {
+			filteredArgs = append(filteredArgs, args[i])
 		}
 	}
+	args = filteredArgs
 
 	if configPath == "" {
 		configPath = getConfigPath("")
@@ -982,8 +963,7 @@ func main() {
 				purge = true
 			}
 		}
-		_ = purge
-		runTeardown(false)
+		runTeardown(purge)
 	case "status":
 		runStatus(configPath)
 	default:
