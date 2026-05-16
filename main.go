@@ -362,12 +362,12 @@ func (c *OBSClient) SendRequestWithData(requestType string, requestData map[stri
 	defer c.mu.Unlock()
 
 	if !c.connected.Load() {
-		c.mu.Unlock() // Release before reconnect
+		c.mu.Unlock()
 		log.Println("Not connected to OBS. Reconnecting...")
 		if err := c.Connect(); err != nil {
 			return err
 		}
-		c.mu.Lock() // Re-acquire after reconnect
+		c.mu.Lock()
 	}
 
 	request := RequestMessage{
