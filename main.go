@@ -148,10 +148,12 @@ type HelloMessage struct {
 }
 
 type IdentifyMessage struct {
-	Op int `json:"op"`
-	D  struct {
-		RpcVersion int `json:"rpcVersion"`
-	} `json:"d"`
+	Op   int `json:"op"`
+	D    IdentifyMessageData `json:"d"`
+}
+
+type IdentifyMessageData struct {
+	RpcVersion int `json:"rpcVersion"`
 }
 
 type RequestMessage struct {
