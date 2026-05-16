@@ -369,7 +369,6 @@ func (c *OBSClient) SendRequest(requestType string) error {
 
 func (c *OBSClient) SendRequestWithData(requestType string, requestData map[string]interface{}) error {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 
 	if !c.connected.Load() {
 		c.mu.Unlock()
@@ -395,18 +394,20 @@ func (c *OBSClient) SendRequestWithData(requestType string, requestData map[stri
 
 	if err := c.conn.WriteJSON(request); err != nil {
 		c.connected.Store(false)
+		c.mu.Unlock()
 		return fmt.Errorf("failed to send request: %w", err)
 	}
 
-	// Read response (but don't block)
 	var response map[string]interface{}
 	c.conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	if err := c.conn.ReadJSON(&response); err != nil {
 		c.connected.Store(false)
 		c.conn.SetReadDeadline(time.Time{})
+		c.mu.Unlock()
 		return fmt.Errorf("failed to read response: %w", err)
 	}
 	c.conn.SetReadDeadline(time.Time{})
+	c.mu.Unlock()
 
 	return nil
 }
