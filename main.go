@@ -24,11 +24,9 @@ const (
 	configFileName   = "hotkeys.json"
 )
 
-func getConfigPath() string {
-	configFlag := flag.String("config", "", "Path to config file (overrides default location)")
-
-	if *configFlag != "" {
-		return *configFlag
+func getConfigPath(configFlag string) string {
+	if configFlag != "" {
+		return configFlag
 	}
 
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
@@ -504,7 +502,7 @@ func main() {
 
 	configFlag := flag.String("config", "", "Path to config file (overrides default location)")
 	flag.Parse()
-	configPath := getConfigPath()
+	configPath := getConfigPath(*configFlag)
 	dirPath := filepath.Dir(configPath)
 
 	if err := ensureConfig(dirPath, configPath); err != nil {
