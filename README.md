@@ -1,4 +1,4 @@
-# OBS Wayland Hotkey
+# OBS Hotkey
 
 A lightweight Go binary for controlling OBS Studio with global hotkeys on Wayland (and X11).
 
@@ -6,39 +6,40 @@ A lightweight Go binary for controlling OBS Studio with global hotkeys on Waylan
 
 ## Features
 
-- ✅ **Wayland & X11 Support** - Works on both display servers
-- ✅ **Single Binary** - No dependencies, just 7.7MB
-- ✅ **Global Hotkeys** - Works even when OBS is not in focus
-- ✅ **Auto-start on Login** - Set it and forget it
-- ✅ **Auto-reconnect** - Automatically reconnects to OBS if it restarts
-- ✅ **Multi-keyboard** - Monitors all connected keyboards
-- ✅ **Low Resource Usage** - ~10-20MB RAM, minimal CPU
+- **Wayland & X11 Support** - Works on both display servers
+- **Single Binary** - No dependencies, just ~7MB
+- **Global Hotkeys** - Works even when OBS is not in focus
+- **Auto-start on Login** - Set it and forget it
+- **Auto-reconnect** - Automatically reconnects to OBS if it restarts
+- **Multi-keyboard** - Monitors all connected keyboards
+- **Low Resource Usage** - ~10-20MB RAM, minimal CPU
+- **F13-F24 Support** - Use mouse extra keys as a stream dock
 
-## Quick Install (Recommended)
+## Quick Install
 
 ### NixOS
 
-Add to your `configuration.nix` or use the flake:
+Add to your flake inputs and configuration:
 
 ```nix
-# Using flake (recommended)
 inputs.obs-hotkey.url = "path:/path/to/obs-wayland-hotkey";
 
 # In your configuration:
 imports = [ inputs.obs-hotkey.nixosModules.default ];
 
 services.obs-hotkey.enable = true;
+services.obs-hotkey.user = "your_username";
 ```
 
 Or build directly:
 ```bash
 nix build
-sudo ./result/bin/obs-wayland-hotkey
+./result/bin/obs-hotkey
 ```
 
 ### Other Linux
 
-Run the installer to set up auto-start:
+Run the installer:
 
 ```bash
 chmod +x install.sh
@@ -48,9 +49,10 @@ chmod +x install.sh
 This will:
 - Build the binary (if needed)
 - Install to `/usr/local/bin/`
-- Configure passwordless sudo
+- Add your user to the `input` group for keyboard access
 - Create a systemd service that starts automatically on login
 - Enable and start the service
+- Migrate from any old `obs-wayland-hotkey` service if found
 
 **After installation, the hotkey controller will start automatically when you log in!**
 
@@ -59,7 +61,7 @@ This will:
 - **Scroll Lock** - Toggle recording start/stop
 - **Pause** - Toggle recording pause/resume
 
-**Note:** Default hotkeys are set in the config file at `~/.config/obs-hotkey/hotkeys.json`. On first run, a default config is created automatically.
+Default hotkeys are set in the config file at `~/.config/obs-hotkey/hotkeys.json`. On first run, a default config is created automatically.
 
 ## Manual Setup
 
@@ -70,7 +72,7 @@ chmod +x build.sh
 ./build.sh
 ```
 
-This creates the `obs-hotkey-go` binary (~7.7MB).
+This creates the `obs-hotkey` binary (~7MB).
 
 ### 2. Configure OBS
 
@@ -83,50 +85,50 @@ This creates the `obs-hotkey-go` binary (~7.7MB).
 ### 3. Run Manually
 
 ```bash
-sudo ./obs-hotkey-go
+./obs-hotkey
 ```
 
-You'll need sudo for keyboard device access (`/dev/input/`).
+You need to be in the `input` group for keyboard device access (`/dev/input/`):
+```bash
+sudo usermod -aG input $(whoami)
+# Log out and back in for group changes to take effect
+```
 
 ## System-wide Installation
 
 ### Install Binary
 
 ```bash
-sudo cp obs-hotkey-go /usr/local/bin/
-sudo chmod +x /usr/local/bin/obs-hotkey-go
+sudo cp obs-hotkey /usr/local/bin/
+sudo chmod +x /usr/local/bin/obs-hotkey
 ```
 
 Then run from anywhere:
 ```bash
-sudo obs-hotkey-go
+obs-hotkey
 ```
 
 ### Autostart with Systemd (Manual)
 
 If you didn't use the installer, you can manually set up auto-start:
 
-1. **Configure passwordless sudo:**
+1. **Add your user to the input group:**
    ```bash
-   sudo tee /etc/sudoers.d/obs-hotkey > /dev/null << 'EOF'
-   # Allow your_username to run obs-hotkey-go without password
-   your_username ALL=(root) NOPASSWD: /usr/local/bin/obs-hotkey-go
-   EOF
+   sudo usermod -aG input $(whoami)
    ```
-   
-   Replace `your_username` with your actual username.
+   Log out and back in for this to take effect.
 
 2. **Create systemd service** `~/.config/systemd/user/obs-hotkey.service`:
    ```bash
    mkdir -p ~/.config/systemd/user
    cat > ~/.config/systemd/user/obs-hotkey.service << 'EOF'
    [Unit]
-   Description=OBS Hotkey Controller (Wayland)
+   Description=OBS Hotkey Controller
    After=graphical-session.target
 
    [Service]
    Type=simple
-   ExecStart=/usr/bin/sudo /usr/local/bin/obs-hotkey-go
+   ExecStart=/usr/local/bin/obs-hotkey --config /home/YOUR_USERNAME/.config/obs-hotkey/hotkeys.json
    Restart=on-failure
    RestartSec=10s
 
@@ -134,6 +136,8 @@ If you didn't use the installer, you can manually set up auto-start:
    WantedBy=graphical-session.target
    EOF
    ```
+
+   Replace `YOUR_USERNAME` with your actual username.
 
 3. **Enable and start:**
    ```bash
@@ -143,8 +147,6 @@ If you didn't use the installer, you can manually set up auto-start:
    ```
 
 ## Managing the Service
-
-After installation, use these commands:
 
 ```bash
 # Check status
@@ -235,21 +237,22 @@ journalctl --user -u obs-hotkey.service -n 50
 ```
 
 Common issues:
-- **"must be run as root"** - Passwordless sudo not configured correctly
 - **"failed to connect to OBS"** - OBS not running or WebSocket not enabled
-- **"No keyboard devices found"** - Permission issue with `/dev/input/`
+- **"No keyboard devices found"** - Not in the `input` group
+- **"unknown key"** - Key name in config doesn't match a supported key
 
-### "must be run as root"
+### "No keyboard devices found"
 
-Make sure passwordless sudo is configured:
+You need to be in the `input` group to access `/dev/input/` devices:
 ```bash
-sudo cat /etc/sudoers.d/obs-hotkey
+groups $(whoami)
 ```
 
-Should show:
+If `input` is not listed:
+```bash
+sudo usermod -aG input $(whoami)
 ```
-your_username ALL=(root) NOPASSWD: /usr/local/bin/obs-hotkey-go
-```
+Then log out and back in.
 
 ### "failed to connect to OBS"
 
@@ -271,7 +274,7 @@ your_username ALL=(root) NOPASSWD: /usr/local/bin/obs-hotkey-go
 Stop the service and run manually to see output:
 ```bash
 systemctl --user stop obs-hotkey.service
-sudo /usr/local/bin/obs-hotkey-go
+/usr/local/bin/obs-hotkey --config ~/.config/obs-hotkey/hotkeys.json
 ```
 
 Press Ctrl+C to stop, then restart the service:
@@ -293,16 +296,16 @@ The program:
 
 ```bash
 # Current system
-go build -o obs-hotkey-go main.go
+go build -mod=vendor -o obs-hotkey main.go
 
 # Raspberry Pi (32-bit ARM)
-GOARCH=arm GOARM=7 go build -o obs-hotkey-go-arm main.go
+GOARCH=arm GOARM=7 go build -mod=vendor -o obs-hotkey-arm main.go
 
 # 64-bit ARM
-GOARCH=arm64 go build -o obs-hotkey-go-arm64 main.go
+GOARCH=arm64 go build -mod=vendor -o obs-hotkey-arm64 main.go
 
 # AMD64
-GOARCH=amd64 go build -o obs-hotkey-go-amd64 main.go
+GOARCH=amd64 go build -mod=vendor -o obs-hotkey-amd64 main.go
 ```
 
 ## Adding New Actions
@@ -332,7 +335,7 @@ To add a new OBS WebSocket action:
 3. Rebuild and reinstall:
    ```bash
    ./build.sh
-   sudo cp obs-hotkey-go /usr/local/bin/
+   sudo cp obs-hotkey /usr/local/bin/
    systemctl --user restart obs-hotkey.service
    ```
 
@@ -343,7 +346,7 @@ For the full list of available OBS WebSocket requests, see the [Available Action
 - Linux (Wayland or X11)
 - OBS Studio 28+ with WebSocket enabled
 - Go 1.21+ (for building)
-- Root/sudo access (for running)
+- Membership in the `input` group (for keyboard device access)
 
 ## Uninstall
 
@@ -354,11 +357,13 @@ systemctl --user disable obs-hotkey.service
 
 # Remove files
 rm ~/.config/systemd/user/obs-hotkey.service
-sudo rm /usr/local/bin/obs-hotkey-go
-sudo rm /etc/sudoers.d/obs-hotkey
+sudo rm /usr/local/bin/obs-hotkey
 
 # Reload systemd
 systemctl --user daemon-reload
+
+# Optional: remove config
+# rm -rf ~/.config/obs-hotkey
 ```
 
 ## License
