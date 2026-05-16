@@ -165,12 +165,55 @@ func (c *OBSClient) Connect() error {
 	if response.Op == 2 {
 		log.Println("Successfully identified to OBS WebSocket")
 		c.connected = true
+		c.QueryStudioMode()
 	} else {
 		return fmt.Errorf("failed to identify to OBS")
 	}
-	
 
 	return nil
+}
+
+func (c *OBSClient) QueryStudioMode() {
+	type studioModeResponse struct {
+		Op   int `json:"op"`
+		D    struct {
+			RequestID    string `json:"requestId"`
+			RequestStatus struct {
+				Result bool   `json:"result"`
+				Code   int    `json:"code"`
+			} `json:"requestStatus"`
+			ResponseData struct {
+				StudioModeEnabled bool `json:"studioModeEnabled"`
+			} `json:"responseData"`
+		} `json:"d"`
+	}
+
+	request := RequestMessage{
+		Op: 6,
+		D: struct {
+			RequestType string                 `json:"requestType"`
+			RequestID   string                 `json:"requestId"`
+			RequestData map[string]interface{} `json:"requestData,omitempty"`
+		}{
+			RequestType: "GetStudioModeEnabled",
+			RequestID:   fmt.Sprintf("GetStudioModeEnabled_%d", time.Now().Unix()),
+		},
+	}
+
+	if err := c.conn.WriteJSON(request); err != nil {
+		log.Printf("Failed to query studio mode: %v", err)
+		return
+	}
+
+	var response studioModeResponse
+	if err := c.conn.ReadJSON(&response); err != nil {
+		log.Printf("Failed to read studio mode response: %v", err)
+		return
+	}
+
+	c.studioModeEnabled = response.D.ResponseData.StudioModeEnabled
+	c.studioModeQueried = true
+	log.Printf("Studio mode is currently: %v", c.studioModeEnabled)
 }
 
 func (c *OBSClient) SendRequest(requestType string) error {
