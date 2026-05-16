@@ -41,8 +41,9 @@ type IdentifyMessage struct {
 type RequestMessage struct {
 	Op int `json:"op"`
 	D  struct {
-		RequestType string `json:"requestType"`
-		RequestID   string `json:"requestId"`
+		RequestType string                 `json:"requestType"`
+		RequestID   string                 `json:"requestId"`
+		RequestData map[string]interface{} `json:"requestData,omitempty"`
 	} `json:"d"`
 }
 
@@ -173,6 +174,10 @@ func (c *OBSClient) Connect() error {
 }
 
 func (c *OBSClient) SendRequest(requestType string) error {
+	return c.SendRequestWithData(requestType, nil)
+}
+
+func (c *OBSClient) SendRequestWithData(requestType string, requestData map[string]interface{}) error {
 	if !c.connected {
 		log.Println("Not connected to OBS. Reconnecting...")
 		if err := c.Connect(); err != nil {
@@ -185,11 +190,13 @@ func (c *OBSClient) SendRequest(requestType string) error {
 	request := RequestMessage{
 		Op: 6,
 		D: struct {
-			RequestType string `json:"requestType"`
-			RequestID   string `json:"requestId"`
+			RequestType string                 `json:"requestType"`
+			RequestID   string                 `json:"requestId"`
+			RequestData map[string]interface{} `json:"requestData,omitempty"`
 		}{
 			RequestType: requestType,
 			RequestID:   fmt.Sprintf("%s_%d", requestType, time.Now().Unix()),
+			RequestData: requestData,
 		},
 	}
 
@@ -220,7 +227,75 @@ func (c *OBSClient) TogglePause() {
 	if err := c.SendRequest("ToggleRecordPause"); err != nil {
 		log.Printf("Error toggling pause: %v", err)
 	}
-	
+}
+
+func (c *OBSClient) ToggleStreaming() {
+	log.Println("Toggling stream...")
+	if err := c.SendRequest("ToggleStream"); err != nil {
+		log.Printf("Error toggling stream: %v", err)
+	}
+}
+
+func (c *OBSClient) Screenshot(sourceName, saveDir string) {
+	log.Println("Taking screenshot...")
+	reqData := map[string]interface{}{
+		"imageFormat":    "png",
+		"imageFilePath":   fmt.Sprintf("%s/obs-screenshot-%d.png", saveDir, time.Now().Unix()),
+	}
+	if sourceName != "" {
+		reqData["sourceName"] = sourceName
+	}
+	if err := c.SendRequestWithData("SaveSourceScreenshot", reqData); err != nil {
+		log.Printf("Error taking screenshot: %v", err)
+	} else {
+		log.Printf("Screenshot saved to: %s", reqData["imageFilePath"])
+	}
+}
+
+func (c *OBSClient) ToggleMuteMic(inputName string) {
+	if inputName == "" {
+		log.Println("Mic input name not configured, skipping mute toggle")
+		return
+	}
+	log.Println("Toggling mic mute...")
+	reqData := map[string]interface{}{
+		"inputName": inputName,
+	}
+	if err := c.SendRequestWithData("ToggleInputMute", reqData); err != nil {
+		log.Printf("Error toggling mic mute: %v", err)
+	}
+}
+
+func (c *OBSClient) ToggleStudioMode() {
+	log.Println("Toggling studio mode...")
+	if !c.studioModeQueried {
+		log.Println("Studio mode state unknown, querying...")
+		c.QueryStudioMode()
+	}
+	newState := !c.studioModeEnabled
+	reqData := map[string]interface{}{
+		"studioModeEnabled": newState,
+	}
+	if err := c.SendRequestWithData("SetStudioModeEnabled", reqData); err != nil {
+		log.Printf("Error toggling studio mode: %v", err)
+	} else {
+		c.studioModeEnabled = newState
+		log.Printf("Studio mode set to: %v", newState)
+	}
+}
+
+func (c *OBSClient) ToggleReplayBuffer() {
+	log.Println("Toggling replay buffer...")
+	if err := c.SendRequest("ToggleReplayBuffer"); err != nil {
+		log.Printf("Error toggling replay buffer: %v", err)
+	}
+}
+
+func (c *OBSClient) SaveReplay() {
+	log.Println("Saving replay buffer...")
+	if err := c.SendRequest("SaveReplayBuffer"); err != nil {
+		log.Printf("Error saving replay: %v", err)
+	}
 }
 
 func (c *OBSClient) Close() {
