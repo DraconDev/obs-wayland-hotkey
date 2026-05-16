@@ -278,7 +278,11 @@ func (c *OBSClient) Connect() error {
 
 	identify := IdentifyMessage{
 		Op: 1,
-		D:  IdentifyMessageData{RpcVersion: 1},
+		D: struct {
+			RpcVersion int `json:"rpcVersion"`
+		}{
+			RpcVersion: 1,
+		},
 	}
 
 	if err := conn.WriteJSON(identify); err != nil {
