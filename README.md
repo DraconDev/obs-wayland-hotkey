@@ -29,6 +29,7 @@ imports = [ inputs.obs-hotkey.nixosModules.default ];
 
 services.obs-hotkey.enable = true;
 services.obs-hotkey.user = "your_username";
+services.obs-hotkey.configFile = "/home/your_username/.config/obs-hotkey/hotkeys.json";  # optional
 ```
 
 Or build and run directly:

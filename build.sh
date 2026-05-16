@@ -4,7 +4,7 @@ set -e
 echo "Building OBS Hotkey..."
 
 if ! command -v go &> /dev/null; then
-    echo "Error: Go is not installed. Please install Go 1.21 or later."
+    echo "Error: Go is not installed. Please install Go 1.22 or later."
     echo "Visit: https://go.dev/doc/install"
     exit 1
 fi
