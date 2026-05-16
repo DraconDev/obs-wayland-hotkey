@@ -296,12 +296,10 @@ func (c *OBSClient) Connect() error {
 	if response.Op == 2 {
 		log.Println("Successfully identified to OBS WebSocket")
 		c.connected.Store(true)
-	}
-	c.mu.Unlock()
-
-	if response.Op == 2 {
+		c.mu.Unlock()
 		c.QueryStudioMode()
 	} else {
+		c.mu.Unlock()
 		return fmt.Errorf("failed to identify to OBS")
 	}
 
