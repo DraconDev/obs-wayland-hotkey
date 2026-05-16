@@ -78,6 +78,7 @@ Type=simple
 ExecStart=${INSTALL_DIR}/obs-hotkey --config $HOME/.config/obs-hotkey/hotkeys.json
 Restart=on-failure
 RestartSec=10s
+SupplementaryGroups=input
 
 [Install]
 WantedBy=graphical-session.target
