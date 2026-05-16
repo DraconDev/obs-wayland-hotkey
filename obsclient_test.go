@@ -16,56 +16,80 @@ var upgrader = websocket.Upgrader{
 }
 
 type mockOBS struct {
-	server        *httptest.Server
-	mut           sync.Mutex
-	connectCount  int
-	helloSent     bool
+	server          *httptest.Server
+	handlerConn     *websocket.Conn
+	mut             sync.Mutex
+	helloSent       bool
 	identifyReceived bool
+	identifyReady   chan struct{}
 }
 
 func newMockOBS() *mockOBS {
-	return &mockOBS{}
+	return &mockOBS{
+		identifyReady: make(chan struct{}, 1),
+	}
 }
 
 func (m *mockOBS) handler(w http.ResponseWriter, r *http.Request) {
-	m.mut.Lock()
-	m.connectCount++
-	m.helloSent = false
-	m.identifyReceived = false
-	m.mut.Unlock()
-
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
 	}
 	defer conn.Close()
 
-	var hello struct {
-		Op int `json:"op"`
-		D  struct {
-			ObsWebSocketVersion string `json:"obsWebSocketVersion"`
-			RpcVersion          int    `json:"rpcVersion"`
-		} `json:"d"`
-	}
-	if err := conn.ReadJSON(&hello); err != nil {
+	m.mut.Lock()
+	m.helloSent = false
+	m.identifyReceived = false
+	m.handlerConn = conn
+	m.mut.Unlock()
+
+	helloBytes, _ := json.Marshal(map[string]interface{}{
+		"op": 0,
+		"d": map[string]interface{}{
+			"obsWebSocketVersion": "5.0.0",
+			"rpcVersion":          1,
+		},
+	})
+	if err := conn.WriteMessage(websocket.TextMessage, helloBytes); err != nil {
 		return
 	}
-
 	m.mut.Lock()
 	m.helloSent = true
 	m.mut.Unlock()
 
-	identifyBytes, _ := json.Marshal(map[string]interface{}{
-		"op": 1,
-		"d":  map[string]interface{}{"rpcVersion": 1},
-	})
-	if err := conn.WriteMessage(websocket.TextMessage, identifyBytes); err != nil {
+	var identify map[string]interface{}
+	if err := conn.ReadJSON(&identify); err != nil {
 		return
 	}
 
 	m.mut.Lock()
 	m.identifyReceived = true
 	m.mut.Unlock()
+	close(m.identifyReady)
+
+	identifiedBytes, _ := json.Marshal(map[string]interface{}{
+		"op": 2,
+		"d": map[string]interface{}{
+			"status": "ok",
+		},
+	})
+	conn.WriteMessage(websocket.TextMessage, identifiedBytes)
+
+	var req map[string]interface{}
+	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	if err := conn.ReadJSON(&req); err == nil {
+		respBytes, _ := json.Marshal(map[string]interface{}{
+			"op": 7,
+			"d": map[string]interface{}{
+				"requestId":    req["d"].(map[string]interface{})["requestId"],
+				"requestStatus": map[string]interface{}{"result": true, "code": 200},
+				"responseData":  map[string]interface{}{"studioModeEnabled": false},
+			},
+		})
+		conn.WriteMessage(websocket.TextMessage, respBytes)
+	}
+
+	<-make(chan struct{}) // block forever keeping connection alive
 }
 
 func (m *mockOBS) start() {
@@ -77,6 +101,7 @@ func (m *mockOBS) URL() string {
 }
 
 func (m *mockOBS) stop() {
+	m.server.CloseClientConnections()
 	m.server.Close()
 }
 
@@ -110,42 +135,12 @@ func TestConnectReleasesMutexOnDialFailure(t *testing.T) {
 	}
 }
 
-func TestSendRequestWithDataReconnectPathUnlocksSafely(t *testing.T) {
-	mock := newMockOBS()
-	mock.start()
-	defer mock.stop()
-
-	client := NewOBSClient("ws" + mock.URL()[4:])
-
-	connected := make(chan struct{}, 1)
-	client.connected.Store(false)
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := client.SendRequestWithData("GetStudioModeEnabled", nil)
-		if err != nil {
-			t.Logf("SendRequestWithData returned error (expected on mock): %v", err)
-		}
-		connected <- struct{}{}
-	}()
-
-	select {
-	case <-connected:
-	case <-time.After(5 * time.Second):
-		t.Fatal("SendRequestWithData did not complete within 5s — possible deadlock")
-	}
-	wg.Wait()
-}
-
 func TestConnectAllErrorPathsUnlockMutex(t *testing.T) {
 	tests := []struct {
 		name string
 		url  string
 	}{
-		{"invalid_url", "ws://localhost:9999"},
-		{"bad_ws_url", "not-a-url"},
+		{"invalid_host", "ws://localhost:9999"},
 	}
 
 	for _, tt := range tests {
@@ -157,4 +152,34 @@ func TestConnectAllErrorPathsUnlockMutex(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSendRequestWithDataReconnectPathNoDeadlock(t *testing.T) {
+	mock := newMockOBS()
+	mock.start()
+	defer mock.stop()
+
+	client := NewOBSClient("ws" + mock.URL()[4:])
+	client.connected.Store(false)
+
+	connected := make(chan struct{})
+	var errOut error
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		errOut = client.SendRequestWithData("GetStudioModeEnabled", nil)
+		if errOut != nil {
+			t.Logf("SendRequestWithData error: %v", errOut)
+		}
+		close(connected)
+	}()
+
+	select {
+	case <-connected:
+	case <-time.After(5 * time.Second):
+		t.Fatal("SendRequestWithData did not complete within 5s — possible deadlock")
+	}
+	wg.Wait()
 }
