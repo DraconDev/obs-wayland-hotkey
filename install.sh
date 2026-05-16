@@ -65,8 +65,6 @@ echo "Creating systemd service..."
 SERVICE_FILE="$HOME/.config/systemd/user/obs-hotkey.service"
 mkdir -p "$HOME/.config/systemd/user"
 
-EXEC_LINE="exec $INSTALL_DIR/obs-hotkey --config $HOME/.config/obs-hotkey/hotkeys.json"
-
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=OBS Hotkey Controller
