@@ -669,7 +669,9 @@ func main() {
 		case <-sigChan:
 			log.Println("\nShutting down...")
 			for _, device := range devices {
-				device.File.Close()
+				if device != nil {
+					device.File.Close()
+				}
 			}
 			return
 
