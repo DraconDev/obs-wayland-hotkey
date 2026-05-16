@@ -502,7 +502,7 @@ func (c *OBSClient) Close() {
 	}
 }
 
-var eventDevicePath = regexp.MustCompile(`^/dev/input/event(\d+)$`)
+var eventDevicePath = regexp.MustCompile(`^event(\d+)$`)
 
 func findKeyboardDevices() ([]*evdev.InputDevice, []chan evdev.InputEvent, error) {
 	keyboards := []*evdev.InputDevice{}
