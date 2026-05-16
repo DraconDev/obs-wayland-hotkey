@@ -63,7 +63,7 @@ if systemctl --user is-enabled obs-wayland-hotkey.service &>/dev/null; then
     echo ""
 fi
 
-# Create systemd service (no sudo needed - uses input group)
+# Create systemd user service (no SupplementaryGroups — user must be in input group for /dev/input access)
 echo "Creating systemd service..."
 SERVICE_FILE="$HOME/.config/systemd/user/obs-hotkey.service"
 mkdir -p "$HOME/.config/systemd/user"
@@ -78,7 +78,6 @@ Type=simple
 ExecStart=${INSTALL_DIR}/obs-hotkey --config $HOME/.config/obs-hotkey/hotkeys.json
 Restart=on-failure
 RestartSec=10s
-SupplementaryGroups=input
 
 [Install]
 WantedBy=graphical-session.target

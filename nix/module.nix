@@ -32,7 +32,6 @@ in
         ExecStart = "${self.packages.${pkgs.system}.default}/bin/obs-hotkey --config ${cfg.configFile}";
         Restart = "on-failure";
         RestartSec = "10s";
-        SupplementaryGroups = [ "input" ];
       };
     };
   };
