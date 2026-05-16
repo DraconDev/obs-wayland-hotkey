@@ -1,52 +1,33 @@
-*.env filter=demon diff=demon
-*.lock binary
-*.png binary
-*.jpg binary
-*.mp4 binary
-*.gif binary
-*.ico binary
-*.woff binary
-*.woff2 binary
-
-# --- BEGIN DEMON MANAGED BLOCK ---
-# DANGER: Managed by Demon. Manual changes inside this block will be overwritten.
-# Purpose: settings for filters and binary files
-*.env filter=demon diff=demon
-*.gif binary
-*.ico binary
-*.jpg binary
-*.json filter=demon diff=demon
-*.lock binary
-*.mp4 binary
-*.png binary
-*.toml filter=demon diff=demon
-*.woff binary
-*.woff2 binary
-*.yaml filter=demon diff=demon
-*.yml filter=demon diff=demon
-# --- END DEMON MANAGED BLOCK ---
 # --- BEGIN DRACON MANAGED BLOCK ---
 # managed by dracon-warden
+*.age filter=dracon diff=dracon merge=dracon
 *.env filter=dracon diff=dracon merge=dracon
+*.key filter=dracon diff=dracon merge=dracon
+*.pem filter=dracon diff=dracon merge=dracon
+.cargo/config.toml filter=dracon diff=dracon merge=dracon
 .env filter=dracon diff=dracon merge=dracon
 .env.* filter=dracon diff=dracon merge=dracon
 config.json filter=dracon diff=dracon merge=dracon
-*.pem filter=dracon diff=dracon merge=dracon
-*.key filter=dracon diff=dracon merge=dracon
-*.age filter=dracon diff=dracon merge=dracon
-test_secret.txt filter=dracon diff=dracon merge=dracon
+config/licenses.json filter=dracon diff=dracon merge=dracon
+config/licenses.test.json filter=dracon diff=dracon merge=dracon
+config/services.json filter=dracon diff=dracon merge=dracon
+config/services.test.json filter=dracon diff=dracon merge=dracon
+plan/pages/snapshots/*.json filter=dracon diff=dracon merge=dracon
+plan/pages/templates/*.json filter=dracon diff=dracon merge=dracon
 secrets/** filter=dracon diff=dracon merge=dracon
-Cargo.lock -filter -diff -merge
-Cargo.toml -filter -diff -merge
-rust-toolchain.toml -filter -diff -merge
-rustfmt.toml -filter -diff -merge
-clippy.toml -filter -diff -merge
-deny.toml -filter -diff -merge
-.cargo/config.toml -filter -diff -merge
-flake.nix -filter -diff -merge
-flake.lock -filter -diff -merge
-.dracon/data/ -filter -diff -merge
-.dracon/data/keys/ -filter -diff -merge
-.dracon/data/keys/*.pub -filter -diff -merge
-*.pub -filter -diff -merge
+test_secret.txt filter=dracon diff=dracon merge=dracon
+*.events.jsonl -filter
+*.pub -filter
+.dracon/data/ -filter
+.dracon/data/keys/ -filter
+.dracon/data/keys/*.pub -filter
+Cargo.lock -filter
+Cargo.toml -filter
+clippy.toml -filter
+deny.toml -filter
+events.jsonl -filter
+flake.lock -filter
+flake.nix -filter
+rust-toolchain.toml -filter
+rustfmt.toml -filter
 # --- END DRACON MANAGED BLOCK ---
