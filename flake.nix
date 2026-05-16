@@ -25,12 +25,6 @@
             ldflags = [ "-s" "-w" ];
             postInstall = ''
               mv $out/bin/obs-wayland-hotkey $out/bin/obs-hotkey
-              cat > $out/bin/obs-hotkey-install-service << 'WRAPPER'
-              #!/bin/sh
-              exec @out@/bin/obs-hotkey --install-service
-              WRAPPER
-              chmod +x $out/bin/obs-hotkey-install-service
-              substituteInPlace $out/bin/obs-hotkey-install-service --replace '@out@' $out
             '';
           };
         }
@@ -49,10 +43,6 @@
         default = {
           type = "app";
           program = "${self.packages.${system}.default}/bin/obs-hotkey";
-        };
-        "install-service" = {
-          type = "app";
-          program = "${self.packages.${system}.default}/bin/obs-hotkey-install-service";
         };
       });
     };
