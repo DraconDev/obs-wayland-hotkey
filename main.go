@@ -264,21 +264,21 @@ func (c *OBSClient) Connect() error {
 
 	conn, _, err := websocket.DefaultDialer.Dial(c.wsURL, nil)
 	if err != nil {
+		c.mu.Unlock()
 		return fmt.Errorf("failed to connect to OBS: %w", err)
 	}
 
 	c.conn = conn
 
-	// Read hello message
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 	var hello HelloMessage
 	if err := conn.ReadJSON(&hello); err != nil {
+		c.mu.Unlock()
 		return fmt.Errorf("failed to read hello message: %w", err)
 	}
 
 	log.Printf("Connected to OBS WebSocket v%s", hello.D.ObsWebSocketVersion)
 
-	// Send identify message
 	identify := IdentifyMessage{
 		Op: 1,
 		D: struct {
@@ -289,31 +289,30 @@ func (c *OBSClient) Connect() error {
 	}
 
 	if err := conn.WriteJSON(identify); err != nil {
+		c.mu.Unlock()
 		return fmt.Errorf("failed to send identify message: %w", err)
 	}
 
-	// Read identify response
 	var response ResponseMessage
 	if err := conn.ReadJSON(&response); err != nil {
+		c.mu.Unlock()
 		return fmt.Errorf("failed to read identify response: %w", err)
 	}
 
-	// Clear read deadline after handshake; use ping handler for keepalive
 	conn.SetReadDeadline(time.Time{})
 	conn.SetPingHandler(func(msg string) error {
 		return conn.WriteControl(websocket.PongMessage, []byte(msg), time.Now().Add(5*time.Second))
 	})
 
-	if response.Op == 2 {
-		log.Println("Successfully identified to OBS WebSocket")
-		c.connected.Store(true)
-		c.mu.Unlock()
-		c.QueryStudioMode()
-	} else {
+	if response.Op != 2 {
 		c.mu.Unlock()
 		return fmt.Errorf("failed to identify to OBS")
 	}
 
+	log.Println("Successfully identified to OBS WebSocket")
+	c.connected.Store(true)
+	c.mu.Unlock()
+	c.QueryStudioMode()
 	return nil
 }
 func (c *OBSClient) QueryStudioMode() {
