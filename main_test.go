@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -260,4 +261,66 @@ func TestEnsureConfig(t *testing.T) {
 			t.Errorf("existing config was overwritten: got %q, want %q", string(data), original)
 		}
 	})
+}
+
+func TestWriteServiceFile(t *testing.T) {
+	dir := t.TempDir()
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", dir)
+	defer os.Setenv("HOME", oldHome)
+
+	exePath := "/usr/bin/obs-hotkey"
+	cfgDir := filepath.Join(dir, ".config", "obs-hotkey")
+
+	err := writeServiceFile(exePath, cfgDir)
+	if err != nil {
+		t.Fatalf("writeServiceFile() error: %v", err)
+	}
+
+	unitPath := filepath.Join(dir, ".config", "systemd", "user", "obs-hotkey.service")
+	data, err := os.ReadFile(unitPath)
+	if err != nil {
+		t.Fatalf("failed to read service file: %v", err)
+	}
+
+	if !strings.Contains(string(data), "ExecStart="+exePath+" --config "+cfgDir+"/hotkeys.json") {
+		t.Errorf("service file does not contain correct ExecStart line")
+	}
+	if !strings.Contains(string(data), "WantedBy=graphical-session.target") {
+		t.Errorf("service file does not contain WantedBy")
+	}
+}
+
+func TestIsAutostartEnabled(t *testing.T) {
+	enabled := isAutostartEnabled()
+	_ = enabled
+}
+
+func TestInInputGroup(t *testing.T) {
+	result := inInputGroup()
+	if os.Getenv("USER") == "" {
+		t.Skip("USER env not set")
+	}
+	if result {
+		t.Log("Current user is in input group")
+	} else {
+		t.Log("Current user is NOT in input group")
+	}
+}
+
+func TestRunningUnderSystemd(t *testing.T) {
+	result := runningUnderSystemd()
+	t.Logf("runningUnderSystemd() = %v", result)
+}
+
+func TestServiceUnitPath(t *testing.T) {
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", "/home/testuser")
+	defer os.Setenv("HOME", oldHome)
+
+	path := serviceUnitPath()
+	want := "/home/testuser/.config/systemd/user/obs-hotkey.service"
+	if path != want {
+		t.Errorf("serviceUnitPath() = %q, want %q", path, want)
+	}
 }
