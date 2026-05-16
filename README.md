@@ -307,23 +307,23 @@ GOARCH=amd64 go build -o obs-hotkey-go-amd64 main.go
 
 ## Adding New Actions
 
-To add a new OBS action to the hotkey controller:
+To add a new OBS WebSocket action:
 
-1. Add a new method to `OBSClient` in [`main.go`](main.go:1):
+1. Add a new method to `OBSClient` in [`main.go`](main.go):
    ```go
-   func (c *OBSClient) YourAction() {
-       log.Println("Doing something...")
-       c.SendRequest("YourOBSCommand")
+   func (c *OBSClient) StartRecording() {
+       log.Println("Starting recording...")
+       c.SendRequest("StartRecord")
    }
    ```
 
-   Or for actions that require request data:
+   For actions that need request data (see the [OBS WebSocket 5.x Protocol](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md)):
    ```go
-   func (c *OBSClient) YourActionWithData(param string) {
+   func (c *OBSClient) SetScene(sceneName string) {
        reqData := map[string]interface{}{
-           "paramName": param,
+           "sceneName": sceneName,
        }
-       c.SendRequestWithData("YourOBSCommand", reqData)
+       c.SendRequestWithData("SetCurrentProgramScene", reqData)
    }
    ```
 
@@ -335,6 +335,8 @@ To add a new OBS action to the hotkey controller:
    sudo cp obs-hotkey-go /usr/local/bin/
    systemctl --user restart obs-hotkey.service
    ```
+
+For the full list of available OBS WebSocket requests, see the [Available Actions](#available-actions) table or the [OBS WebSocket 5.x Protocol](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md) documentation.
 
 ## Requirements
 
