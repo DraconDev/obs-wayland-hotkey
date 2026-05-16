@@ -194,14 +194,15 @@ type OBSClient struct {
 	wsURL               string
 }
 
-func NewOBSClient() *OBSClient {
+func NewOBSClient(wsURL string) *OBSClient {
 	return &OBSClient{
 		connected: false,
+		wsURL:     wsURL,
 	}
 }
 
 func (c *OBSClient) Connect() error {
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	conn, _, err := websocket.DefaultDialer.Dial(c.wsURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to connect to OBS: %w", err)
 	}
