@@ -36,10 +36,10 @@ The module sets up the systemd user service automatically — no extra steps nee
 
 ### Standalone (no module)
 
-If you don't want to import the module, you can still get auto-start by running:
+If you don't want to import the module, you can still get auto-start:
 
 ```bash
-# Build and run directly:
+# Build:
 nix build
 ./result/bin/obs-hotkey
 
@@ -47,27 +47,32 @@ nix build
 nix run .#
 
 # One-time setup for auto-start as a systemd user service:
-nix run .#install-service
+nix run .# -- setup
 ```
 
 ### Other Linux
 
-Run the installer:
-
 ```bash
-chmod +x install.sh
-./install.sh
+chmod +x install.sh && ./install.sh
 ```
 
-This will:
-- Build the binary (if needed)
-- Install to `/usr/local/bin/`
-- Add your user to the `input` group for keyboard access
-- Create a systemd service that starts automatically on login
-- Enable and start the service
-- Migrate from any old `obs-wayland-hotkey` service if found
+This runs `obs-hotkey setup` — writes the systemd service file, enables and starts it.
+You can also run `obs-hotkey setup` directly if the binary is already in your PATH.
 
-**After installation, the hotkey controller will start automatically when you log in!**
+## Subcommands
+
+```
+obs-hotkey          # run the daemon (default)
+obs-hotkey setup    # enable auto-start on login
+obs-hotkey teardown # undo setup (stop + disable + remove service)
+obs-hotkey status   # show service state and config status
+```
+
+**`setup`** writes `~/.config/systemd/user/obs-hotkey.service` and enables it.
+
+**`teardown`** stops, disables, and removes the service file. Use `--purge` to also delete the config directory.
+
+**`status`** checks whether the service is enabled, whether you're in the `input` group, whether the config file exists, and whether OBS is reachable on port 4455.
 
 ## Default Hotkeys
 
@@ -81,8 +86,7 @@ Default hotkeys are set in the config file at `~/.config/obs-hotkey/hotkeys.json
 ### 1. Build
 
 ```bash
-chmod +x build.sh
-./build.sh
+chmod +x build.sh && ./build.sh
 ```
 
 This creates the `obs-hotkey` binary (~7MB).
@@ -95,10 +99,12 @@ This creates the `obs-hotkey` binary (~7MB).
 4. Use default port **4455**
 5. Disable authentication
 
-### 3. Run Manually
+### 3. Run
 
 ```bash
-./obs-hotkey
+./obs-hotkey           # run as daemon (shows banner with hotkey list)
+./obs-hotkey setup     # enable auto-start on login
+./obs-hotkey status    # check service state
 ```
 
 You need to be in the `input` group for keyboard device access (`/dev/input/`):
@@ -346,10 +352,9 @@ To add a new OBS WebSocket action:
 2. Add the hotkey binding in `main()` under the `bindings` slice.
 
 3. Rebuild and reinstall:
-   ```bash
-   ./build.sh
-   ./install.sh
-   ```
+    ```bash
+    ./build.sh && ./install.sh
+    ```
 
 For the full list of available OBS WebSocket requests, see the [Available Actions](#available-actions) table or the [OBS WebSocket 5.x Protocol](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md) documentation.
 
