@@ -50,7 +50,7 @@ func defaultConfig() AppConfig {
 }
 
 func loadConfig(path string) (AppConfig, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return AppConfig{}, fmt.Errorf("config file not found")
@@ -81,7 +81,7 @@ func ensureConfig(dirPath, filePath string) error {
 		return fmt.Errorf("failed to marshal default config: %w", err)
 	}
 
-	if err := ioutil.WriteFile(filePath, data, 0644); err != nil {
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write default config: %w", err)
 	}
 
