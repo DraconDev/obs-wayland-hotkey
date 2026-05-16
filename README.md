@@ -357,12 +357,13 @@ For the full list of available OBS WebSocket requests, see the [Available Action
 systemctl --user stop obs-hotkey.service
 systemctl --user disable obs-hotkey.service
 
-# Remove files
+# Remove systemd user service
 rm ~/.config/systemd/user/obs-hotkey.service
-sudo rm /usr/local/bin/obs-hotkey
-
-# Reload systemd
 systemctl --user daemon-reload
+
+# Remove binary (check which location was used)
+[ -f ~/.local/bin/obs-hotkey ] && rm ~/.local/bin/obs-hotkey
+[ -f /usr/local/bin/obs-hotkey ] && sudo rm /usr/local/bin/obs-hotkey
 
 # Optional: remove config
 # rm -rf ~/.config/obs-hotkey
