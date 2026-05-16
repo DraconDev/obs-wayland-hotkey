@@ -189,8 +189,9 @@ var keyNames = map[uint16]string{
 type OBSClient struct {
 	conn               *websocket.Conn
 	connected          bool
-	studioModeEnabled  bool
-	studioModeQueried  bool
+	studioModeEnabled   bool
+	studioModeQueried   bool
+	wsURL               string
 }
 
 func NewOBSClient() *OBSClient {
