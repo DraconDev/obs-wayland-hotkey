@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -24,11 +25,35 @@ const (
 )
 
 func getConfigPath() string {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return configFileName
+	configFlag := flag.String("config", "", "Path to config file (overrides default location)")
+	flag.Parse()
+
+	if *configFlag != "" {
+		return *configFlag
 	}
+
+	homeDir := getRealHome()
 	return filepath.Join(homeDir, ".config", configDirName, configFileName)
+}
+
+func getRealHome() string {
+	if sudoUser := os.Getenv("SUDO_USER"); sudoUser != "" {
+		if info, err := os.UserHomeDir(); err == nil && info != "" {
+			if !strings.Contains(info, "/root") && !strings.Contains(info, "/home/"+sudoUser) {
+				return info
+			}
+		}
+		if passwd, err := os.ReadFile("/etc/passwd"); err == nil {
+			for _, line := range strings.Split(string(passwd), "\n") {
+				parts := strings.Split(line, ":")
+				if len(parts) >= 6 && parts[0] == sudoUser {
+					return parts[5]
+				}
+			}
+		}
+	}
+	homeDir, _ := os.UserHomeDir()
+	return homeDir
 }
 
 func defaultConfig() AppConfig {
