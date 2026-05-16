@@ -20,11 +20,11 @@ import (
 )
 
 const (
-	defaultWSURL    = "ws://localhost:4455"
-	maxRetries       = 10
-	retryDelay       = 30 * time.Second
-	configDirName    = "obs-hotkey"
-	configFileName   = "hotkeys.json"
+	defaultWSURL   = "ws://localhost:4455"
+	maxRetries     = 10
+	retryDelay     = 30 * time.Second
+	configDirName  = "obs-hotkey"
+	configFileName = "hotkeys.json"
 )
 
 func getConfigPath(configFlag string) string {
@@ -59,17 +59,17 @@ func defaultConfig() AppConfig {
 	return AppConfig{
 		OBSHost: defaultWSURL,
 		Hotkeys: HotkeyConfig{
-			ToggleRecording: "scroll lock",
-			TogglePause:     "pause",
-			ToggleStreaming: "",
-			Screenshot:      "",
-			ToggleMuteMic:   "",
+			ToggleRecording:  "scroll lock",
+			TogglePause:      "pause",
+			ToggleStreaming:  "",
+			Screenshot:       "",
+			ToggleMuteMic:    "",
 			ToggleStudioMode: "",
-			ToggleReplayBuf: "",
-			SaveReplay:      "",
+			ToggleReplayBuf:  "",
+			SaveReplay:       "",
 		},
 		ScreenshotDir: "~/Pictures",
-		MicName:      "",
+		MicName:       "",
 	}
 }
 
@@ -173,21 +173,21 @@ type ResponseMessage struct {
 // Config file structures
 type HotkeyConfig struct {
 	ToggleRecording  string `json:"toggle_recording"`
-	TogglePause     string `json:"toggle_pause"`
-	ToggleStreaming string `json:"toggle_streaming"`
-	Screenshot      string `json:"screenshot"`
-	ToggleMuteMic   string `json:"toggle_mute_mic"`
+	TogglePause      string `json:"toggle_pause"`
+	ToggleStreaming  string `json:"toggle_streaming"`
+	Screenshot       string `json:"screenshot"`
+	ToggleMuteMic    string `json:"toggle_mute_mic"`
 	ToggleStudioMode string `json:"toggle_studio_mode"`
-	ToggleReplayBuf string `json:"toggle_replay_buffer"`
-	SaveReplay      string `json:"save_replay"`
+	ToggleReplayBuf  string `json:"toggle_replay_buffer"`
+	SaveReplay       string `json:"save_replay"`
 }
 
 type AppConfig struct {
-	OBSHost          string        `json:"obs_host"`
-	Hotkeys          HotkeyConfig  `json:"hotkeys"`
-	ScreenshotSource string        `json:"screenshot_source"`
-	ScreenshotDir    string        `json:"screenshot_dir"`
-	MicName          string        `json:"mic_name"`
+	OBSHost          string       `json:"obs_host"`
+	Hotkeys          HotkeyConfig `json:"hotkeys"`
+	ScreenshotSource string       `json:"screenshot_source"`
+	ScreenshotDir    string       `json:"screenshot_dir"`
+	MicName          string       `json:"mic_name"`
 }
 
 // Key code mappings
@@ -234,13 +234,14 @@ func init() {
 		keyNameToCode[name] = code
 	}
 }
+
 type OBSClient struct {
-	conn            *websocket.Conn
-	connected       atomic.Bool
+	conn              *websocket.Conn
+	connected         atomic.Bool
 	studioModeEnabled atomic.Bool
 	studioModeQueried atomic.Bool
-	wsURL           string
-	mu              sync.Mutex // protects conn during read/write
+	wsURL             string
+	mu                sync.Mutex // protects conn during read/write
 }
 
 func NewOBSClient(wsURL string) *OBSClient {
@@ -320,12 +321,12 @@ func (c *OBSClient) QueryStudioMode() {
 	defer c.mu.Unlock()
 
 	type studioModeResponse struct {
-		Op   int `json:"op"`
-		D    struct {
-			RequestID    string `json:"requestId"`
+		Op int `json:"op"`
+		D  struct {
+			RequestID     string `json:"requestId"`
 			RequestStatus struct {
-				Result bool   `json:"result"`
-				Code   int    `json:"code"`
+				Result bool `json:"result"`
+				Code   int  `json:"code"`
 			} `json:"requestStatus"`
 			ResponseData struct {
 				StudioModeEnabled bool `json:"studioModeEnabled"`
@@ -436,7 +437,7 @@ func (c *OBSClient) ToggleStreaming() {
 func (c *OBSClient) Screenshot(sourceName, saveDir string) {
 	log.Println("Taking screenshot...")
 	reqData := map[string]interface{}{
-		"imageFormat":    "png",
+		"imageFormat":   "png",
 		"imageFilePath": fmt.Sprintf("%s/obs-screenshot-%d.png", saveDir, time.Now().UnixMilli()),
 	}
 	if sourceName != "" {
@@ -692,7 +693,7 @@ func main() {
 			// devices — the user must restart the service on hot-plug changes.
 			for i, d := range devices {
 				if d == dev {
-					devices[i] = nil // mark as closed
+					devices[i] = nil     // mark as closed
 					close(eventChans[i]) // close the channel
 				}
 			}
