@@ -470,7 +470,7 @@ func main() {
 
 	cfg, err := loadConfig(configPath)
 	if err != nil {
-		log.Fatalf("Failed to load config from %s: %v\nSet your hotkeys in the config file.", configPath)
+		log.Fatalf("Failed to load config from %s: %v\nSet your hotkeys in the config file.", configPath, err)
 	}
 
 	log.Printf("Loaded config from: %s", configPath)
