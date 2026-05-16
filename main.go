@@ -26,7 +26,6 @@ const (
 
 func getConfigPath() string {
 	configFlag := flag.String("config", "", "Path to config file (overrides default location)")
-	flag.Parse()
 
 	if *configFlag != "" {
 		return *configFlag
@@ -250,7 +249,7 @@ func (c *OBSClient) Connect() error {
 	}
 	
 
-	c.conn = conn
+c.conn = conn
 
 	// Read hello message
 	var hello HelloMessage
@@ -503,6 +502,7 @@ func findKeyboardDevices() ([]*evdev.InputDevice, error) {
 func main() {
 	log.Println("OBS Hotkey Controller - Wayland compatible")
 
+	flag.Parse()
 	configPath := getConfigPath()
 	dirPath := filepath.Dir(configPath)
 
@@ -569,7 +569,7 @@ func main() {
 	}
 
 	if len(devices) == 0 {
-		log.Fatal("No keyboard devices found! Make sure you're running with sudo.")
+		log.Fatal("No keyboard devices found! Make sure you're in the input group.")
 	}
 
 	log.Printf("Found %d keyboard device(s):", len(devices))
