@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -54,8 +55,11 @@ func (m *mockOBS) handler(w http.ResponseWriter, r *http.Request) {
 	m.helloSent = true
 	m.mut.Unlock()
 
-	resp, _ := websocket.NewMessage(websocket.TextMessage, 1, []byte(`{"op":1,"d":{"rpcVersion":1}}`))
-	if err := conn.WriteMessage(websocket.TextMessage, resp); err != nil {
+	identifyBytes, _ := json.Marshal(map[string]interface{}{
+		"op": 1,
+		"d":  map[string]interface{}{"rpcVersion": 1},
+	})
+	if err := conn.WriteMessage(websocket.TextMessage, identifyBytes); err != nil {
 		return
 	}
 
