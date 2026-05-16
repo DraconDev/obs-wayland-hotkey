@@ -5,7 +5,7 @@ let
 in
 {
   options.services.obs-hotkey = {
-    enable = lib.mkEnableOption "OBS Wayland Hotkey Controller";
+    enable = lib.mkEnableOption "OBS Hotkey Controller";
     user = lib.mkOption {
       type = lib.types.str;
       default = "dracon";
@@ -13,7 +13,7 @@ in
     };
     configFile = lib.mkOption {
       type = lib.types.path;
-      default = "/home/dracon/.config/obs-hotkey/hotkeys.json";
+      default = "/home/${cfg.user}/.config/obs-hotkey/hotkeys.json";
       description = "Path to the hotkeys config file";
     };
   };
@@ -21,29 +21,19 @@ in
   config = lib.mkIf cfg.enable {
     environment.systemPackages = [ pkgs.obs-hotkey ];
 
+    users.users.${cfg.user}.extraGroups = [ "input" ];
+
     systemd.user.services.obs-hotkey = {
-      description = "OBS Hotkey Controller (Wayland)";
+      description = "OBS Hotkey Controller";
       after = [ "graphical-session.target" ];
       wantedBy = [ "graphical-session.target" ];
 
       serviceConfig = {
         Type = "simple";
-        ExecStart = "${pkgs.obs-hotkey}/bin/obs-hotkey-go --config ${cfg.configFile}";
+        ExecStart = "${pkgs.obs-hotkey}/bin/obs-hotkey --config ${cfg.configFile}";
         Restart = "on-failure";
         RestartSec = "10s";
       };
     };
-
-    security.sudo.extraRules = [
-      {
-        users = [ cfg.user ];
-        commands = [
-          {
-            command = "${pkgs.obs-hotkey}/bin/obs-hotkey-go";
-            options = [ "NOPASSWD" ];
-          }
-        ];
-      }
-    ];
   };
 }
