@@ -32,17 +32,16 @@ func getConfigPath() string {
 		return *configFlag
 	}
 
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return filepath.Join(xdg, configDirName, configFileName)
+	}
+
 	homeDir := getRealHome()
 	return filepath.Join(homeDir, ".config", configDirName, configFileName)
 }
 
 func getRealHome() string {
 	if sudoUser := os.Getenv("SUDO_USER"); sudoUser != "" {
-		if info, err := os.UserHomeDir(); err == nil && info != "" {
-			if !strings.Contains(info, "/root") && !strings.Contains(info, "/home/"+sudoUser) {
-				return info
-			}
-		}
 		if passwd, err := os.ReadFile("/etc/passwd"); err == nil {
 			for _, line := range strings.Split(string(passwd), "\n") {
 				parts := strings.Split(line, ":")
@@ -76,10 +75,7 @@ func defaultConfig() AppConfig {
 
 func expandHome(path string) string {
 	if len(path) > 0 && path[0] == '~' {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return path
-		}
+		homeDir := getRealHome()
 		return filepath.Join(homeDir, path[1:])
 	}
 	return path
@@ -505,7 +501,7 @@ func findKeyboardDevices() ([]*evdev.InputDevice, error) {
 }
 
 func main() {
-	log.Println("OBS Hotkey Controller (Go version - Wayland compatible)")
+	log.Println("OBS Hotkey Controller - Wayland compatible")
 
 	configPath := getConfigPath()
 	dirPath := filepath.Dir(configPath)
