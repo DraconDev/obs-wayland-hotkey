@@ -49,6 +49,24 @@ func defaultConfig() AppConfig {
 	}
 }
 
+func expandHome(path string) string {
+	if len(path) > 0 && path[0] == '~' {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return path
+		}
+		return filepath.Join(homeDir, path[1:])
+	}
+	return path
+}
+
+func sanitizeOBSHost(host string) string {
+	if host != "" && !strings.HasPrefix(host, "ws://") && !strings.HasPrefix(host, "wss://") {
+		return "ws://" + host
+	}
+	return host
+}
+
 func loadConfig(path string) (AppConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -62,6 +80,9 @@ func loadConfig(path string) (AppConfig, error) {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return AppConfig{}, fmt.Errorf("failed to parse config: %w", err)
 	}
+
+	cfg.OBSHost = sanitizeOBSHost(cfg.OBSHost)
+	cfg.ScreenshotDir = expandHome(cfg.ScreenshotDir)
 
 	return cfg, nil
 }
