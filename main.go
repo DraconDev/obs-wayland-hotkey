@@ -8,7 +8,10 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -129,10 +132,8 @@ func ensureConfig(dirPath, filePath string) error {
 }
 
 func getKeyCode(keyName string) uint16 {
-	for code, name := range keyNames {
-		if name == keyName {
-			return code
-		}
+	if code, ok := keyNameToCode[keyName]; ok {
+		return code
 	}
 	return 0
 }
@@ -201,53 +202,65 @@ var keyNames = map[uint16]string{
 	evdev.KEY_DELETE:     "delete",
 	evdev.KEY_F1:         "f1",
 	evdev.KEY_F2:         "f2",
-	evdev.KEY_F3:         "f3",
-	evdev.KEY_F4:         "f4",
-	evdev.KEY_F5:         "f5",
-	evdev.KEY_F6:         "f6",
-	evdev.KEY_F7:         "f7",
-	evdev.KEY_F8:         "f8",
-	evdev.KEY_F9:         "f9",
-	evdev.KEY_F10:        "f10",
-	evdev.KEY_F11:        "f11",
-	evdev.KEY_F12:        "f12",
-	evdev.KEY_F13:        "f13",
-	evdev.KEY_F14:        "f14",
-	evdev.KEY_F15:        "f15",
-	evdev.KEY_F16:        "f16",
-	evdev.KEY_F17:        "f17",
-	evdev.KEY_F18:        "f18",
-	evdev.KEY_F19:        "f19",
-	evdev.KEY_F20:        "f20",
-	evdev.KEY_F21:        "f21",
-	evdev.KEY_F22:        "f22",
-	evdev.KEY_F23:        "f23",
-	evdev.KEY_F24:        "f24",
-	}
+	evdev.KEY_F3:         "f3",	evdev.KEY_F4:         "f4",
+	evdev.KEY_F5:         "f5",	evdev.KEY_F6:         "f6",
+	evdev.KEY_F7:         "f7",	evdev.KEY_F8:         "f8",
+	evdev.KEY_F9:         "f9",	evdev.KEY_F10:        "f10",
+	evdev.KEY_F11:        "f11",	evdev.KEY_F12:        "f12",
+	evdev.KEY_F13:        "f13",	evdev.KEY_F14:        "f14",
+	evdev.KEY_F15:        "f15",	evdev.KEY_F16:        "f16",
+	evdev.KEY_F17:        "f17",	evdev.KEY_F18:        "f18",
+	evdev.KEY_F19:        "f19",	evdev.KEY_F20:        "f20",
+	evdev.KEY_F21:        "f21",	evdev.KEY_F22:        "f22",
+	evdev.KEY_F23:        "f23",	evdev.KEY_F24:        "f24",
+}
 
+var keyNameToCode map[string]uint16
+
+func init() {
+	keyNameToCode = make(map[string]uint16, len(keyNames))
+	for code, name := range keyNames {
+		keyNameToCode[name] = code
+	}
+}
 type OBSClient struct {
-	conn               *websocket.Conn
-	connected          bool
-	studioModeEnabled   bool
-	studioModeQueried   bool
-	wsURL               string
+	conn            *websocket.Conn
+	connected       atomic.Bool
+	studioModeEnabled atomic.Bool
+	studioModeQueried atomic.Bool
+	wsURL           string
+	mu              sync.Mutex // protects conn during read/write
 }
 
 func NewOBSClient(wsURL string) *OBSClient {
-	return &OBSClient{
-		connected: false,
-		wsURL:     wsURL,
+	c := &OBSClient{
+		wsURL: wsURL,
 	}
+	c.connected.Store(false)
+	c.studioModeEnabled.Store(false)
+	c.studioModeQueried.Store(false)
+	return c
 }
 
 func (c *OBSClient) Connect() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.conn != nil {
+		c.conn.Close()
+		c.conn = nil
+	}
+	c.connected.Store(false)
+
 	conn, _, err := websocket.DefaultDialer.Dial(c.wsURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to connect to OBS: %w", err)
 	}
-	
 
-c.conn = conn
+	// Set read deadline for handshake
+	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+
+	c.conn = conn
 
 	// Read hello message
 	var hello HelloMessage
@@ -277,11 +290,15 @@ c.conn = conn
 		return fmt.Errorf("failed to read identify response: %w", err)
 	}
 
-	
+	// Clear read deadline after handshake; use ping handler for keepalive
+	conn.SetReadDeadline(time.Time{})
+	conn.SetPingHandler(func(msg string) error {
+		return conn.WriteControl(websocket.PongMessage, []byte(msg), time.Now().Add(5*time.Second))
+	})
 
 	if response.Op == 2 {
 		log.Println("Successfully identified to OBS WebSocket")
-		c.connected = true
+		c.connected.Store(true)
 		c.QueryStudioMode()
 	} else {
 		return fmt.Errorf("failed to identify to OBS")
@@ -289,7 +306,6 @@ c.conn = conn
 
 	return nil
 }
-
 func (c *OBSClient) QueryStudioMode() {
 	type studioModeResponse struct {
 		Op   int `json:"op"`
@@ -328,9 +344,11 @@ func (c *OBSClient) QueryStudioMode() {
 		return
 	}
 
-	c.studioModeEnabled = response.D.ResponseData.StudioModeEnabled
-	c.studioModeQueried = true
-	log.Printf("Studio mode is currently: %v", c.studioModeEnabled)
+	if response.D.RequestStatus.Result {
+		c.studioModeEnabled.Store(response.D.ResponseData.StudioModeEnabled)
+	}
+	c.studioModeQueried.Store(true)
+	log.Printf("Studio mode is currently: %v", c.studioModeEnabled.Load())
 }
 
 func (c *OBSClient) SendRequest(requestType string) error {
@@ -338,14 +356,15 @@ func (c *OBSClient) SendRequest(requestType string) error {
 }
 
 func (c *OBSClient) SendRequestWithData(requestType string, requestData map[string]interface{}) error {
-	if !c.connected {
+	if !c.connected.Load() {
 		log.Println("Not connected to OBS. Reconnecting...")
 		if err := c.Connect(); err != nil {
 			return err
 		}
 	}
 
-
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	request := RequestMessage{
 		Op: 6,
@@ -361,16 +380,19 @@ func (c *OBSClient) SendRequestWithData(requestType string, requestData map[stri
 	}
 
 	if err := c.conn.WriteJSON(request); err != nil {
-		c.connected = false
+		c.connected.Store(false)
 		return fmt.Errorf("failed to send request: %w", err)
 	}
 
 	// Read response (but don't block)
 	var response map[string]interface{}
+	c.conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	if err := c.conn.ReadJSON(&response); err != nil {
-		c.connected = false
+		c.connected.Store(false)
+		c.conn.SetReadDeadline(time.Time{})
 		return fmt.Errorf("failed to read response: %w", err)
 	}
+	c.conn.SetReadDeadline(time.Time{})
 
 	return nil
 }
@@ -400,7 +422,7 @@ func (c *OBSClient) Screenshot(sourceName, saveDir string) {
 	log.Println("Taking screenshot...")
 	reqData := map[string]interface{}{
 		"imageFormat":    "png",
-		"imageFilePath":   fmt.Sprintf("%s/obs-screenshot-%d.png", saveDir, time.Now().Unix()),
+		"imageFilePath": fmt.Sprintf("%s/obs-screenshot-%d.png", saveDir, time.Now().UnixMilli()),
 	}
 	if sourceName != "" {
 		reqData["sourceName"] = sourceName
@@ -428,18 +450,18 @@ func (c *OBSClient) ToggleMuteMic(inputName string) {
 
 func (c *OBSClient) ToggleStudioMode() {
 	log.Println("Toggling studio mode...")
-	if !c.studioModeQueried {
+	if !c.studioModeQueried.Load() {
 		log.Println("Studio mode state unknown, querying...")
 		c.QueryStudioMode()
 	}
-	newState := !c.studioModeEnabled
+	newState := !c.studioModeEnabled.Load()
 	reqData := map[string]interface{}{
 		"studioModeEnabled": newState,
 	}
 	if err := c.SendRequestWithData("SetStudioModeEnabled", reqData); err != nil {
 		log.Printf("Error toggling studio mode: %v", err)
 	} else {
-		c.studioModeEnabled = newState
+		c.studioModeEnabled.Store(newState)
 		log.Printf("Studio mode set to: %v", newState)
 	}
 }
@@ -464,23 +486,33 @@ func (c *OBSClient) Close() {
 	}
 }
 
-func findKeyboardDevices() ([]*evdev.InputDevice, error) {
-	keyboards := []*evdev.InputDevice{}
+var eventDevicePath = regexp.MustCompile(`^/dev/input/event(\d+)$`)
 
-	// Manually scan /dev/input/event* devices
-	for i := 0; i < 32; i++ {
-		path := fmt.Sprintf("/dev/input/event%d", i)
-		device, err := evdev.Open(path)
-		if err != nil {
-			// Device doesn't exist or can't be opened, skip
+func findKeyboardDevices() ([]*evdev.InputDevice, []chan evdev.InputEvent, error) {
+	keyboards := []*evdev.InputDevice{}
+	channels := []chan evdev.InputEvent{}
+
+	entries, err := os.ReadDir("/dev/input")
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read /dev/input: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.Type().IsRegular() {
+			continue
+		}
+		if !eventDevicePath.MatchString(entry.Name()) {
 			continue
 		}
 
-		// Check if device has key capabilities
-		caps := device.Capabilities
-		// Look for EV_KEY capability (type 1)
+		path := filepath.Join("/dev/input", entry.Name())
+		device, err := evdev.Open(path)
+		if err != nil {
+			continue
+		}
+
 		hasKeyboard := false
-		for capType := range caps {
+		for capType := range device.Capabilities {
 			if capType.Type == 1 { // EV_KEY
 				hasKeyboard = true
 				break
@@ -488,13 +520,15 @@ func findKeyboardDevices() ([]*evdev.InputDevice, error) {
 		}
 
 		if hasKeyboard {
+			ch := make(chan evdev.InputEvent, 10)
 			keyboards = append(keyboards, device)
+			channels = append(channels, ch)
 		} else {
 			device.File.Close()
 		}
 	}
 
-	return keyboards, nil
+	return keyboards, channels, nil
 }
 
 func main() {
@@ -560,9 +594,11 @@ func main() {
 		log.Fatal("No valid hotkeys configured")
 	}
 
+	var eventChans []chan evdev.InputEvent
+
 	// Find keyboard devices
 	log.Println("\nSearching for keyboard devices...")
-	devices, err := findKeyboardDevices()
+	devices, eventChans, err := findKeyboardDevices()
 	if err != nil {
 		log.Fatalf("Error finding keyboard devices: %v", err)
 	}
@@ -592,7 +628,7 @@ func main() {
 		}
 	}
 
-	if !client.connected {
+	if !client.connected.Load() {
 		log.Printf("Failed to connect to OBS after %d attempts.", maxRetries)
 		log.Println("Hotkeys are ready but will only work when OBS is running.")
 	}
@@ -603,15 +639,32 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	// Create event channels for each device
-	eventChans := make([]chan evdev.InputEvent, len(devices))
+	// Find keyboard devices
+	log.Println("\nSearching for keyboard devices...")
+	devices, eventChans, err = findKeyboardDevices()
+	if err != nil {
+		log.Fatalf("Error finding keyboard devices: %v", err)
+	}
+
+	if len(devices) == 0 {
+		log.Fatal("No keyboard devices found! Make sure you're in the input group.")
+	}
+
+	log.Printf("Found %d keyboard device(s):", len(devices))
+	for _, device := range devices {
+		log.Printf("  - %s (%s)", device.Name, device.Fn)
+	}
+
+	// Start device readers
+	deviceClosed := make(chan *evdev.InputDevice, len(devices))
 	for i, device := range devices {
-		eventChans[i] = make(chan evdev.InputEvent, 10)
 		go func(dev *evdev.InputDevice, ch chan evdev.InputEvent) {
 			for {
 				events, err := dev.Read()
 				if err != nil {
 					log.Printf("Error reading from %s: %v", dev.Name, err)
+					close(ch)
+					deviceClosed <- dev
 					return
 				}
 				for _, event := range events {
@@ -634,8 +687,19 @@ func main() {
 			}
 			return
 
+		case dev := <-deviceClosed:
+			// A device was unplugged or errored; mark it closed so we don't try
+			// to close it again in the shutdown path. We don't re-scan for new
+			// devices — the user must restart the service on hot-plug changes.
+			for i, d := range devices {
+				if d == dev {
+					devices[i] = nil // mark as closed
+					close(eventChans[i]) // close the channel
+				}
+			}
+
 		case <-reconnectTicker.C:
-			if !client.connected {
+			if !client.connected.Load() {
 				log.Println("Attempting to reconnect to OBS...")
 				client.Connect()
 			}
@@ -644,9 +708,12 @@ func main() {
 			// Check all device channels
 			for _, ch := range eventChans {
 				select {
-				case event := <-ch:
+				case event, ok := <-ch:
+					if !ok {
+						continue
+					}
 					// Only process key press events (value == 1, not 0 for release or 2 for repeat)
-					if event.Type == 1 && event.Value == 1 { // EV_KEY type is 1
+					if event.Type == 1 && event.Value == 1 {
 						if action, ok := hotkeyActions[event.Code]; ok {
 							action()
 						}
