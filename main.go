@@ -53,10 +53,24 @@ type ResponseMessage struct {
 	} `json:"d"`
 }
 
-// Hotkey configuration
+// Config file structures
 type HotkeyConfig struct {
-	ToggleRecording string
-	TogglePause     string
+	ToggleRecording  string `json:"toggle_recording"`
+	TogglePause     string `json:"toggle_pause"`
+	ToggleStreaming string `json:"toggle_streaming"`
+	Screenshot      string `json:"screenshot"`
+	ToggleMuteMic   string `json:"toggle_mute_mic"`
+	ToggleStudioMode string `json:"toggle_studio_mode"`
+	ToggleReplayBuf string `json:"toggle_replay_buffer"`
+	SaveReplay      string `json:"save_replay"`
+}
+
+type AppConfig struct {
+	OBSHost          string        `json:"obs_host"`
+	Hotkeys          HotkeyConfig  `json:"hotkeys"`
+	ScreenshotSource string        `json:"screenshot_source"`
+	ScreenshotDir    string        `json:"screenshot_dir"`
+	MicName          string        `json:"mic_name"`
 }
 
 // Key code mappings
@@ -96,9 +110,10 @@ var keyNames = map[uint16]string{
 	}
 
 type OBSClient struct {
-	conn      *websocket.Conn
-	connected bool
-
+	conn               *websocket.Conn
+	connected          bool
+	studioModeEnabled  bool
+	studioModeQueried  bool
 }
 
 func NewOBSClient() *OBSClient {
