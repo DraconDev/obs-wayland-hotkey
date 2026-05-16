@@ -44,10 +44,10 @@ echo "Checking input group membership..."
 if groups "$CURRENT_USER" | grep -q '\binput\b'; then
     echo "✓ Already in input group"
 else
-    echo "Adding $CURRENT_USER to input group..."
-    sudo usermod -aG input "$CURRENT_USER"
-    echo "✓ Added to input group"
-    echo "  Note: You must log out and back in for this to take effect."
+    echo "Warning: $CURRENT_USER is not in the input group."
+    echo "  On NixOS: add 'users.users.\"$CURRENT_USER\".extraGroups = [ \"input\" ];' to your configuration.nix"
+    echo "  On others: run: sudo usermod -aG input $CURRENT_USER"
+    echo "  Then log out and back in for changes to take effect."
 fi
 echo ""
 
@@ -65,6 +65,8 @@ echo "Creating systemd service..."
 SERVICE_FILE="$HOME/.config/systemd/user/obs-hotkey.service"
 mkdir -p "$HOME/.config/systemd/user"
 
+EXEC_LINE="exec $INSTALL_DIR/obs-hotkey --config $HOME/.config/obs-hotkey/hotkeys.json"
+
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=OBS Hotkey Controller
@@ -72,7 +74,7 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/obs-hotkey --config $HOME/.config/obs-hotkey/hotkeys.json
+ExecStart=${INSTALL_DIR}/obs-hotkey --config $HOME/.config/obs-hotkey/hotkeys.json
 Restart=on-failure
 RestartSec=10s
 
