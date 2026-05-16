@@ -171,38 +171,59 @@ systemctl --user enable obs-hotkey.service
 
 ## Customizing Hotkeys
 
-Hotkeys are configured at the top of [`main.go`](main.go:1) (around line 230):
+Hotkeys are configured via a JSON config file at `~/.config/obs-hotkey/hotkeys.json`.
 
-```go
-// Load configuration
-cfg := HotkeyConfig{
-	ToggleRecording: "scroll lock",  // Change this key
-	TogglePause:     "pause",        // Change this key
-}
-```
+On first run, a default config is created automatically if none exists.
 
 **To change hotkeys:**
 
-1. Edit the values in [`main.go`](main.go:230-233)
-2. Rebuild: `./build.sh`
-3. Update the installed binary:
-   ```bash
-   systemctl --user stop obs-hotkey.service
-   sudo cp obs-hotkey-go /usr/local/bin/
-   systemctl --user start obs-hotkey.service
-   ```
+1. Edit `~/.config/obs-hotkey/hotkeys.json`
+2. Restart the service: `systemctl --user restart obs-hotkey.service`
 
-Or use this one-liner:
-```bash
-./build.sh && systemctl --user stop obs-hotkey.service && sudo cp obs-hotkey-go /usr/local/bin/ && systemctl --user start obs-hotkey.service
+**Config file format:**
+```json
+{
+  "obs_host": "ws://localhost:4455",
+  "hotkeys": {
+    "toggle_recording": "scroll lock",
+    "toggle_pause": "pause",
+    "toggle_streaming": "",
+    "screenshot": "",
+    "toggle_mute_mic": "",
+    "toggle_studio_mode": "",
+    "toggle_replay_buffer": "",
+    "save_replay": ""
+  },
+  "screenshot_source": "",
+  "screenshot_dir": "~/Pictures",
+  "mic_name": ""
+}
 ```
+
+**Config fields:**
+- `obs_host` — OBS WebSocket URL (default: `ws://localhost:4455`)
+- `hotkeys.*` — Key name for each action (empty string = disabled)
+- `screenshot_source` — OBS source name for screenshot (empty = current program scene)
+- `screenshot_dir` — Directory to save screenshots (default: `~/Pictures`)
+- `mic_name` — OBS input name for mute toggle (e.g., `"Mic/Aux"`)
 
 ### Supported Keys
 
-- Function keys: `f1`, `f2`, `f3`, `f4`, `f5`, `f6`, `f7`, `f8`, `f9`, `f10`, `f11`, `f12`
+- Function keys: `f1` through `f24` (including extra keys like `f13`-`f24` for mouse buttons)
 - Special keys: `scroll lock`, `pause`, `home`, `end`, `page up`, `page down`, `insert`, `delete`
 
-To add more keys, edit the `keyNames` map in [`main.go`](main.go:1).
+### Available Actions
+
+| Action | OBS Request | Notes |
+|--------|-------------|-------|
+| `toggle_recording` | `ToggleRecord` | Start/stop recording |
+| `toggle_pause` | `ToggleRecordPause` | Pause/resume recording |
+| `toggle_streaming` | `ToggleStream` | Start/stop streaming |
+| `screenshot` | `SaveSourceScreenshot` | Saves PNG to `screenshot_dir` |
+| `toggle_mute_mic` | `ToggleInputMute` | Requires `mic_name` in config |
+| `toggle_studio_mode` | `SetStudioModeEnabled` | Toggles studio mode state |
+| `toggle_replay_buffer` | `ToggleReplayBuffer` | Requires replay buffer enabled |
+| `save_replay` | `SaveReplayBuffer` | Saves current replay buffer |
 
 ## Troubleshooting
 
@@ -240,9 +261,10 @@ your_username ALL=(root) NOPASSWD: /usr/local/bin/obs-hotkey-go
 ### Hotkey not working
 
 1. Check the service is running: `systemctl --user status obs-hotkey.service`
-2. Check the key is in the `keyNames` map in [`main.go`](main.go:1)
+2. Check the key is set in your config file (`~/.config/obs-hotkey/hotkeys.json`)
 3. Verify OBS is connected (check logs)
 4. Try a different key
+5. Check that F13-F24 are supported (they require `f13`, `f14`, etc. in the config)
 
 ### Manual testing
 
@@ -285,7 +307,9 @@ GOARCH=amd64 go build -o obs-hotkey-go-amd64 main.go
 
 ## Adding New Actions
 
-1. Add the OBS command method to `OBSClient` in [`main.go`](main.go:1):
+To add a new OBS action to the hotkey controller:
+
+1. Add a new method to `OBSClient` in [`main.go`](main.go:1):
    ```go
    func (c *OBSClient) YourAction() {
        log.Println("Doing something...")
@@ -293,29 +317,19 @@ GOARCH=amd64 go build -o obs-hotkey-go-amd64 main.go
    }
    ```
 
-2. Add to config:
+   Or for actions that require request data:
    ```go
-   var config = HotkeyConfig{
-       ToggleRecording: "scroll lock",
-       TogglePause:     "pause",
-       YourAction:      "f1",
-   }
-   ```
-
-3. Map in `main()`:
-   ```go
-   for keyCode, keyName := range keyNames {
-       if keyName == config.ToggleRecording {
-           hotkeyActions[keyCode] = client.ToggleRecording
-       } else if keyName == config.TogglePause {
-           hotkeyActions[keyCode] = client.TogglePause
-       } else if keyName == config.YourAction {
-           hotkeyActions[keyCode] = client.YourAction
+   func (c *OBSClient) YourActionWithData(param string) {
+       reqData := map[string]interface{}{
+           "paramName": param,
        }
+       c.SendRequestWithData("YourOBSCommand", reqData)
    }
    ```
 
-4. Rebuild and reinstall:
+2. Add the hotkey binding in `main()` under the `bindings` slice.
+
+3. Rebuild and reinstall:
    ```bash
    ./build.sh
    sudo cp obs-hotkey-go /usr/local/bin/
