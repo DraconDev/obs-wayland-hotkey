@@ -23,7 +23,7 @@
             src = ./.;
             vendorHash = null;
             ldflags = [ "-s" "-w" ];
-            postBuild = ''
+            postInstall = ''
               mv $out/bin/obs-wayland-hotkey $out/bin/obs-hotkey
             '';
           };
