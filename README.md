@@ -386,7 +386,7 @@ systemctl --user daemon-reload
 
 ## License
 
-MIT License
+MIT
 
 ## Credits
 
