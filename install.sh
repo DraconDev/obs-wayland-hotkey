@@ -20,6 +20,13 @@ sudo chmod +x /usr/local/bin/obs-hotkey-go
 echo "✓ Binary installed to /usr/local/bin/obs-hotkey-go"
 echo ""
 
+# Create config directory
+echo "Creating config directory..."
+CONFIG_DIR="$HOME/.config/obs-hotkey"
+mkdir -p "$CONFIG_DIR"
+echo "✓ Config directory created at $CONFIG_DIR"
+echo ""
+
 # Setup passwordless sudo
 echo "Setting up passwordless sudo..."
 SUDOERS_FILE="/etc/sudoers.d/obs-hotkey"
@@ -80,4 +87,7 @@ echo "  journalctl --user -u obs-hotkey.service -f"
 echo ""
 echo "To stop:"
 echo "  systemctl --user stop obs-hotkey.service"
+echo ""
+echo "Edit your hotkeys:"
+echo "  ~/.config/obs-hotkey/hotkeys.json"
 echo ""

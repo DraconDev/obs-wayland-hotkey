@@ -12,15 +12,13 @@
       pkgsFor = system: import nixpkgs { inherit system; };
     in
     {
-      # NixOS Module
       nixosModules.default = import ./nix/module.nix;
 
-      # Packages
-      packages = forAllSystems (system: 
+      packages = forAllSystems (system:
         let pkgs = pkgsFor system; in
         {
           default = pkgs.buildGoModule {
-            pname = "obs-hotkey";
+            pname = "obs-hotkey-go";
             version = "1.0.0";
             src = ./.;
             vendorHash = null;
@@ -29,7 +27,6 @@
         }
       );
 
-      # Development shell
       devShells = forAllSystems (system:
         let pkgs = pkgsFor system; in
         {
@@ -39,7 +36,6 @@
         }
       );
 
-      # Apps for running directly
       apps = forAllSystems (system: {
         default = {
           type = "app";
