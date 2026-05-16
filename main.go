@@ -639,22 +639,6 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	// Find keyboard devices
-	log.Println("\nSearching for keyboard devices...")
-	devices, eventChans, err = findKeyboardDevices()
-	if err != nil {
-		log.Fatalf("Error finding keyboard devices: %v", err)
-	}
-
-	if len(devices) == 0 {
-		log.Fatal("No keyboard devices found! Make sure you're in the input group.")
-	}
-
-	log.Printf("Found %d keyboard device(s):", len(devices))
-	for _, device := range devices {
-		log.Printf("  - %s (%s)", device.Name, device.Fn)
-	}
-
 	// Start device readers
 	deviceClosed := make(chan *evdev.InputDevice, len(devices))
 	for i, device := range devices {
