@@ -23,7 +23,13 @@
             src = ./.;
             vendorHash = null;
             ldflags = [ "-s" "-w" ];
-            exePath = "/bin/obs-hotkey";
+            overrideAttrs = finalAttrs: {
+              buildPhase = ''
+                runHook preBuild
+                go build -mod=vendor -o obs-hotkey main.go
+                runHook postBuild
+              '';
+            };
           };
         }
       );
