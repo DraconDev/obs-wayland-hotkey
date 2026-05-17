@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn test_expand_home() {
-        let home = dirs::home_dir().unwrap();
+        let home = real_home();
         assert_eq!(expand_home("~/Pictures"), format!("{}/Pictures", home.display()));
         assert_eq!(expand_home("/tmp/abs"), "/tmp/abs");
     }
