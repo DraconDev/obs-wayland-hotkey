@@ -260,6 +260,13 @@ impl OBSClient {
         }
     }
 
+    pub fn toggle_virtual_cam(&self) {
+        log::info!("Toggling virtual camera...");
+        if let Err(e) = self.send_request("ToggleVirtualCam") {
+            log::info!("Error toggling virtual camera: {}", e);
+        }
+    }
+
     pub fn close(&self) {
         let mut guard = self.conn.lock().unwrap();
         if let Some(ref mut c) = *guard {
