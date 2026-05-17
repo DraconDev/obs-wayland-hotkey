@@ -1,19 +1,39 @@
 # obs-hotkey
 
-A lightweight Rust daemon for controlling OBS Studio with global hotkeys on Wayland and X11.
+> A lightweight Rust daemon for controlling OBS Studio with global hotkeys on Wayland and X11.
 
 **Works on Wayland!** Uses evdev for direct keyboard input capture, bypassing Wayland's security restrictions.
 
+---
+
 ## Features
 
-- **Wayland & X11 Support** - Works on both display servers
-- **Single Static Binary** - No runtime dependencies
-- **Global Hotkeys** - Works even when OBS is not in focus
-- **Auto-start on Login** - systemd user service integration
-- **Auto-reconnect** - Automatically reconnects to OBS if it restarts
-- **Multi-keyboard** - Monitors all connected keyboards
-- **Low Resource Usage** - Minimal RAM and CPU
-- **F13-F24 Support** - Use mouse extra keys as stream deck buttons
+- **Wayland & X11 Support** — works on both display servers
+- **Single Static Binary** — no runtime dependencies
+- **Global Hotkeys** — works even when OBS is not focused
+- **Auto-start on Login** — systemd user service integration
+- **Auto-reconnect** — automatically reconnects if OBS restarts
+- **Multi-keyboard** — monitors all connected keyboards
+- **F13-F24 Support** — use extra keys as stream deck buttons
+
+---
+
+## Quick Start
+
+```bash
+# 1. Install
+cargo install obs-hotkey
+
+# 2. Run once — shows the setup guide
+obs-hotkey
+
+# 3. Follow the on-screen steps:
+#    - Enable OBS WebSocket Server
+#    - Add yourself to the input group
+#    - Run: obs-hotkey setup
+```
+
+---
 
 ## Installation
 
@@ -25,11 +45,14 @@ cargo install obs-hotkey
 
 ### From GitHub Releases
 
-Download a pre-built binary from the [Releases page](https://github.com/DraconDev/obs-wayland-hotkey/releases):
-
 ```bash
 # amd64
 curl -L https://github.com/DraconDev/obs-wayland-hotkey/releases/latest/download/obs-hotkey-x86_64-unknown-linux-gnu -o obs-hotkey
+chmod +x obs-hotkey
+sudo cp obs-hotkey /usr/local/bin/
+
+# ARM64
+curl -L https://github.com/DraconDev/obs-wayland-hotkey/releases/latest/download/obs-hotkey-aarch64-unknown-linux-gnu -o obs-hotkey
 chmod +x obs-hotkey
 sudo cp obs-hotkey /usr/local/bin/
 ```
@@ -37,9 +60,12 @@ sudo cp obs-hotkey /usr/local/bin/
 ### From source
 
 ```bash
-cargo build --release
-./target/release/obs-hotkey
+git clone https://github.com/DraconDev/obs-wayland-hotkey.git
+cd obs-wayland-hotkey
+./install.sh    # builds and runs setup
 ```
+
+---
 
 ## Setup
 
@@ -47,9 +73,9 @@ cargo build --release
 
 1. Open OBS Studio
 2. Go to **Tools → WebSocket Server Settings**
-3. Check **"Enable WebSocket server"**
-4. Use default port **4455**
-5. Disable authentication
+3. Check **Enable WebSocket server**
+4. Port: **4455** (default)
+5. Authentication: **disabled**
 
 ### 2. Add yourself to the input group
 
@@ -64,24 +90,36 @@ sudo usermod -aG input $(whoami)
 obs-hotkey setup
 ```
 
-This writes and enables the systemd user service.
+This writes the systemd user service and enables it to start on login.
+
+---
 
 ## Usage
 
 ```
-obs-hotkey            # run the daemon (default)
-obs-hotkey setup      # enable auto-start on login
-obs-hotkey teardown   # undo setup (stop + disable + remove service)
-obs-hotkey status     # show service state and config status
+obs-hotkey              # Show quickstart guide (interactive setup help)
+obs-hotkey daemon      # Run the hotkey daemon
+obs-hotkey setup        # Install systemd user service
+obs-hotkey teardown     # Remove service and binaries
+obs-hotkey status       # Check service, config, and OBS connectivity
 ```
 
 ### Global flags
 
-- `--config <path>` - Path to config file (all subcommands)
+| Flag | Description |
+|------|-------------|
+| `--config <path>` | Use a custom config file |
+| `--version` | Show version |
+| `--help` | Show full help |
 
 ### Teardown options
 
-- `obs-hotkey teardown --purge` - Also remove config directory
+| Command | Description |
+|---------|-------------|
+| `obs-hotkey teardown` | Stop service, remove service files and binaries |
+| `obs-hotkey teardown --purge` | Above + remove config directory |
+
+---
 
 ## Default Hotkeys
 
@@ -89,6 +127,8 @@ obs-hotkey status     # show service state and config status
 |-----|--------|
 | **Scroll Lock** | Toggle recording start/stop |
 | **Pause** | Toggle recording pause/resume |
+
+---
 
 ## Customizing Hotkeys
 
@@ -115,7 +155,7 @@ Edit `~/.config/obs-hotkey/hotkeys.json`:
 
 ### Supported Keys
 
-- Function keys: `f1` through `f24`
+- Function keys: `f1` – `f24`
 - Special keys: `scroll lock`, `pause`, `home`, `end`, `page up`, `page down`, `insert`, `delete`
 
 ### Available Actions
@@ -131,6 +171,8 @@ Edit `~/.config/obs-hotkey/hotkeys.json`:
 | `toggle_replay_buffer` | `ToggleReplayBuffer` | Requires replay buffer enabled |
 | `save_replay` | `SaveReplayBuffer` | Saves current replay buffer |
 
+---
+
 ## Managing the Service
 
 ```bash
@@ -140,12 +182,14 @@ systemctl --user status obs-hotkey.service
 # View live logs
 journalctl --user -u obs-hotkey.service -f
 
-# Restart
+# Restart (after config changes)
 systemctl --user restart obs-hotkey.service
 
 # Stop
 systemctl --user stop obs-hotkey.service
 ```
+
+---
 
 ## Building
 
@@ -153,13 +197,12 @@ systemctl --user stop obs-hotkey.service
 # Build release binary
 cargo build --release
 
-# Build with all optimizations
-cargo build --release --all
-
 # Cross-compile for ARM64
 rustup target add aarch64-unknown-linux-gnu
 cargo build --release --target aarch64-unknown-linux-gnu
 ```
+
+---
 
 ## Requirements
 
@@ -167,15 +210,16 @@ cargo build --release --target aarch64-unknown-linux-gnu
 - OBS Studio 28+ with WebSocket enabled
 - Membership in the `input` group
 
+---
+
 ## Uninstall
 
 ```bash
-# Stop and disable
-obs-hotkey teardown
-
-# Remove binary
-sudo rm /usr/local/bin/obs-hotkey
+# Stop service and remove everything
+obs-hotkey teardown --purge
 ```
+
+---
 
 ## License
 
