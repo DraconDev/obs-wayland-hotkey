@@ -176,28 +176,68 @@ pub fn run_setup(config_path: &str) {
 pub fn run_teardown(purge: bool) {
     use crate::ansi::*;
 
+    let old_service = service_unit_path()
+        .parent()
+        .unwrap()
+        .join("obs-wayland-hotkey.service");
+    let old_binary = std::env::home_dir()
+        .map(|h| h.join(".cargo/bin/obs-wayland-hotkey"))
+        .unwrap_or_default();
+    let new_binary = std::env::home_dir()
+        .map(|h| h.join(".cargo/bin/obs-hotkey"))
+        .unwrap_or_default();
+
     println!();
-    println!("  {} Stopping service...", heading("▶"));
+    println!("  {} Stopping and disabling services...", heading("▶"));
+
+    // Stop/disable current service
     let _ = Command::new("systemctl")
         .args(["--user", "stop", "obs-hotkey.service"])
         .output();
-
-    println!("  {} Disabling service...", heading("▶"));
     let _ = Command::new("systemctl")
         .args(["--user", "disable", "obs-hotkey.service"])
         .output();
 
-    let unit_path = service_unit_path();
-    if unit_path.exists() {
-        std::fs::remove_file(&unit_path).ok();
-        println!("  {} Service file removed", ok(""));
-    } else {
-        println!("  {} No service file found", muted(""));
-    }
+    // Stop/disable old service (if renamed package was previously installed)
+    let _ = Command::new("systemctl")
+        .args(["--user", "stop", "obs-wayland-hotkey.service"])
+        .output();
+    let _ = Command::new("systemctl")
+        .args(["--user", "disable", "obs-wayland-hotkey.service"])
+        .output();
 
     let _ = Command::new("systemctl")
         .args(["--user", "daemon-reload"])
         .output();
+
+    println!("  {} Removing service files...", heading("▶"));
+
+    let unit_path = service_unit_path();
+    if unit_path.exists() {
+        std::fs::remove_file(&unit_path).ok();
+        println!("  {} obs-hotkey.service removed", ok(""));
+    }
+    if old_service.exists() {
+        std::fs::remove_file(&old_service).ok();
+        println!("  {} obs-wayland-hotkey.service removed", ok(""));
+    }
+    if !unit_path.exists() && !old_service.exists() {
+        println!("  {} No service files found", muted(""));
+    }
+
+    println!("  {} Removing binaries...", heading("▶"));
+
+    if new_binary.exists() {
+        std::fs::remove_file(&new_binary).ok();
+        println!("  {} ~/.cargo/bin/obs-hotkey removed", ok(""));
+    }
+    if old_binary.exists() {
+        std::fs::remove_file(&old_binary).ok();
+        println!("  {} ~/.cargo/bin/obs-wayland-hotkey removed", ok(""));
+    }
+    if !new_binary.exists() && !old_binary.exists() {
+        println!("  {} No binaries found in ~/.cargo/bin", muted(""));
+    }
 
     if purge {
         let config_dir = dirs::config_dir()
@@ -213,8 +253,6 @@ pub fn run_teardown(purge: bool) {
     println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     println!("  {}  Teardown Complete{}", BOLD, RESET);
     println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-    println!();
-    println!("  To reinstall: {}obs-hotkey setup{}", CYAN, RESET);
     println!();
 }
 
