@@ -75,20 +75,29 @@ WantedBy=graphical-session.target
 }
 
 pub fn run_setup(config_path: &str) {
+    use crate::ansi::*;
+
     if !in_input_group() {
-        println!("Warning: you are not in the 'input' group.");
-        println!("  On NixOS: add 'users.users.\"$USER\".extraGroups = [ \"input\" ];' to your configuration.nix");
-        println!("  On others: run: sudo usermod -aG input $USER");
-        println!("  Then log out and back in for changes to take effect.");
+        println!();
+        println!("  {} {}", warn(""), heading("Warning:") + " not in 'input' group");
+        println!();
+        println!("  Add yourself with:");
+        println!("    {} sudo usermod -aG input $(whoami)", key(""));
+        println!();
+        println!("  {} On NixOS:", muted(""));
+        println!("    {}users.users.\"$USER\".extraGroups = [ \"input\" ];{}",
+                 CYAN, RESET);
+        println!("  {} Then log out and back in for changes to take effect.", muted(""));
         println!();
     }
 
+    // Migrate old service name
     let old_unit = service_unit_path()
         .parent()
         .unwrap()
         .join("obs-wayland-hotkey.service");
     if old_unit.exists() {
-        println!("Found old obs-wayland-hotkey.service, removing...");
+        println!("  {} Removing old service...", warn(""));
         let _ = Command::new("systemctl")
             .args(["--user", "stop", "obs-wayland-hotkey.service"])
             .output();
@@ -116,14 +125,10 @@ pub fn run_setup(config_path: &str) {
     }
     log::info!("Service file written to {}", service_unit_path().display());
 
-    if !Command::new("systemctl")
+    let _ = Command::new("systemctl")
         .args(["--user", "daemon-reload"])
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
-    {
-        log::warn!("failed to reload systemd");
-    }
+        .output();
+
     if !Command::new("systemctl")
         .args(["--user", "enable", "obs-hotkey.service"])
         .output()
@@ -134,36 +139,50 @@ pub fn run_setup(config_path: &str) {
         std::process::exit(1);
     }
 
-    println!("Service enabled. Starting now...");
     let _ = Command::new("systemctl")
         .args(["--user", "start", "obs-hotkey.service"])
         .output();
 
+    // Final setup summary
     println!();
-    println!("=== Setup Complete! ===");
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    println!("  {}  Setup Complete!{}", BOLD, RESET);
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     println!();
-    println!("1. ENABLE OBS WEBSOCKET SERVER:");
-    println!("   - Open OBS Studio → Tools → WebSocket Server Settings");
-    println!("   - Check 'Enable WebSocket server', port 4455, no auth");
+    println!("  {}  Enable OBS WebSocket Server", heading("1."));
+    println!("     {}Open OBS → Tools → WebSocket Server Settings{}", CYAN, RESET);
+    println!("     Check {}Enable{} (port 4455, no auth)", GREEN, RESET);
     println!();
-    println!("2. DEFAULT HOTKEYS (already configured):");
-    println!("   - Scroll Lock → Toggle recording");
-    println!("   - Pause       → Toggle recording pause");
+    println!("  {}  Default hotkeys configured:", heading("2."));
+    println!("     {}Scroll Lock{} → Toggle recording", CYAN, RESET);
+    println!("     {}Pause{}       → Toggle pause", CYAN, RESET);
     println!();
-    println!("3. VERIFY IT'S WORKING:");
-    println!("   - Press Scroll Lock — recording should stop/resume");
+    println!("  {}  Test it:", heading("3."));
+    println!("     Press {}Scroll Lock{} — recording should toggle", CYAN, RESET);
     println!();
-    println!("4. VIEW LOGS:  journalctl --user -u obs-hotkey.service -f");
-    println!("5. SERVICE:     systemctl --user restart obs-hotkey.service");
-    println!("6. CUSTOMIZE:   ~/.config/obs-hotkey/hotkeys.json");
+    println!("  {}  View logs:", heading("4."));
+    println!("     {}", muted("journalctl --user -u obs-hotkey.service -f"));
+    println!();
+    println!("  {}  Service commands:", heading("5."));
+    println!("     {}systemctl --user restart obs-hotkey.service{}", CYAN, RESET);
+    println!();
+    println!("  {}  Customize:", heading("6."));
+    println!("     {}", muted("~/.config/obs-hotkey/hotkeys.json"));
+    println!();
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    println!();
 }
 
 pub fn run_teardown(purge: bool) {
-    println!("Stopping service...");
+    use crate::ansi::*;
+
+    println!();
+    println!("  {} Stopping service...", heading("▶"));
     let _ = Command::new("systemctl")
         .args(["--user", "stop", "obs-hotkey.service"])
         .output();
-    println!("Disabling service...");
+
+    println!("  {} Disabling service...", heading("▶"));
     let _ = Command::new("systemctl")
         .args(["--user", "disable", "obs-hotkey.service"])
         .output();
@@ -171,9 +190,9 @@ pub fn run_teardown(purge: bool) {
     let unit_path = service_unit_path();
     if unit_path.exists() {
         std::fs::remove_file(&unit_path).ok();
-        println!("Service file removed.");
+        println!("  {} Service file removed", ok(""));
     } else {
-        println!("No service file found (already removed?).");
+        println!("  {} No service file found", muted(""));
     }
 
     let _ = Command::new("systemctl")
@@ -184,57 +203,82 @@ pub fn run_teardown(purge: bool) {
         let config_dir = dirs::config_dir()
             .map(|p| p.join("obs-hotkey"))
             .unwrap_or_else(|| PathBuf::from("~/.config/obs-hotkey"));
-        std::fs::remove_dir_all(&config_dir).ok();
-        println!("Config directory purged.");
+        if config_dir.exists() {
+            std::fs::remove_dir_all(&config_dir).ok();
+            println!("  {} Config directory purged", ok(""));
+        }
     }
 
-    println!("Teardown complete.");
+    println!();
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    println!("  {}  Teardown Complete{}", BOLD, RESET);
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    println!();
+    println!("  To reinstall: {}obs-hotkey setup{}", CYAN, RESET);
+    println!();
 }
 
 pub fn run_status(config_path: &str) {
-    println!("=== OBS Hotkey Status ===");
+    use crate::ansi::*;
+
+    println!();
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    println!("  {}  OBS Hotkey Status{}", BOLD, RESET);
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     println!();
 
-    if is_autostart_enabled() {
-        println!("  Auto-start: enabled (systemd user service)");
-    } else {
-        println!("  Auto-start: not configured");
-        println!("               Run 'obs-hotkey setup' to enable");
-    }
+    let autostart = is_autostart_enabled();
+    let input_grp = in_input_group();
+    let cfg_exists = std::path::Path::new(config_path).exists();
+    let dir_exists = std::path::Path::new(config_path)
+        .parent()
+        .map(|p| p.exists())
+        .unwrap_or(false);
 
-    if in_input_group() {
-        println!("  Input group: ✓ member");
-    } else {
-        println!("  Input group: ✗ not a member");
-    }
-
-    if std::path::Path::new(config_path).exists() {
-        println!("  Config:      ✓ {}", config_path);
-    } else {
-        println!("  Config:      ✗ not found ({})", config_path);
-    }
-
-    let dir_path = std::path::Path::new(config_path).parent().unwrap_or(std::path::Path::new(""));
-    if dir_path.exists() {
-        println!("  Config dir: ✓ {}", dir_path.display());
-    } else {
-        println!("  Config dir: ✗ not found");
-    }
-
-    print!("  OBS WS:     ");
-    if let Ok(conn) = std::net::TcpStream::connect_timeout(
+    let obs_ok = std::net::TcpStream::connect_timeout(
         &std::net::SocketAddr::from(([127, 0, 0, 1], 4455)),
         std::time::Duration::from_secs(1),
-    ) {
-        drop(conn);
-        println!("✓ reachable (port 4455)");
+    )
+    .is_ok();
+
+    // Auto-start row
+    if autostart {
+        println!("  {:<14}  {}", "Auto-start:", ok("enabled (systemd)"));
     } else {
-        println!("✗ not reachable (is OBS running?)");
+        println!("  {:<14}  {}  (run {} to enable)",
+                 "Auto-start:", warn("disabled"), key("obs-hotkey setup"));
+    }
+
+    // Input group row
+    println!("  {:<14}  {}", "Input group:", if input_grp { ok("member") } else { err("not a member") });
+
+    // Config row
+    if cfg_exists {
+        println!("  {:<14}  {}  {}", "Config:", ok("✓"), muted(config_path));
+    } else {
+        println!("  {:<14}  {}  ({})", "Config:", err("✗"), muted(config_path));
+    }
+
+    // Config dir row
+    if dir_exists {
+        let dir = std::path::Path::new(config_path).parent()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_default();
+        println!("  {:<14}  {}  {}", "Config dir:", ok("✓"), muted(&dir));
+    } else {
+        println!("  {:<14}  {}", "Config dir:", err("not found"));
+    }
+
+    // OBS row
+    if obs_ok {
+        println!("  {:<14}  {}", "OBS WS:", ok("reachable"));
+    } else {
+        println!("  {:<14}  {}  (is OBS running?)", "OBS WS:", err("✗"));
     }
 
     println!();
-    if !is_autostart_enabled() {
-        println!("Run 'obs-hotkey setup' to enable auto-start on login.");
+    if !autostart {
+        println!("  Run {}obs-hotkey setup{} to enable auto-start.", key(""), key("setup"));
     }
 }
 

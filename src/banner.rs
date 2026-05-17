@@ -1,3 +1,4 @@
+use crate::ansi::*;
 use crate::config::AppConfig;
 
 pub struct HotkeyBinding {
@@ -8,8 +9,12 @@ pub struct HotkeyBinding {
 
 pub fn print_banner(_cfg: &AppConfig, bindings: &[HotkeyBinding], autostart: bool) {
     println!();
-    println!("OBS Hotkey Controller - Wayland compatible");
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    println!("  {}  OBS Hotkey Controller{}", BOLD, RESET);
+    println!("  {}  Wayland-compatible{}", DIM, RESET);
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     println!();
+
     for b in bindings {
         if b.key_name.is_empty() {
             continue;
@@ -17,17 +22,20 @@ pub fn print_banner(_cfg: &AppConfig, bindings: &[HotkeyBinding], autostart: boo
         if crate::input::get_key_code(&b.key_name).is_none() {
             continue;
         }
-        println!("  {:-12} → {}", b.key_name, b.label);
+        println!("  {} → {}", key(&b.key_name), b.label);
     }
     println!();
+
     if autostart {
-        println!("  Auto-start: enabled (systemd user service)");
+        println!("  {} Auto-start enabled", ok(""));
     } else {
-        println!("  Auto-start: not configured (run 'obs-hotkey setup' to enable)");
+        println!("  {} Auto-start not configured", warn(""));
+        println!("     {} to enable", key("obs-hotkey setup"));
     }
     println!();
+
     if !running_under_systemd() {
-        println!("Listening for hotkeys... (Ctrl+C to exit)");
+        println!("  {} Listening for hotkeys... (Ctrl+C to exit){}", DIM, RESET);
     }
 }
 

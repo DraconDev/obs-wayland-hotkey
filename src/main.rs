@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
+mod ansi;
 mod banner;
 mod config;
 mod input;
@@ -311,36 +312,50 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
 }
 
 fn print_quickstart() {
-    println!("obs-hotkey {} — Wayland-compatible OBS hotkey daemon", env!("CARGO_PKG_VERSION"));
+    use ansi::*;
     println!();
-    println!("Quick Start:");
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    println!("  {}  obs-hotkey {}  {}", BOLD, env!("CARGO_PKG_VERSION"), RESET);
+    println!("  {}  Wayland-compatible OBS hotkey daemon{}", DIM, RESET);
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     println!();
-    println!("  1. Enable OBS WebSocket Server");
-    println!("     Open OBS → Tools → WebSocket Server Settings → Enable (port 4455, no auth)");
+
+    println!("  {}", heading("▶ Quick Start"));
     println!();
-    println!("  2. Add yourself to the input group");
-    println!("     sudo usermod -aG input $(whoami)");
-    println!("     (then log out and back in)");
+    println!("  {}" , heading("1.") + " " + "Enable OBS WebSocket Server");
+    println!("     Open OBS → Tools → WebSocket Server Settings");
+    println!("     {}Enable{}", GREEN, RESET);
+    println!("     (port 4455, no auth needed)");
     println!();
-    println!("  3. Set up auto-start on login");
-    println!("     obs-hotkey setup");
+    println!("  {}" , heading("2.") + " " + "Add yourself to the input group");
+    println!("     {}", muted("sudo usermod -aG input $(whoami)"));
+    println!("     {}", muted("(then log out and back in)"));
     println!();
-    println!("  4. Or run the daemon directly");
-    println!("     obs-hotkey daemon");
+    println!("  {}" , heading("3.") + " " + "Set up auto-start on login");
+    println!("     {}", key("obs-hotkey setup"));
     println!();
-    println!("Commands:");
-    println!("  daemon     Run the hotkey daemon");
-    println!("  setup      Install systemd service for auto-start");
-    println!("  teardown   Remove the systemd service");
-    println!("  status     Check service, config, and OBS connectivity");
+    println!("  {}" , heading("4.") + " " + "Run the daemon");
+    println!("     {}", key("obs-hotkey daemon"));
     println!();
-    println!("Flags:");
-    println!("  --config <path>   Use a custom config file");
-    println!("  --version         Show version");
-    println!("  --help            Show full help");
+
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     println!();
-    println!("Config:  ~/.config/obs-hotkey/hotkeys.json");
-    println!("Logs:    journalctl --user -u obs-hotkey.service -f");
+    println!("  {}", heading("Commands:"));
+    println!("  {:>12}  Run the hotkey daemon", key("daemon"));
+    println!("  {:>12}  Install systemd service", key("setup"));
+    println!("  {:>12}  Remove systemd service", key("teardown"));
+    println!("  {:>12}  Check service & OBS", key("status"));
+    println!();
+    println!("  {}", heading("Flags:"));
+    println!("  {:>12}  Use a custom config file", key("--config"));
+    println!("  {:>12}  Show version", key("--version"));
+    println!("  {:>12}  Show full help", key("--help"));
+    println!();
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    println!();
+    println!("  {}  Config:  {}", muted("~"), muted("~/.config/obs-hotkey/hotkeys.json"));
+    println!("  {}  Logs:    {}", muted("~"), muted("journalctl --user -u obs-hotkey.service -f"));
+    println!();
 }
 
 fn main() {
