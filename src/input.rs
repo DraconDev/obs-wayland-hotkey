@@ -1,7 +1,7 @@
-use evdev::{Device, Key};
+use evdev::{Device, KeyCode};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 
@@ -13,7 +13,7 @@ pub fn find_keyboards() -> anyhow::Result<Vec<PathBuf>> {
     let mut paths = Vec::new();
     for entry in std::fs::read_dir("/dev/input")? {
         let entry = entry?;
-        let name = entry.file_name().to_str()?;
+        let name = entry.file_name().to_str().ok()?;
         if !name.starts_with("event") {
             continue;
         }
@@ -29,7 +29,7 @@ pub fn find_keyboards() -> anyhow::Result<Vec<PathBuf>> {
             Some(k) => k,
             None => continue,
         };
-        if supported.contains(Key::KEY_SCROLLLOCK) {
+        if supported.contains(KeyCode::KEY_SCROLLLOCK) {
             paths.push(path);
         }
     }
@@ -43,15 +43,15 @@ pub struct KeyEvent {
 
 pub struct DeviceHandle {
     pub path: PathBuf,
-    pub tx: Sender<()>,
+    tx: Sender<()>,
 }
 
 pub fn spawn_keyboard_reader(
     path: PathBuf,
     device_idx: usize,
 ) -> (DeviceHandle, Receiver<KeyEvent>) {
-    let (tx, rx) = mpsc::channel();
     let (close_tx, close_rx) = mpsc::channel();
+    let (tx, rx) = mpsc::channel();
 
     thread::spawn(move || {
         let mut device = match Device::open(&path) {
@@ -77,22 +77,15 @@ pub fn spawn_keyboard_reader(
                 break;
             }
 
-            match events.next() {
-                Some(Ok(event)) => {
-                    if event.event_type() == evdev::EventType::KEY && event.value() == 1 {
-                        let _ = tx.send(KeyEvent {
-                            code: event.code(),
-                            value: event.value(),
-                        });
-                    }
+            if let Some(event) = events.next() {
+                if event.event_type() == evdev::EventType::KEY && event.value() == 1 {
+                    let _ = tx.send(KeyEvent {
+                        code: event.code(),
+                        value: event.value(),
+                    });
                 }
-                Some(Err(e)) => {
-                    log::warn!("event error on {}: {}", name, e);
-                    break;
-                }
-                None => {
-                    break;
-                }
+            } else {
+                break;
             }
         }
         log::info!("keyboard thread exiting: {}", name);

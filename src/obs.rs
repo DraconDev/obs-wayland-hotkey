@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::io::{Read, Write as IoWrite};
 use std::net::TcpStream;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -36,45 +35,36 @@ impl OBSClient {
     pub fn connect(&self) -> anyhow::Result<()> {
         let mut guard = self.conn.lock().unwrap();
         if let Some(ref mut c) = *guard {
-            let _ = c.ws.write_close(None);
+            let _ = c.ws.close(Some(tungstenite::protocol::CloseFrame::NULL));
         }
         *guard = None;
         self.connected.store(false, Ordering::SeqCst);
 
         let stream = TcpStream::connect(&self.ws_url)?;
         stream.set_read_timeout(Some(Duration::from_secs(10)))?;
-        let ws = tungstenite::client(
-            tungstenite::handshake::client::ClientHandshake::start(
-                &stream,
-                &self.ws_url,
-                tungstenite::handshake::client::NoProxy,
-            )?,
-            &self.ws_url,
-        )?
-        .0;
-        ws.set_read_timeout(Some(Duration::from_secs(10)))?;
 
-        let mut msg = ws.read_message()?;
+        let (ws, resp) = tungstenite::client(&self.ws_url, stream)?;
+
+        log::info!("Connected to OBS WebSocket");
+        log::debug!("Handshake response: {:?}", resp);
+
+        let mut msg = ws.read()?;
         let hello: HelloMessage = serde_json::from_str(msg.to_text().unwrap())?;
-        log::info!(
-            "Connected to OBS WebSocket v{}",
-            hello.d.obs_web_socket_version
-        );
+        log::info!("OBS WebSocket version: {}", hello.d.obs_web_socket_version);
 
         let ident = IdentifyMessage {
             op: 1,
             d: IdentifyData { rpc_version: 1 },
         };
-        ws.write_message(&tungstenite::Message::Text(
-            serde_json::to_string(&ident).unwrap(),
+        ws.send(tungstenite::Message::Text(
+            serde_json::to_string(&ident).unwrap().into(),
         ))?;
 
-        msg = ws.read_message()?;
+        msg = ws.read()?;
         let text = msg.to_text().unwrap();
         if !text.starts_with("{") {
             anyhow::bail!("failed to identify to OBS: unexpected message: {}", text);
         }
-        ws.set_read_timeout(None)?;
 
         log::info!("Successfully identified to OBS WebSocket");
         *guard = Some(Conn { ws });
@@ -120,7 +110,7 @@ impl OBSClient {
                 guard = self.conn.lock().unwrap();
             }
             let conn = guard.as_mut().unwrap();
-            conn.ws.write_message(&tungstenite::Message::Text(json.into()))?;
+            conn.ws.send(tungstenite::Message::Text(json.into()))?;
         }
 
         let resp = self.read_response()?;
@@ -135,10 +125,8 @@ impl OBSClient {
     fn read_response(&self) -> anyhow::Result<serde_json::Value> {
         let mut guard = self.conn.lock().unwrap();
         let conn = guard.as_mut().unwrap();
-        conn.ws.set_read_timeout(Some(Duration::from_secs(5)))?;
-        let msg = conn.ws.read_message()?;
+        let msg = conn.ws.read()?;
         let data: serde_json::Value = serde_json::from_str(msg.to_text().unwrap())?;
-        conn.ws.set_read_timeout(None)?;
         Ok(data)
     }
 
@@ -227,7 +215,7 @@ impl OBSClient {
     pub fn close(&self) {
         let mut guard = self.conn.lock().unwrap();
         if let Some(ref mut c) = *guard {
-            let _ = c.ws.write_close(None);
+            let _ = c.ws.close(Some(tungstenite::protocol::CloseFrame::NULL));
         }
         *guard = None;
     }
@@ -257,7 +245,7 @@ impl OBSClient {
                 return;
             }
             let conn = guard.as_mut().unwrap();
-            conn.ws.write_message(&tungstenite::Message::Text(json.into()))?;
+            conn.ws.send(tungstenite::Message::Text(json.into())).ok();
         }
 
         let resp = self.read_response();
