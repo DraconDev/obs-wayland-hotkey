@@ -321,9 +321,9 @@ pub fn run_status(config_path: &str) {
 
     // Config row
     if cfg_exists {
-        println!("  {:<14}  {}  {}", "Config:", ok("✓"), muted(config_path));
+        println!("  {:<14}  {}  {}", "Config:", ok(""), muted(config_path));
     } else {
-        println!("  {:<14}  {}  ({})", "Config:", err("✗"), muted(config_path));
+        println!("  {:<14}  {}  ({})", "Config:", err(""), muted(config_path));
     }
 
     // Config dir row
@@ -331,7 +331,7 @@ pub fn run_status(config_path: &str) {
         let dir = std::path::Path::new(config_path).parent()
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default();
-        println!("  {:<14}  {}  {}", "Config dir:", ok("✓"), muted(&dir));
+        println!("  {:<14}  {}  {}", "Config dir:", ok(""), muted(&dir));
     } else {
         println!("  {:<14}  {}", "Config dir:", err("not found"));
     }
