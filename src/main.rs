@@ -43,7 +43,6 @@ enum Commands {
     Status,
 }
 
-#[derive(Clone)]
 struct ActionContext {
     client: obs::OBSClient,
     screenshot_source: String,
@@ -132,21 +131,88 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
 
     banner::print_banner(&cfg, &bindings, autostart);
 
-    if bindings.iter().all(|b| b.key_name.is_empty() || get_key_code(&b.key_name).is_none()) {
+    if bindings
+        .iter()
+        .all(|b| b.key_name.is_empty() || get_key_code(&b.key_name).is_none())
+    {
         anyhow::bail!("No valid hotkeys configured");
     }
 
-    let mut hotkey_actions: std::collections::HashMap<
-        u16,
-        std::sync::Arc<std::sync::Mutex<obs::OBSClient>>,
-    > = std::collections::HashMap::new();
+    let action_map: std::collections::HashMap<
+        &str,
+        std::sync::Arc<dyn Fn() + Send + Sync>,
+    > = std::collections::HashMap::from([
+        (
+            "toggle_recording",
+            std::sync::Arc::new({
+                let c = ctx.client.clone();
+                move || c.toggle_recording()
+            }) as _,
+        ),
+        (
+            "toggle_pause",
+            std::sync::Arc::new({
+                let c = ctx.client.clone();
+                move || c.toggle_pause()
+            }) as _,
+        ),
+        (
+            "toggle_streaming",
+            std::sync::Arc::new({
+                let c = ctx.client.clone();
+                move || c.toggle_streaming()
+            }) as _,
+        ),
+        (
+            "screenshot",
+            std::sync::Arc::new({
+                let c = ctx.client.clone();
+                let src = ctx.screenshot_source.clone();
+                let dir = ctx.screenshot_dir.clone();
+                move || c.screenshot(&src, &dir)
+            }) as _,
+        ),
+        (
+            "toggle_mute_mic",
+            std::sync::Arc::new({
+                let c = ctx.client.clone();
+                let mic = ctx.mic_name.clone();
+                move || c.toggle_mute_mic(&mic)
+            }) as _,
+        ),
+        (
+            "toggle_studio_mode",
+            std::sync::Arc::new({
+                let c = ctx.client.clone();
+                move || c.toggle_studio_mode()
+            }) as _,
+        ),
+        (
+            "toggle_replay_buffer",
+            std::sync::Arc::new({
+                let c = ctx.client.clone();
+                move || c.toggle_replay_buffer()
+            }) as _,
+        ),
+        (
+            "save_replay",
+            std::sync::Arc::new({
+                let c = ctx.client.clone();
+                move || c.save_replay()
+            }) as _,
+        ),
+    ]);
 
+    let mut binding_actions: std::collections::HashMap<u16, std::sync::Arc<dyn Fn() + Send + Sync>> =
+        std::collections::HashMap::new();
     for b in &bindings {
         if b.key_name.is_empty() {
             continue;
         }
         if let Some(code) = get_key_code(&b.key_name) {
-            hotkey_actions.insert(code, ctx.client.clone());
+            if let Some(action) = action_map.get(b.action) {
+                binding_actions.insert(code, action.clone());
+            }
         }
     }
 
@@ -209,85 +275,35 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         }
     });
 
-    let action_client = ctx.client.clone();
-    let action_ctx = ctx.clone();
+    let close_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
 
-    let action_map: std::collections::HashMap<&str, Box<dyn Fn() + Send + Sync>> =
-        std::collections::HashMap::from([
-            ("toggle_recording", Box::new(move || action_client.toggle_recording()) as _),
-            (
-                "toggle_pause",
-                Box::new(move || action_client.toggle_pause()) as _,
-            ),
-            (
-                "toggle_streaming",
-                Box::new(move || action_client.toggle_streaming()) as _,
-            ),
-            (
-                "screenshot",
-                Box::new({
-                    let c = action_ctx.client.clone();
-                    let src = action_ctx.screenshot_source.clone();
-                    let dir = action_ctx.screenshot_dir.clone();
-                    move || c.screenshot(&src, &dir)
-                }) as _,
-            ),
-            (
-                "toggle_mute_mic",
-                Box::new({
-                    let c = action_ctx.client.clone();
-                    let mic = action_ctx.mic_name.clone();
-                    move || c.toggle_mute_mic(&mic)
-                }) as _,
-            ),
-            (
-                "toggle_studio_mode",
-                Box::new(move || action_client.toggle_studio_mode()) as _,
-            ),
-            (
-                "toggle_replay_buffer",
-                Box::new(move || action_client.toggle_replay_buffer()) as _,
-            ),
-            ("save_replay", Box::new(move || action_client.save_replay()) as _),
-        ]);
-
-    let mut binding_actions: std::collections::HashMap<u16, std::sync::Arc<dyn Fn() + Send + Sync>> =
-        std::collections::HashMap::new();
-    for b in &bindings {
-        if b.key_name.is_empty() {
-            continue;
-        }
-        if let Some(code) = get_key_code(&b.key_name) {
-            if let Some(action) = action_map.get(b.action) {
-                binding_actions.insert(code, std::sync::Arc::new((action.clone()) as Box<dyn Fn() + Send + Sync>));
-            }
-        }
-    }
+    std::thread::spawn(move || {
+        let mut buf = [0u8; 1];
+        std::io::stdin().read_exact(&mut buf).ok();
+        close_flag.store(true, std::sync::atomic::Ordering::SeqCst);
+    });
 
     loop {
-        let mut all_closed = true;
+        if close_flag.load(std::sync::atomic::Ordering::SeqCst) {
+            log::info!("Shutting down...");
+            break;
+        }
+
+        let mut any_events = false;
         for rx in &rx_channels {
             while let Ok(event) = rx.try_recv() {
+                any_events = true;
                 if event.value == 1 {
                     if let Some(action) = binding_actions.get(&event.code) {
                         action();
                     }
                 }
             }
-            if rx.is_empty() {
-            } else {
-                all_closed = false;
-            }
-        }
-
-        if all_closed && rx_channels.iter().all(|rx| rx.is_empty()) {
-            break;
         }
 
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
 
-    log::info!("All keyboard devices closed, shutting down...");
     should_stop.store(true, std::sync::atomic::Ordering::SeqCst);
     ctx.client.close();
 
@@ -295,10 +311,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
 }
 
 fn main() {
-    env_logger::Builder::from_env(
-        env_logger::Env::default().default_filter_or("info"),
-    )
-    .init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let cli = Cli::parse();
 
