@@ -24,8 +24,10 @@ impl Clone for OBSClient {
     }
 }
 
-unsafe impl Send for OBSClient {}
-unsafe impl Sync for OBSClient {}
+const _: () = {
+    fn assert_send_sync<T: Send + Sync>() {}
+    assert_send_sync::<OBSClient>();
+};
 
 struct Conn {
     ws: tungstenite::WebSocket<TcpStream>,
@@ -232,6 +234,7 @@ impl OBSClient {
             let _ = c.ws.close(None);
         }
         *guard = None;
+        self.connected.store(false, Ordering::SeqCst);
     }
 
     fn query_studio_mode(&self) {

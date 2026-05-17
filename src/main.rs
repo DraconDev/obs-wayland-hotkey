@@ -17,7 +17,7 @@ const RECONNECT_INTERVAL_SECS: u64 = 60;
 #[derive(Parser, Debug)]
 #[command(
     name = "obs-hotkey",
-    version = "1.0.0",
+    version = env!("CARGO_PKG_VERSION"),
     about = "Lightweight daemon for controlling OBS Studio with global hotkeys on Wayland and X11",
     infer_subcommands = true
 )]
