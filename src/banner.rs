@@ -60,7 +60,9 @@ mod tests {
 
     #[test]
     fn test_running_under_systemd() {
+        std::env::remove_var("INVOCATION_ID");
+        std::env::remove_var("JOURNAL_STREAM");
         let result = running_under_systemd();
-        assert!(!result);
+        assert!(!result, "should return false when not running under systemd");
     }
 }

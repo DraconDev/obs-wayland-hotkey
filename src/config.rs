@@ -172,7 +172,7 @@ mod tests {
     fn test_load_config_bare_host() {
         let temp = std::env::temp_dir();
         let path = temp.join("hotkeys2.json");
-        fs::write(&path, r#"{"obs_host":"localhost:4455"}"#).unwrap();
+        fs::write(&path, r#"{"obs_host":"localhost:4455","hotkeys":{"toggle_recording":"","toggle_pause":"","toggle_streaming":"","screenshot":"","toggle_mute_mic":"","toggle_studio_mode":"","toggle_replay_buffer":"","save_replay":""},"screenshot_source":"","screenshot_dir":"","mic_name":""}"#).unwrap();
         let cfg = load_config(&path).unwrap();
         assert_eq!(cfg.obs_host, "ws://localhost:4455");
         fs::remove_file(&path).ok();
@@ -196,7 +196,7 @@ mod tests {
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
         fs::create_dir_all(&dir).unwrap();
-        fs::write(&path, r#"{"obs_host":"ws://custom:1234"}"#).unwrap();
+        fs::write(&path, r#"{"obs_host":"ws://custom:1234","hotkeys":{"toggle_recording":"scroll lock","toggle_pause":"","toggle_streaming":"","screenshot":"","toggle_mute_mic":"","toggle_studio_mode":"","toggle_replay_buffer":"","save_replay":""},"screenshot_source":"","screenshot_dir":"","mic_name":""}"#).unwrap();
         ensure_config(&dir, &path).unwrap();
         let cfg = load_config(&path).unwrap();
         assert_eq!(cfg.obs_host, "ws://custom:1234");
