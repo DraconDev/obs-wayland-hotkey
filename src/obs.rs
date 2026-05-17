@@ -14,26 +14,132 @@ pub struct OBSClient {
     ws_url: String,
 }
 
-#[derive(Clone)]
-pub struct OBSClientClone {
-    inner: OBSClient,
+struct Conn {
+    ws: tungstenite::WebSocket<TcpStream>,
 }
 
-impl Clone for OBSClient {
-    fn clone(&self) -> Self {
+impl OBSClient {
+    pub fn new(ws_url: String) -> Self {
         Self {
-            conn: self.conn.clone(),
-            connected: self.connected.clone(),
-            studio_mode_enabled: self.studio_mode_enabled.clone(),
-            studio_mode_queried: self.studio_mode_queried.clone(),
-            ws_url: self.ws_url.clone(),
+            conn: Arc::new(Mutex::new(None)),
+            connected: AtomicBool::new(false),
+            studio_mode_enabled: AtomicBool::new(false),
+            studio_mode_queried: AtomicBool::new(false),
+            ws_url,
         }
     }
-}
 
-impl OBSClientClone {
     pub fn is_connected(&self) -> bool {
         self.connected.load(Ordering::SeqCst)
+    }
+
+    pub fn connect(&self) -> anyhow::Result<()> {
+        let mut guard = self.conn.lock().unwrap();
+        if let Some(ref mut c) = *guard {
+            let _ = c.ws.write_close(None);
+        }
+        *guard = None;
+        self.connected.store(false, Ordering::SeqCst);
+
+        let stream = TcpStream::connect(&self.ws_url)?;
+        stream.set_read_timeout(Some(Duration::from_secs(10)))?;
+        let ws = tungstenite::client(
+            tungstenite::handshake::client::ClientHandshake::start(
+                &stream,
+                &self.ws_url,
+                tungstenite::handshake::client::NoProxy,
+            )?,
+            &self.ws_url,
+        )?
+        .0;
+        ws.set_read_timeout(Some(Duration::from_secs(10)))?;
+
+        let mut msg = ws.read_message()?;
+        let hello: HelloMessage = serde_json::from_str(msg.to_text().unwrap())?;
+        log::info!(
+            "Connected to OBS WebSocket v{}",
+            hello.d.obs_web_socket_version
+        );
+
+        let ident = IdentifyMessage {
+            op: 1,
+            d: IdentifyData { rpc_version: 1 },
+        };
+        ws.write_message(&tungstenite::Message::Text(
+            serde_json::to_string(&ident).unwrap(),
+        ))?;
+
+        msg = ws.read_message()?;
+        let text = msg.to_text().unwrap();
+        if !text.starts_with("{") {
+            anyhow::bail!("failed to identify to OBS: unexpected message: {}", text);
+        }
+        ws.set_read_timeout(None)?;
+
+        log::info!("Successfully identified to OBS WebSocket");
+        *guard = Some(Conn { ws });
+        self.connected.store(true, Ordering::SeqCst);
+        drop(guard);
+        self.query_studio_mode();
+        Ok(())
+    }
+
+    pub fn send_request(&self, request_type: &str) -> anyhow::Result<()> {
+        self.send_request_with_data(request_type, None)
+    }
+
+    pub fn send_request_with_data(
+        &self,
+        request_type: &str,
+        request_data: Option<serde_json::Value>,
+    ) -> anyhow::Result<()> {
+        let request_id = format!(
+            "{}_{}",
+            request_type,
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        );
+        let req = RequestMessage {
+            op: 6,
+            d: RequestData {
+                request_type: request_type.to_string(),
+                request_id,
+                request_data,
+            },
+        };
+        let json = serde_json::to_string(&req)?;
+
+        {
+            let mut guard = self.conn.lock().unwrap();
+            if !self.connected.load(Ordering::SeqCst) {
+                drop(guard);
+                log::info!("Not connected to OBS. Reconnecting...");
+                self.connect()?;
+                guard = self.conn.lock().unwrap();
+            }
+            let conn = guard.as_mut().unwrap();
+            conn.ws.write_message(&tungstenite::Message::Text(json.into()))?;
+        }
+
+        let resp = self.read_response()?;
+        if let Some(status) = resp.get("d").and_then(|d| d.get("requestStatus")) {
+            if !status.get("result").and_then(|r| r.as_bool()).unwrap_or(false) {
+                anyhow::bail!("request {} failed: {:?}", request_type, status);
+            }
+        }
+        Ok(())
+    }
+
+    fn read_response(&self) -> anyhow::Result<serde_json::Value> {
+        let mut guard = self.conn.lock().unwrap();
+        let conn = guard.as_mut().unwrap();
+        conn.ws.set_read_timeout(Some(Duration::from_secs(5)))?;
+        let msg = conn.ws.read_message()?;
+        let data: serde_json::Value = serde_json::from_str(msg.to_text().unwrap())?;
+        conn.ws.set_read_timeout(None)?;
+        Ok(data)
     }
 
     pub fn toggle_recording(&self) {
@@ -118,115 +224,6 @@ impl OBSClientClone {
         }
     }
 
-    pub fn connect(&self) -> anyhow::Result<()> {
-        let mut guard = self.conn.lock().unwrap();
-        if let Some(ref mut c) = *guard {
-            let _ = c.ws.write_close(None);
-        }
-        *guard = None;
-        self.connected.store(false, Ordering::SeqCst);
-
-        let stream = TcpStream::connect(&self.ws_url)?;
-        stream.set_read_timeout(Some(Duration::from_secs(10)))?;
-        let ws = tungstenite::client(
-            tungstenite::handshake::client::ClientHandshake::start(
-                &stream,
-                &self.ws_url,
-                tungstenite::handshake::client::NoProxy,
-            )?,
-            &self.ws_url,
-        )?
-        .0;
-        ws.set_read_timeout(Some(Duration::from_secs(10)))?;
-
-        let mut msg = ws.read_message()?;
-        let hello: HelloMessage = serde_json::from_str(msg.to_text().unwrap())?;
-        log::info!(
-            "Connected to OBS WebSocket v{}",
-            hello.d.obs_web_socket_version
-        );
-
-        let ident = IdentifyMessage {
-            op: 1,
-            d: IdentifyData { rpc_version: 1 },
-        };
-        ws.write_message(&tungstenite::Message::Text(
-            serde_json::to_string(&ident).unwrap(),
-        ))?;
-
-        msg = ws.read_message()?;
-        let text = msg.to_text().unwrap();
-        if !text.starts_with("{") {
-            anyhow::bail!("failed to identify to OBS: unexpected message: {}", text);
-        }
-        ws.set_read_timeout(None)?;
-
-        log::info!("Successfully identified to OBS WebSocket");
-        *guard = Some(Conn { ws });
-        self.connected.store(true, Ordering::SeqCst);
-        drop(guard);
-        self.query_studio_mode();
-        Ok(())
-    }
-
-    fn send_request(&self, request_type: &str) -> anyhow::Result<()> {
-        self.send_request_with_data(request_type, None)
-    }
-
-    fn send_request_with_data(
-        &self,
-        request_type: &str,
-        request_data: Option<serde_json::Value>,
-    ) -> anyhow::Result<()> {
-        let request_id = format!(
-            "{}_{}",
-            request_type,
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-        );
-        let req = RequestMessage {
-            op: 6,
-            d: RequestData {
-                request_type: request_type.to_string(),
-                request_id,
-                request_data,
-            },
-        };
-        let json = serde_json::to_string(&req)?;
-
-        {
-            let mut guard = self.conn.lock().unwrap();
-            if !self.connected.load(Ordering::SeqCst) {
-                drop(guard);
-                log::info!("Not connected to OBS. Reconnecting...");
-                self.connect()?;
-                guard = self.conn.lock().unwrap();
-            }
-            let conn = guard.as_mut().unwrap();
-            conn.ws.write_message(&tungstenite::Message::Text(json.into()))?;
-        }
-
-        let resp = self.read_response()?;
-        if let Some(status) = resp.get("d").and_then(|d| d.get("requestStatus")) {
-            if !status.get("result").and_then(|r| r.as_bool()).unwrap_or(false) {
-                anyhow::bail!("request {} failed: {:?}", request_type, status);
-            }
-        }
-        Ok(())
-    }
-
-    fn read_response(&self) -> anyhow::Result<serde_json::Value> {
-        let mut guard = self.conn.lock().unwrap();
-        let conn = guard.as_mut().unwrap();
-        conn.ws.set_read_timeout(Some(Duration::from_secs(5)))?;
-        let msg = conn.ws.read_message()?;
-        let data: serde_json::Value = serde_json::from_str(msg.to_text().unwrap())?;
-        conn.ws.set_read_timeout(None)?;
-        Ok(data)
-    }
-
     pub fn close(&self) {
         let mut guard = self.conn.lock().unwrap();
         if let Some(ref mut c) = *guard {
@@ -279,10 +276,6 @@ impl OBSClientClone {
             self.studio_mode_enabled.load(Ordering::SeqCst)
         );
     }
-}
-
-struct Conn {
-    ws: tungstenite::WebSocket<TcpStream>,
 }
 
 #[derive(Debug, Deserialize)]
