@@ -11,7 +11,6 @@ mod service;
 use config::config_path;
 use input::{find_keyboards, get_key_code, spawn_keyboard_reader};
 
-const MAX_RETRIES: usize = 10;
 const RETRY_DELAY_SECS: u64 = 30;
 const RECONNECT_INTERVAL_SECS: u64 = 60;
 
@@ -228,39 +227,38 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
     }
 
     use ansi::*;
-    println!("  {} Connecting to OBS WebSocket at {}...", muted("~"), key(&ws_url));
-    let mut retries = 0;
-    while retries < MAX_RETRIES {
-        match ctx.client.connect() {
-            Ok(()) => {
-                println!("  {} Connected to OBS!{}", ok(""), RESET);
+
+    // Background reconnection thread — retries forever with visible output
+    let client_for_reconnect = ctx.client.clone();
+    let should_stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let should_stop_clone = should_stop.clone();
+
+    let reconnect_handle = std::thread::spawn(move || {
+        loop {
+            if should_stop_clone.load(std::sync::atomic::Ordering::SeqCst) {
                 break;
             }
-            Err(e) => {
-                retries += 1;
-                println!(
-                    "  {} Attempt {}/{} failed: {}",
-                    warn(""),
-                    retries,
-                    MAX_RETRIES,
-                    e
-                );
-                if retries < MAX_RETRIES {
-                    println!("     Waiting {}s before retry...", RETRY_DELAY_SECS);
+            if client_for_reconnect.is_connected() {
+                // Already connected — check again in 60s
+                std::thread::sleep(std::time::Duration::from_secs(RECONNECT_INTERVAL_SECS));
+                continue;
+            }
+            match client_for_reconnect.connect() {
+                Ok(()) => {
+                    println!("  {} Connected to OBS!{}", ok(""), RESET);
+                }
+                Err(e) => {
+                    println!(
+                        "  {} Could not reach OBS: {} — retrying in {}s...",
+                        muted("~"),
+                        e,
+                        RETRY_DELAY_SECS
+                    );
                     std::thread::sleep(std::time::Duration::from_secs(RETRY_DELAY_SECS));
                 }
             }
         }
-    }
-
-    if !ctx.client.is_connected() {
-        println!(
-            "  {} Could not reach OBS after {} attempts.",
-            err(""),
-            MAX_RETRIES
-        );
-        println!("     Hotkeys are ready — will connect when OBS is running.");
-    }
+    });
 
     let (_device_handles, rx_channels): (Vec<_>, Vec<_>) = keyboard_paths
         .into_iter()
@@ -271,22 +269,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         })
         .unzip();
 
-    let client_for_reconnect = ctx.client.clone();
-    let should_stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let should_stop_clone = should_stop.clone();
-    let reconnect_handle = std::thread::spawn(move || {
-        let interval = std::time::Duration::from_secs(RECONNECT_INTERVAL_SECS);
-        loop {
-            std::thread::sleep(interval);
-            if should_stop_clone.load(std::sync::atomic::Ordering::SeqCst) {
-                break;
-            }
-            if !client_for_reconnect.is_connected() {
-                log::warn!("Attempting to reconnect to OBS...");
-                let _ = client_for_reconnect.connect();
-            }
-        }
-    });
+    println!("  {} Hotkeys ready — connecting to OBS in background{}", muted("~"), RESET);
 
     let close_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
 
