@@ -1,9 +1,9 @@
 use evdev::{EventType, InputDevice, Key};
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
-use std::time::Duration;
 
 pub fn get_key_code(name: &str) -> Option<u16> {
     KEY_NAME_TO_CODE.get(name).copied()
@@ -124,48 +124,46 @@ const KEY_F22: u16 = 0x71;
 const KEY_F23: u16 = 0x72;
 const KEY_F24: u16 = 0x73;
 
-lazy_static::lazy_static! {
-    static ref KEY_CODE_TO_NAME: HashMap<u16, &'static str> = {
-        let mut m = HashMap::new();
-        m.insert(KEY_SCROLLLOCK, "scroll lock");
-        m.insert(KEY_PAUSE, "pause");
-        m.insert(KEY_HOME, "home");
-        m.insert(KEY_END, "end");
-        m.insert(KEY_PAGEUP, "page up");
-        m.insert(KEY_PAGEDOWN, "page down");
-        m.insert(KEY_INSERT, "insert");
-        m.insert(KEY_DELETE, "delete");
-        m.insert(KEY_F1, "f1");
-        m.insert(KEY_F2, "f2");
-        m.insert(KEY_F3, "f3");
-        m.insert(KEY_F4, "f4");
-        m.insert(KEY_F5, "f5");
-        m.insert(KEY_F6, "f6");
-        m.insert(KEY_F7, "f7");
-        m.insert(KEY_F8, "f8");
-        m.insert(KEY_F9, "f9");
-        m.insert(KEY_F10, "f10");
-        m.insert(KEY_F11, "f11");
-        m.insert(KEY_F12, "f12");
-        m.insert(KEY_F13, "f13");
-        m.insert(KEY_F14, "f14");
-        m.insert(KEY_F15, "f15");
-        m.insert(KEY_F16, "f16");
-        m.insert(KEY_F17, "f17");
-        m.insert(KEY_F18, "f18");
-        m.insert(KEY_F19, "f19");
-        m.insert(KEY_F20, "f20");
-        m.insert(KEY_F21, "f21");
-        m.insert(KEY_F22, "f22");
-        m.insert(KEY_F23, "f23");
-        m.insert(KEY_F24, "f24");
-        m
-    };
+static KEY_CODE_TO_NAME: Lazy<HashMap<u16, &'static str>> = Lazy::new(|| {
+    HashMap::from([
+        (KEY_SCROLLLOCK, "scroll lock"),
+        (KEY_PAUSE, "pause"),
+        (KEY_HOME, "home"),
+        (KEY_END, "end"),
+        (KEY_PAGEUP, "page up"),
+        (KEY_PAGEDOWN, "page down"),
+        (KEY_INSERT, "insert"),
+        (KEY_DELETE, "delete"),
+        (KEY_F1, "f1"),
+        (KEY_F2, "f2"),
+        (KEY_F3, "f3"),
+        (KEY_F4, "f4"),
+        (KEY_F5, "f5"),
+        (KEY_F6, "f6"),
+        (KEY_F7, "f7"),
+        (KEY_F8, "f8"),
+        (KEY_F9, "f9"),
+        (KEY_F10, "f10"),
+        (KEY_F11, "f11"),
+        (KEY_F12, "f12"),
+        (KEY_F13, "f13"),
+        (KEY_F14, "f14"),
+        (KEY_F15, "f15"),
+        (KEY_F16, "f16"),
+        (KEY_F17, "f17"),
+        (KEY_F18, "f18"),
+        (KEY_F19, "f19"),
+        (KEY_F20, "f20"),
+        (KEY_F21, "f21"),
+        (KEY_F22, "f22"),
+        (KEY_F23, "f23"),
+        (KEY_F24, "f24"),
+    ])
+});
 
-    static ref KEY_NAME_TO_CODE: HashMap<String, u16> = {
-        KEY_CODE_TO_NAME.iter().map(|(&k, &v)| (v.to_string(), k)).collect()
-    };
-}
+static KEY_NAME_TO_CODE: Lazy<HashMap<String, u16>> = Lazy::new(|| {
+    KEY_CODE_TO_NAME.iter().map(|(&k, &v)| (v.to_string(), k)).collect()
+});
 
 #[cfg(test)]
 mod tests {
