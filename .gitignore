@@ -18,7 +18,6 @@ __pycache__/
 build/
 dist/
 node_modules/
-obs-hotkey
 target/
 !*.env
 !.env
