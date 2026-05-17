@@ -160,7 +160,7 @@ mod tests {
     fn test_load_config_valid() {
         let temp = std::env::temp_dir();
         let path = temp.join("hotkeys.json");
-        fs::write(&path, r#"{"obs_host":"ws://localhost:4455","hotkeys":{"toggle_recording":"f1","toggle_pause":"f2"},"screenshot_source":"","screenshot_dir":"~/Pictures","mic_name":""}"#).unwrap();
+        fs::write(&path, r#"{"obs_host":"ws://localhost:4455","hotkeys":{"toggle_recording":"f1","toggle_pause":"f2","toggle_streaming":"","screenshot":"","toggle_mute_mic":"","toggle_studio_mode":"","toggle_replay_buffer":"","save_replay":""},"screenshot_source":"","screenshot_dir":"~/Pictures","mic_name":""}"#).unwrap();
         let cfg = load_config(&path).unwrap();
         assert_eq!(cfg.obs_host, "ws://localhost:4455");
         assert_eq!(cfg.hotkeys.toggle_recording, "f1");
