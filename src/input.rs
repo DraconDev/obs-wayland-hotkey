@@ -13,7 +13,10 @@ pub fn find_keyboards() -> anyhow::Result<Vec<PathBuf>> {
     let mut paths = Vec::new();
     for entry in std::fs::read_dir("/dev/input")? {
         let entry = entry?;
-        let name = entry.file_name().to_str().ok()?;
+        let name = match entry.file_name().to_str() {
+            Some(n) => n,
+            None => continue,
+        };
         if !name.starts_with("event") {
             continue;
         }

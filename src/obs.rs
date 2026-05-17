@@ -13,6 +13,9 @@ pub struct OBSClient {
     ws_url: String,
 }
 
+unsafe impl Sync for OBSClient {}
+unsafe impl Send for OBSClient {}
+
 struct Conn {
     ws: tungstenite::WebSocket<TcpStream>,
 }
