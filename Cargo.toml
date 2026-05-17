@@ -1,13 +1,12 @@
 [package]
 name = "obs-hotkey"
-version = "1.2.0"
+version = "1.0.0"
 edition = "2021"
 license = "MIT"
 description = "Lightweight daemon for controlling OBS Studio with global hotkeys on Wayland and X11"
 repository = "https://github.com/DraconDev/obs-wayland-hotkey"
 keywords = ["obs", "hotkey", "wayland", "evdev", "streaming"]
 categories = ["command-line-utilities", "multimedia"]
-rust-version = "1.75"
 readme = "README.md"
 
 [[bin]]
@@ -25,6 +24,8 @@ anyhow = "1"
 libc = "0.2"
 log = "0.4"
 env_logger = "0.11"
+lazy_static = "1"
+once_cell = "1"
 
 [profile.release]
 opt-level = 3
