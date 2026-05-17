@@ -47,6 +47,9 @@ jobs:
       - name: Format check
         run: cargo fmt --all -- --check
 
+      - name: Lockfile check
+        run: cargo check --locked
+
       - name: Clippy
         run: cargo clippy --all --all-features -- -D warnings
 

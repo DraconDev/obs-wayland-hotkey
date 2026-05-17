@@ -259,7 +259,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
     let client_for_reconnect = ctx.client.clone();
     let should_stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let should_stop_clone = should_stop.clone();
-    let _reconnect_handle = std::thread::spawn(move || {
+    let reconnect_handle = std::thread::spawn(move || {
         let interval = std::time::Duration::from_secs(RECONNECT_INTERVAL_SECS);
         loop {
             std::thread::sleep(interval);
@@ -274,10 +274,14 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
     });
 
     let close_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let close_flag_clone = close_flag.clone();
 
-    ctrlc::set_handler(move || {
-        close_flag_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+    ctrlc::set_handler({
+        let should_stop_clone = should_stop.clone();
+        let close_flag_clone = close_flag.clone();
+        move || {
+            close_flag_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+            should_stop_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+        }
     }).expect("error setting Ctrl-C handler");
 
     loop {
@@ -301,12 +305,13 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
 
     should_stop.store(true, std::sync::atomic::Ordering::SeqCst);
     ctx.client.close();
+    let _ = reconnect_handle.join();
 
     Ok(())
 }
 
 fn main() {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
 
     let cli = Cli::parse();
 

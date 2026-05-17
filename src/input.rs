@@ -69,7 +69,21 @@ pub fn spawn_keyboard_reader(
         let name = device.name().unwrap_or("?").to_string();
         log::info!("keyboard thread started: {} at {}", name, path_clone.display());
 
+        // Use recv_timeout so the loop periodically checks close_rx.
+        // This avoids blocking indefinitely in fetch_events().
+        const TIMEOUT_MS: u32 = 500;
+
         loop {
+            // Check for shutdown signal first
+            match close_rx.recv_timeout(std::time::Duration::from_millis(TIMEOUT_MS as u64)) {
+                Ok(()) | Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                    break;
+                }
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                    // Timeout is fine — keep polling the device
+                }
+            }
+
             let events = match device.fetch_events() {
                 Ok(e) => e,
                 Err(e) => {
@@ -77,10 +91,6 @@ pub fn spawn_keyboard_reader(
                     break;
                 }
             };
-
-            if close_rx.try_recv().is_ok() {
-                break;
-            }
 
             for event in events {
                 if event.event_type() == evdev::EventType::KEY && event.value() == 1 {

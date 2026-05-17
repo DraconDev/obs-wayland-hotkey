@@ -151,9 +151,14 @@ impl OBSClient {
     /// daemon.
     fn read_response(&self) -> anyhow::Result<serde_json::Value> {
         let mut guard = self.conn.lock().unwrap();
-        let conn = guard.as_mut().unwrap();
+        let conn = guard.as_mut()
+            .ok_or_else(|| anyhow::anyhow!("not connected to OBS"))?;
         let msg = conn.ws.read()?;
-        let data: serde_json::Value = serde_json::from_str(msg.to_text().unwrap())?;
+        let text = msg
+            .into_text()
+            .map_err(|e| anyhow::anyhow!("unexpected non-text WebSocket frame: {}", e))?;
+        let data: serde_json::Value =
+            serde_json::from_str(&text).map_err(|e| anyhow::anyhow!("invalid JSON: {}", e))?;
         Ok(data)
     }
 
@@ -266,7 +271,7 @@ impl OBSClient {
             op: 6,
             d: RequestData {
                 request_type: "GetStudioModeEnabled".to_string(),
-                request_id,
+                request_id: request_id.clone(),
                 request_data: None,
             },
         };
@@ -279,17 +284,31 @@ impl OBSClient {
                 return;
             }
             let conn = guard.as_mut().unwrap();
-            conn.ws.send(tungstenite::Message::Text(json.into())).ok();
+            if conn.ws.send(tungstenite::Message::Text(json.into())).is_err() {
+                log::warn!("Failed to send studio mode query");
+                return;
+            }
         }
 
         let resp = self.read_response();
         if let Ok(data) = resp {
-            if let Some(resp_data) = data.get("d").and_then(|d| d.get("responseData")) {
-                let enabled = resp_data
-                    .get("studioModeEnabled")
-                    .and_then(|e| e.as_bool())
-                    .unwrap_or(false);
-                self.studio_mode_enabled.store(enabled, Ordering::SeqCst);
+            // Verify the response matches our request_id
+            if let Some(resp_id) = data.get("d").and_then(|d| d.get("requestId")) {
+                if resp_id.as_str() == Some(&request_id) {
+                    if let Some(resp_data) = data.get("d").and_then(|d| d.get("responseData")) {
+                        let enabled = resp_data
+                            .get("studioModeEnabled")
+                            .and_then(|e| e.as_bool())
+                            .unwrap_or(false);
+                        self.studio_mode_enabled.store(enabled, Ordering::SeqCst);
+                    }
+                } else {
+                    log::warn!(
+                        "Studio mode response id mismatch: expected {}, got {:?}",
+                        request_id,
+                        resp_id
+                    );
+                }
             }
         }
         self.studio_mode_queried.store(true, Ordering::SeqCst);
