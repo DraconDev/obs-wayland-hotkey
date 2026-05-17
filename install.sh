@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -e
 
-BINARY="${OBS_HOTKEY_BINARY:-obs-hotkey}"
-
-if [ ! -f "$BINARY" ]; then
-    echo "Binary not found at '$BINARY'. Please build or install first:"
-    echo "  cargo build --release"
-    echo "  # binary will be at target/release/obs-hotkey"
-    exit 1
+if command -v obs-hotkey >/dev/null 2>&1; then
+    exec obs-hotkey setup "$@"
+elif [ -f "./obs-hotkey" ]; then
+    exec ./obs-hotkey setup "$@"
+elif [ -f "target/release/obs-hotkey" ]; then
+    exec target/release/obs-hotkey setup "$@"
+else
+    echo "obs-hotkey not found. Building from source..."
+    cargo build --release
+    exec target/release/obs-hotkey setup "$@"
 fi
-
-exec ./"$BINARY" setup "$@"
