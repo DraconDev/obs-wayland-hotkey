@@ -56,7 +56,12 @@ impl OBSClient {
         *guard = None;
         self.connected.store(false, Ordering::SeqCst);
 
-        let stream = TcpStream::connect(&self.ws_url)?;
+        // Strip ws:// prefix to get host:port for TCP
+        let tcp_addr = self.ws_url
+            .strip_prefix("ws://")
+            .or_else(|| self.ws_url.strip_prefix("wss://"))
+            .unwrap_or(&self.ws_url);
+        let stream = TcpStream::connect(tcp_addr)?;
         stream.set_read_timeout(Some(Duration::from_secs(10)))?;
 
         let (mut ws, resp) = tungstenite::client(&self.ws_url, stream)?;
@@ -336,6 +341,7 @@ struct HelloData {
     #[serde(rename = "obsWebSocketVersion")]
     obs_web_socket_version: String,
     #[allow(dead_code)]
+    #[serde(rename = "rpcVersion")]
     rpc_version: u32,
 }
 

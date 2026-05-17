@@ -231,19 +231,26 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
     println!("  {} Connecting to OBS WebSocket at {}...", muted("~"), key(&ws_url));
     let mut retries = 0;
     while retries < MAX_RETRIES {
-        if ctx.client.connect().is_ok() {
-            println!("  {} Connected to OBS!{}", ok(""), RESET);
-            break;
+        match ctx.client.connect() {
+            Ok(()) => {
+                println!("  {} Connected to OBS!{}", ok(""), RESET);
+                break;
+            }
+            Err(e) => {
+                retries += 1;
+                println!(
+                    "  {} Attempt {}/{} failed: {}",
+                    warn(""),
+                    retries,
+                    MAX_RETRIES,
+                    e
+                );
+                if retries < MAX_RETRIES {
+                    println!("     Waiting {}s before retry...", RETRY_DELAY_SECS);
+                    std::thread::sleep(std::time::Duration::from_secs(RETRY_DELAY_SECS));
+                }
+            }
         }
-        retries += 1;
-        println!(
-            "  {} Attempt {}/{} failed, waiting {}s...",
-            warn(""),
-            retries,
-            MAX_RETRIES,
-            RETRY_DELAY_SECS
-        );
-        std::thread::sleep(std::time::Duration::from_secs(RETRY_DELAY_SECS));
     }
 
     if !ctx.client.is_connected() {
