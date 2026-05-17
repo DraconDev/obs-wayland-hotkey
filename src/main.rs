@@ -344,7 +344,7 @@ mod tests {
     #[test]
     fn test_cli_no_args_defaults_to_daemon() {
         let cli = Cli::try_parse_from(["obs-hotkey"]).unwrap();
-        assert!(matches!(cli.command, None));
+        assert!(cli.command.is_none());
         assert!(cli.config.is_none());
     }
 
