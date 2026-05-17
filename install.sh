@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 set -e
 
-if command -v obs-hotkey >/dev/null 2>&1; then
-    exec obs-hotkey setup "$@"
-elif [ -f "./obs-hotkey" ]; then
-    exec ./obs-hotkey setup "$@"
-elif [ -f "target/release/obs-hotkey" ]; then
-    exec target/release/obs-hotkey setup "$@"
-else
-    echo "obs-hotkey not found. Building from source..."
-    cargo build --release
-    exec target/release/obs-hotkey setup "$@"
-fi
+# Build from source into a temp location, then install to cargo bin
+echo "Building obs-hotkey..."
+cargo build --release
+
+# Find or install to cargo bin
+CARGO_BIN="${CARGO_HOME:-$HOME/.cargo}/bin"
+mkdir -p "$CARGO_BIN"
+
+# Copy the freshly-built binary
+cp target/release/obs-hotkey "$CARGO_BIN/obs-hotkey"
+chmod +x "$CARGO_BIN/obs-hotkey"
+
+echo "Installed to $CARGO_BIN/obs-hotkey"
+
+# Run setup
+exec "$CARGO_BIN/obs-hotkey" setup "$@"
