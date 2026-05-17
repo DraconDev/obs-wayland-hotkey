@@ -30,7 +30,7 @@ struct Cli {
 
 #[derive(Subcommand, Debug, Clone)]
 enum Commands {
-    #[command(about = "Run the obs-hotkey daemon (default)")]
+    #[command(about = "Run the obs-hotkey daemon")]
     Daemon,
     #[command(about = "Set up systemd user service for auto-start on login")]
     Setup,
@@ -310,6 +310,39 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn print_quickstart() {
+    println!("obs-hotkey {} — Wayland-compatible OBS hotkey daemon", env!("CARGO_PKG_VERSION"));
+    println!();
+    println!("Quick Start:");
+    println!();
+    println!("  1. Enable OBS WebSocket Server");
+    println!("     Open OBS → Tools → WebSocket Server Settings → Enable (port 4455, no auth)");
+    println!();
+    println!("  2. Add yourself to the input group");
+    println!("     sudo usermod -aG input $(whoami)");
+    println!("     (then log out and back in)");
+    println!();
+    println!("  3. Set up auto-start on login");
+    println!("     obs-hotkey setup");
+    println!();
+    println!("  4. Or run the daemon directly");
+    println!("     obs-hotkey daemon");
+    println!();
+    println!("Commands:");
+    println!("  daemon     Run the hotkey daemon");
+    println!("  setup      Install systemd service for auto-start");
+    println!("  teardown   Remove the systemd service");
+    println!("  status     Check service, config, and OBS connectivity");
+    println!();
+    println!("Flags:");
+    println!("  --config <path>   Use a custom config file");
+    println!("  --version         Show version");
+    println!("  --help            Show full help");
+    println!();
+    println!("Config:  ~/.config/obs-hotkey/hotkeys.json");
+    println!("Logs:    journalctl --user -u obs-hotkey.service -f");
+}
+
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
 
@@ -323,21 +356,24 @@ fn main() {
     let config_path_for_status = cfg_path.clone();
     let config_path_for_setup = cfg_path.clone();
 
-    match cli.command.as_ref().unwrap_or(&Commands::Daemon) {
-        Commands::Daemon => {
+    match cli.command.as_ref() {
+        Some(Commands::Daemon) => {
             if let Err(e) = run_daemon(&cfg_path) {
                 log::error!("Fatal error: {}", e);
                 std::process::exit(1);
             }
         }
-        Commands::Setup => {
+        Some(Commands::Setup) => {
             service::run_setup(&config_path_for_setup);
         }
-        Commands::Teardown { purge } => {
+        Some(Commands::Teardown { purge }) => {
             service::run_teardown(*purge);
         }
-        Commands::Status => {
+        Some(Commands::Status) => {
             service::run_status(&config_path_for_status);
+        }
+        None => {
+            print_quickstart();
         }
     }
 }
@@ -347,7 +383,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_cli_no_args_defaults_to_daemon() {
+    fn test_cli_no_args_shows_no_subcommand() {
         let cli = Cli::try_parse_from(["obs-hotkey"]).unwrap();
         assert!(cli.command.is_none());
         assert!(cli.config.is_none());
