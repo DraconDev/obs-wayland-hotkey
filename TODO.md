@@ -10,8 +10,7 @@
 
 ## Cleanup
 
-- [x] **Move `tempfile` to `[dev-dependencies]`** — was only used in tests, now properly under `[dev-dependencies]`
-- [ ] **`OBSClient::clone()` copies `AtomicBool` by value** — each clone gets independent atomics. Works because `Arc<Mutex<Conn>>` is truth. Could wrap atomics inside Arc for clarity.
+- [ ] **`OBSClient::clone()` copies `AtomicBool` by value** — each clone gets independent atomics. Works because `Arc<Mutex<Conn>>` is authoritative. Could wrap atomics inside Arc for clarity.
 
 ## Improvements
 
@@ -24,4 +23,5 @@
 - [ ] Password/auth support for OBS WebSocket (currently assumes no auth)
 - [ ] Hotkey chord support (e.g., Ctrl+Shift+F1)
 - [ ] Wayland idle inhibit on recording start
-- [ ] Publish to crates.io (metadata already set up)
+- [x] Publish to crates.io — done, v1.0.24
+- [ ] Integration tests — would need a mock OBS WebSocket server
