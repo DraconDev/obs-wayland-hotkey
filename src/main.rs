@@ -276,10 +276,9 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
     let close_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let close_flag_clone = close_flag.clone();
 
-    std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_secs(86400));
+    ctrlc::set_handler(move || {
         close_flag_clone.store(true, std::sync::atomic::Ordering::SeqCst);
-    });
+    }).expect("error setting Ctrl-C handler");
 
     loop {
         if close_flag.load(std::sync::atomic::Ordering::SeqCst) {
