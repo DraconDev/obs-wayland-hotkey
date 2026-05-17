@@ -291,7 +291,80 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
                 if event.value == 1 {
                     if let Some(action) = binding_actions.get(&event.code) {
                         action();
-                    }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cli_no_args_defaults_to_daemon() {
+        let cli = Cli::try_parse_from(["obs-hotkey"]).unwrap();
+        assert!(matches!(cli.command, None));
+        assert!(cli.config.is_none());
+    }
+
+    #[test]
+    fn test_cli_daemon_subcommand() {
+        let cli = Cli::try_parse_from(["obs-hotkey", "daemon"]).unwrap();
+        assert!(matches!(cli.command, Some(Commands::Daemon)));
+    }
+
+    #[test]
+    fn test_cli_setup_subcommand() {
+        let cli = Cli::try_parse_from(["obs-hotkey", "setup"]).unwrap();
+        assert!(matches!(cli.command, Some(Commands::Setup)));
+    }
+
+    #[test]
+    fn test_cli_teardown_subcommand() {
+        let cli = Cli::try_parse_from(["obs-hotkey", "teardown"]).unwrap();
+        assert!(matches!(cli.command, Some(Commands::Teardown { purge: false })));
+    }
+
+    #[test]
+    fn test_cli_teardown_with_purge() {
+        let cli = Cli::try_parse_from(["obs-hotkey", "teardown", "--purge"]).unwrap();
+        assert!(matches!(cli.command, Some(Commands::Teardown { purge: true })));
+    }
+
+    #[test]
+    fn test_cli_status_subcommand() {
+        let cli = Cli::try_parse_from(["obs-hotkey", "status"]).unwrap();
+        assert!(matches!(cli.command, Some(Commands::Status)));
+    }
+
+    #[test]
+    fn test_cli_global_config_flag() {
+        let cli = Cli::try_parse_from(["obs-hotkey", "--config", "/path/to/config.json"]).unwrap();
+        assert_eq!(cli.config, Some(PathBuf::from("/path/to/config.json")));
+    }
+
+    #[test]
+    fn test_cli_config_flag_with_subcommand() {
+        let cli = Cli::try_parse_from(["obs-hotkey", "--config", "/path/config.json", "status"]).unwrap();
+        assert_eq!(cli.config, Some(PathBuf::from("/path/config.json")));
+        assert!(matches!(cli.command, Some(Commands::Status)));
+    }
+
+    #[test]
+    fn test_cli_help_flag() {
+        let result = Cli::try_parse_from(["obs-hotkey", "--help"]);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("USAGE") || err.to_string().contains("OPTIONS"));
+    }
+
+    #[test]
+    fn test_cli_version() {
+        let result = Cli::try_parse_from(["obs-hotkey", "--version"]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_cli_unknown_subcommand() {
+        let result = Cli::try_parse_from(["obs-hotkey", "invalid-subcommand"]);
+        assert!(result.is_err());
+    }
+}
                 }
             }
         }
