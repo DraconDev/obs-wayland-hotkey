@@ -1,5 +1,7 @@
+use std::net::TcpStream;
 use std::path::PathBuf;
 use std::process::Command;
+use std::time::Duration;
 
 use crate::config::real_home;
 
@@ -256,6 +258,37 @@ pub fn run_teardown(purge: bool) {
     println!();
 }
 
+/// Probe OBS WebSocket by doing a full handshake + identify cycle.
+/// Returns true if the handshake and identify succeed.
+fn probe_obs_websocket(port: u16) -> bool {
+    let url = format!("ws://127.0.0.1:{}", port);
+    let stream = match TcpStream::connect_timeout(
+        &std::net::SocketAddr::from(([127, 0, 0, 1], port)),
+        Duration::from_secs(1),
+    ) {
+        Ok(s) => s,
+        Err(_) => return false,
+    };
+    stream.set_read_timeout(Some(Duration::from_secs(2))).ok();
+
+    let mut ws = match tungstenite::client(&url, stream) {
+        Ok((ws, _)) => ws,
+        Err(_) => return false,
+    };
+
+    match ws.read() {
+        Ok(msg) => {
+            // Should be a hello message — check it's valid JSON
+            if let Ok(text) = msg.to_text() {
+                text.starts_with("{")
+            } else {
+                false
+            }
+        }
+        Err(_) => false,
+    }
+}
+
 pub fn run_status(config_path: &str) {
     use crate::ansi::*;
 
@@ -273,11 +306,7 @@ pub fn run_status(config_path: &str) {
         .map(|p| p.exists())
         .unwrap_or(false);
 
-    let obs_ok = std::net::TcpStream::connect_timeout(
-        &std::net::SocketAddr::from(([127, 0, 0, 1], 4455)),
-        std::time::Duration::from_secs(1),
-    )
-    .is_ok();
+    let obs_ok = probe_obs_websocket(4455);
 
     // Auto-start row
     if autostart {
@@ -312,6 +341,20 @@ pub fn run_status(config_path: &str) {
         println!("  {:<14}  {}", "OBS WS:", ok("reachable"));
     } else {
         println!("  {:<14}  {}  (is OBS running?)", "OBS WS:", err("✗"));
+    }
+
+    // Daemon activity check - is the process running?
+    let daemon_active = std::process::Command::new("systemctl")
+        .args(["--user", "is-active", "obs-hotkey.service"])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    if daemon_active {
+        println!("  {:<14}  {}", "Daemon:", ok("running"));
+    } else {
+        println!("  {:<14}  {}  (run {} to enable)",
+                 "Daemon:", warn("not running"), key("obs-hotkey daemon"));
     }
 
     println!();

@@ -65,7 +65,10 @@ impl OBSClient {
         log::debug!("Handshake response: {:?}", resp);
 
         let mut msg = ws.read()?;
-        let hello: HelloMessage = serde_json::from_str(msg.to_text().unwrap())?;
+        let hello: HelloMessage =
+            serde_json::from_str(msg.to_text().map_err(|e| anyhow::anyhow!(
+                "unexpected binary frame during handshake: {}", e
+            ))?)?;
         log::info!("OBS WebSocket version: {}", hello.d.obs_web_socket_version);
 
         let ident = IdentifyMessage {
@@ -77,7 +80,9 @@ impl OBSClient {
         ))?;
 
         msg = ws.read()?;
-        let text = msg.to_text().unwrap();
+        let text = msg.to_text().map_err(|e| anyhow::anyhow!(
+            "unexpected binary frame after identify: {}", e
+        ))?;
         if !text.starts_with("{") {
             anyhow::bail!("failed to identify to OBS: unexpected message: {}", text);
         }
