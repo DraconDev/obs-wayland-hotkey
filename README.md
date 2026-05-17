@@ -174,7 +174,6 @@ Edit `~/.config/obs-hotkey/hotkeys.json`:
 | `toggle_studio_mode` | `SetStudioModeEnabled` | Toggles studio mode |
 | `toggle_replay_buffer` | `ToggleReplayBuffer` | Requires replay buffer enabled |
 | `save_replay` | `SaveReplayBuffer` | Saves current replay buffer |
-| `toggle_virtual_cam` | `ToggleVirtualCam` | Toggle virtual camera on/off |
 
 ---
 

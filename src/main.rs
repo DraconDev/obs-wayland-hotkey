@@ -109,11 +109,6 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
             action: "save_replay",
             label: "Save Replay",
         },
-        banner::HotkeyBinding {
-            key_name: cfg.hotkeys.toggle_virtual_cam.clone(),
-            action: "toggle_virtual_cam",
-            label: "Toggle Virtual Camera",
-        },
     ];
 
     let client = obs::OBSClient::new(ws_url.clone());
@@ -205,13 +200,6 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
                 std::sync::Arc::new({
                     let c = ctx.client.clone();
                     move || c.save_replay()
-                }) as _,
-            ),
-            (
-                "toggle_virtual_cam",
-                std::sync::Arc::new({
-                    let c = ctx.client.clone();
-                    move || c.toggle_virtual_cam()
                 }) as _,
             ),
         ]);

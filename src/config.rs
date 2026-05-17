@@ -18,8 +18,6 @@ pub struct HotkeyConfig {
     pub toggle_studio_mode: String,
     pub toggle_replay_buffer: String,
     pub save_replay: String,
-    #[serde(default)]
-    pub toggle_virtual_cam: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,7 +45,6 @@ pub fn default_config() -> AppConfig {
             toggle_studio_mode: String::new(),
             toggle_replay_buffer: String::new(),
             save_replay: String::new(),
-            toggle_virtual_cam: String::new(),
         },
         screenshot_source: String::new(),
         screenshot_dir: "~/Pictures".to_string(),
