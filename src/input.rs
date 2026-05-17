@@ -45,6 +45,7 @@ pub struct KeyEvent {
 }
 
 pub struct DeviceHandle {
+    #[allow(dead_code)]
     pub path: PathBuf,
     tx: Sender<()>,
 }
@@ -101,6 +102,7 @@ pub fn spawn_keyboard_reader(
     )
 }
 
+#[allow(dead_code)]
 pub fn key_name(code: u16) -> Option<String> {
     KEY_CODE_TO_NAME.get(&code).map(|s| s.to_string())
 }

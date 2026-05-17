@@ -282,6 +282,7 @@ impl OBSClient {
 
 #[derive(Debug, Deserialize)]
 struct HelloMessage {
+    #[allow(dead_code)]
     op: u8,
     d: HelloData,
 }
@@ -290,7 +291,7 @@ struct HelloMessage {
 struct HelloData {
     #[serde(rename = "obsWebSocketVersion")]
     obs_web_socket_version: String,
-    #[serde(rename = "rpcVersion")]
+    #[allow(dead_code)]
     rpc_version: u32,
 }
 
