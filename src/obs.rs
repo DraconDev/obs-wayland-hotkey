@@ -25,7 +25,7 @@ impl Clone for OBSClient {
 }
 
 const _: () = {
-    fn assert_send_sync<T: Send + Sync>() {}
+    const fn assert_send_sync<T: Send + Sync>() {}
     assert_send_sync::<OBSClient>();
 };
 
