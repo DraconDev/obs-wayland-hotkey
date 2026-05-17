@@ -38,7 +38,7 @@ impl OBSClient {
     pub fn connect(&self) -> anyhow::Result<()> {
         let mut guard = self.conn.lock().unwrap();
         if let Some(ref mut c) = *guard {
-            let _ = c.ws.close(Some(tungstenite::protocol::CloseFrame::NULL));
+            let _ = c.ws.close(None);
         }
         *guard = None;
         self.connected.store(false, Ordering::SeqCst);
@@ -46,7 +46,7 @@ impl OBSClient {
         let stream = TcpStream::connect(&self.ws_url)?;
         stream.set_read_timeout(Some(Duration::from_secs(10)))?;
 
-        let (ws, resp) = tungstenite::client(&self.ws_url, stream)?;
+        let (mut ws, resp) = tungstenite::client(&self.ws_url, stream)?;
 
         log::info!("Connected to OBS WebSocket");
         log::debug!("Handshake response: {:?}", resp);
@@ -218,7 +218,7 @@ impl OBSClient {
     pub fn close(&self) {
         let mut guard = self.conn.lock().unwrap();
         if let Some(ref mut c) = *guard {
-            let _ = c.ws.close(Some(tungstenite::protocol::CloseFrame::NULL));
+            let _ = c.ws.close(None);
         }
         *guard = None;
     }

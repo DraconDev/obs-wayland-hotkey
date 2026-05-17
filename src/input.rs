@@ -14,13 +14,13 @@ pub fn find_keyboards() -> anyhow::Result<Vec<PathBuf>> {
     for entry in std::fs::read_dir("/dev/input")? {
         let entry = entry?;
         let name = match entry.file_name().to_str() {
-            Some(n) => n,
+            Some(n) => n.to_string(),
             None => continue,
         };
         if !name.starts_with("event") {
             continue;
         }
-        let path = PathBuf::from("/dev/input").join(name);
+        let path = PathBuf::from("/dev/input").join(&name);
         let mut device = match Device::open(&path) {
             Ok(d) => d,
             Err(e) => {
@@ -51,13 +51,14 @@ pub struct DeviceHandle {
 
 pub fn spawn_keyboard_reader(
     path: PathBuf,
-    device_idx: usize,
+    _device_idx: usize,
 ) -> (DeviceHandle, Receiver<KeyEvent>) {
     let (close_tx, close_rx) = mpsc::channel();
     let (tx, rx) = mpsc::channel();
+    let path_clone = path.clone();
 
     thread::spawn(move || {
-        let mut device = match Device::open(&path) {
+        let mut device = match Device::open(&path_clone) {
             Ok(d) => d,
             Err(e) => {
                 log::warn!("could not open {}: {}", path.display(), e);
