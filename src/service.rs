@@ -59,7 +59,7 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart={} --config {}/hotkeys.json
+ExecStart={} daemon --config {}/hotkeys.json
 Restart=on-failure
 RestartSec=10s
 

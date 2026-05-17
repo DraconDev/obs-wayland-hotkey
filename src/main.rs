@@ -32,7 +32,10 @@ struct Cli {
 #[derive(Subcommand, Debug, Clone)]
 enum Commands {
     #[command(about = "Run the obs-hotkey daemon")]
-    Daemon,
+    Daemon {
+        #[arg(long = "config", help = "Path to config file")]
+        config: Option<PathBuf>,
+    },
     #[command(about = "Set up systemd user service for auto-start on login")]
     Setup,
     #[command(about = "Remove systemd user service and stop obs-hotkey")]
@@ -372,8 +375,12 @@ fn main() {
     let config_path_for_setup = cfg_path.clone();
 
     match cli.command.as_ref() {
-        Some(Commands::Daemon) => {
-            if let Err(e) = run_daemon(&cfg_path) {
+        Some(Commands::Daemon { config }) => {
+            let daemon_cfg = config
+                .clone()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_else(|| cfg_path.clone());
+            if let Err(e) = run_daemon(&daemon_cfg) {
                 log::error!("Fatal error: {}", e);
                 std::process::exit(1);
             }
@@ -407,7 +414,13 @@ mod tests {
     #[test]
     fn test_cli_daemon_subcommand() {
         let cli = Cli::try_parse_from(["obs-hotkey", "daemon"]).unwrap();
-        assert!(matches!(cli.command, Some(Commands::Daemon)));
+        assert!(matches!(cli.command, Some(Commands::Daemon { config: None })));
+    }
+
+    #[test]
+    fn test_cli_daemon_with_config() {
+        let cli = Cli::try_parse_from(["obs-hotkey", "daemon", "--config", "/path/to/config.json"]).unwrap();
+        assert!(matches!(cli.command, Some(Commands::Daemon { config: Some(_) })));
     }
 
     #[test]
