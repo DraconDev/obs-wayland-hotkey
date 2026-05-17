@@ -69,28 +69,26 @@ pub fn spawn_keyboard_reader(
         let name = device.name().unwrap_or("?").to_string();
         log::info!("keyboard thread started: {} at {}", name, path_clone.display());
 
-        let mut events = match device.fetch_events() {
-            Ok(e) => e,
-            Err(e) => {
-                log::warn!("error reading device {}: {}", name, e);
-                return;
-            }
-        };
-
         loop {
+            let events = match device.fetch_events() {
+                Ok(e) => e,
+                Err(e) => {
+                    log::warn!("error reading device {}: {}", name, e);
+                    break;
+                }
+            };
+
             if close_rx.try_recv().is_ok() {
                 break;
             }
 
-            if let Some(event) = events.next() {
+            for event in events {
                 if event.event_type() == evdev::EventType::KEY && event.value() == 1 {
                     let _ = tx.send(KeyEvent {
                         code: event.code(),
                         value: event.value(),
                     });
                 }
-            } else {
-                break;
             }
         }
         log::info!("keyboard thread exiting: {}", name);
