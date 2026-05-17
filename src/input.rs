@@ -61,7 +61,7 @@ pub fn spawn_keyboard_reader(
         let mut device = match Device::open(&path_clone) {
             Ok(d) => d,
             Err(e) => {
-                log::warn!("could not open {}: {}", path.display(), e);
+                log::warn!("could not open {}: {}", path_clone.display(), e);
                 return;
             }
         };
