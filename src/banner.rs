@@ -10,8 +10,11 @@ pub struct HotkeyBinding {
 pub fn print_banner(_cfg: &AppConfig, bindings: &[HotkeyBinding], autostart: bool) {
     println!();
     println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-    println!("  {}  OBS Hotkey Controller{}", BOLD, RESET);
-    println!("  {}  Wayland-compatible{}", DIM, RESET);
+    println!("  {}  OBS Hotkey Controller  v{}{}", BOLD, env!("CARGO_PKG_VERSION"), RESET);
+    println!("  {}  Wayland-compatible  |  {} hotkeys configured{}",
+        DIM,
+        bindings.iter().filter(|b| !b.key_name.is_empty()).count(),
+        RESET);
     println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     println!();
 

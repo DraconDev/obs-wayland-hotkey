@@ -227,15 +227,18 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         log::info!("  - {}", p.display());
     }
 
-    log::info!("Connecting to OBS WebSocket at {}...", ws_url);
+    use ansi::*;
+    println!("  {} Connecting to OBS WebSocket at {}...", muted("~"), key(&ws_url));
     let mut retries = 0;
     while retries < MAX_RETRIES {
         if ctx.client.connect().is_ok() {
+            println!("  {} Connected to OBS!{}", ok(""), RESET);
             break;
         }
         retries += 1;
-        log::info!(
-            "Connection attempt {}/{} failed, waiting {}s...",
+        println!(
+            "  {} Attempt {}/{} failed, waiting {}s...",
+            warn(""),
             retries,
             MAX_RETRIES,
             RETRY_DELAY_SECS
@@ -244,11 +247,12 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
     }
 
     if !ctx.client.is_connected() {
-        log::info!(
-            "Failed to connect to OBS after {} attempts.",
+        println!(
+            "  {} Could not reach OBS after {} attempts.",
+            err(""),
             MAX_RETRIES
         );
-        log::info!("Hotkeys are ready but will only work when OBS is running.");
+        println!("     Hotkeys are ready — will connect when OBS is running.");
     }
 
     let (_device_handles, rx_channels): (Vec<_>, Vec<_>) = keyboard_paths
@@ -271,7 +275,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
                 break;
             }
             if !client_for_reconnect.is_connected() {
-                log::info!("Attempting to reconnect to OBS...");
+                log::warn!("Attempting to reconnect to OBS...");
                 let _ = client_for_reconnect.connect();
             }
         }

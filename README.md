@@ -1,5 +1,9 @@
 # obs-hotkey
 
+[![Crates.io](https://img.shields.io/crates/v/obs-hotkey?style=for-the-badge)](https://crates.io/crates/obs-hotkey)
+[![CI](https://img.shields.io/github/actions/workflow/status/DraconDev/obs-wayland-hotkey/ci.yml?style=for-the-badge&label=CI)](https://github.com/DraconDev/obs-wayland-hotkey/actions)
+[![License](https://img.shields.io/crates/l/obs-hotkey?style=for-the-badge)](https://github.com/DraconDev/obs-wayland-hotkey/blob/main/LICENSE)
+
 > A lightweight Rust daemon for controlling OBS Studio with global hotkeys on Wayland and X11.
 
 **Works on Wayland!** Uses evdev for direct keyboard input capture, bypassing Wayland's security restrictions.
