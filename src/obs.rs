@@ -4,7 +4,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-#[derive(Clone)]
 pub struct OBSClient {
     conn: Arc<Mutex<Option<Conn>>>,
     connected: AtomicBool,
@@ -13,8 +12,20 @@ pub struct OBSClient {
     ws_url: String,
 }
 
-unsafe impl Sync for OBSClient {}
+impl Clone for OBSClient {
+    fn clone(&self) -> Self {
+        Self {
+            conn: Arc::clone(&self.conn),
+            connected: AtomicBool::new(self.connected.load(Ordering::SeqCst)),
+            studio_mode_enabled: AtomicBool::new(self.studio_mode_enabled.load(Ordering::SeqCst)),
+            studio_mode_queried: AtomicBool::new(self.studio_mode_queried.load(Ordering::SeqCst)),
+            ws_url: self.ws_url.clone(),
+        }
+    }
+}
+
 unsafe impl Send for OBSClient {}
+unsafe impl Sync for OBSClient {}
 
 struct Conn {
     ws: tungstenite::WebSocket<TcpStream>,

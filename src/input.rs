@@ -21,7 +21,7 @@ pub fn find_keyboards() -> anyhow::Result<Vec<PathBuf>> {
             continue;
         }
         let path = PathBuf::from("/dev/input").join(&name);
-        let mut device = match Device::open(&path) {
+        let device = match Device::open(&path) {
             Ok(d) => d,
             Err(e) => {
                 log::warn!("could not open {}: {}", path.display(), e);
@@ -66,7 +66,7 @@ pub fn spawn_keyboard_reader(
             }
         };
         let name = device.name().unwrap_or("?").to_string();
-        log::info!("keyboard thread started: {} at {}", name, path.display());
+        log::info!("keyboard thread started: {} at {}", name, path_clone.display());
 
         let mut events = match device.fetch_events() {
             Ok(e) => e,

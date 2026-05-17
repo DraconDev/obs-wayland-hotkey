@@ -6,7 +6,7 @@ pub struct HotkeyBinding {
     pub label: &'static str,
 }
 
-pub fn print_banner(cfg: &AppConfig, bindings: &[HotkeyBinding], autostart: bool) {
+pub fn print_banner(_cfg: &AppConfig, bindings: &[HotkeyBinding], autostart: bool) {
     println!();
     println!("OBS Hotkey Controller - Wayland compatible");
     println!();
