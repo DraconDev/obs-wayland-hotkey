@@ -1,5 +1,5 @@
 use evdev::{Device, KeyCode};
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -105,7 +105,7 @@ pub fn key_name(code: u16) -> Option<String> {
     KEY_CODE_TO_NAME.get(&code).map(|s| s.to_string())
 }
 
-static KEY_CODE_TO_NAME: Lazy<HashMap<u16, &'static str>> = Lazy::new(|| {
+static KEY_CODE_TO_NAME: LazyLock<HashMap<u16, &'static str>> = LazyLock::new(|| {
     HashMap::from([
         (70, "scroll lock"),
         (119, "pause"),
@@ -142,8 +142,8 @@ static KEY_CODE_TO_NAME: Lazy<HashMap<u16, &'static str>> = Lazy::new(|| {
     ])
 });
 
-static KEY_NAME_TO_CODE: Lazy<HashMap<String, u16>> =
-    Lazy::new(|| KEY_CODE_TO_NAME.iter().map(|(&k, &v)| (v.to_string(), k)).collect());
+static KEY_NAME_TO_CODE: LazyLock<HashMap<String, u16>> =
+    LazyLock::new(|| KEY_CODE_TO_NAME.iter().map(|(&k, &v)| (v.to_string(), k)).collect());
 
 impl Drop for DeviceHandle {
     fn drop(&mut self) {

@@ -605,7 +605,6 @@ dependencies = [
  "evdev",
  "libc",
  "log",
- "once_cell",
  "predicates",
  "serde",
  "serde_json",

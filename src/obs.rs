@@ -138,6 +138,17 @@ impl OBSClient {
         Ok(())
     }
 
+    /// Reads a response from the WebSocket connection.
+    ///
+    /// # Safety
+    ///
+    /// This method assumes single-threaded access to the WebSocket. In a
+    /// multi-threaded context, responses could be consumed by a different
+    /// thread than the one that issued the request. The current design uses
+    /// a `Mutex<Conn>` which serializes access, but does not pair requests
+    /// with responses. This is safe only when calls are made from a single
+    /// thread (e.g., the main event loop), which is the case for this
+    /// daemon.
     fn read_response(&self) -> anyhow::Result<serde_json::Value> {
         let mut guard = self.conn.lock().unwrap();
         let conn = guard.as_mut().unwrap();
@@ -169,6 +180,12 @@ impl OBSClient {
 
     pub fn screenshot(&self, source_name: &str, save_dir: &str) {
         log::info!("Taking screenshot...");
+
+        // Ensure the screenshot directory exists
+        if let Err(e) = std::fs::create_dir_all(save_dir) {
+            log::warn!("Could not create screenshot directory '{}': {}", save_dir, e);
+        }
+
         let now_ms = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()

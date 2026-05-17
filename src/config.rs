@@ -52,17 +52,7 @@ pub fn default_config() -> AppConfig {
     }
 }
 
-pub fn config_path() -> PathBuf {
-    if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
-        return PathBuf::from(xdg)
-            .join(CONFIG_DIR_NAME)
-            .join(CONFIG_FILE_NAME);
-    }
-    let home = real_home();
-    home.join(".config").join(CONFIG_DIR_NAME).join(CONFIG_FILE_NAME)
-}
-
-fn real_home() -> PathBuf {
+pub fn real_home() -> PathBuf {
     if let Some(sudo_user) = std::env::var_os("SUDO_USER") {
         let passwd = fs::read_to_string("/etc/passwd").ok();
         if let Some(pw) = passwd {
@@ -75,6 +65,16 @@ fn real_home() -> PathBuf {
         }
     }
     dirs::home_dir().unwrap_or_else(|| PathBuf::from("."))
+}
+
+pub fn config_path() -> PathBuf {
+    if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
+        return PathBuf::from(xdg)
+            .join(CONFIG_DIR_NAME)
+            .join(CONFIG_FILE_NAME);
+    }
+    let home = real_home();
+    home.join(".config").join(CONFIG_DIR_NAME).join(CONFIG_FILE_NAME)
 }
 
 pub fn expand_home(path: &str) -> String {

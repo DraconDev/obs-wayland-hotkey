@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 use std::process::Command;
 
+use crate::config::real_home;
+
 pub fn is_autostart_enabled() -> bool {
     Command::new("systemctl")
         .args(["--user", "is-enabled", "obs-hotkey.service"])
@@ -14,11 +16,31 @@ pub fn in_input_group() -> bool {
     if user.is_empty() {
         return false;
     }
-    Command::new("groups")
-        .arg(&user)
-        .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).contains("input"))
-        .unwrap_or(false)
+
+    let uid = unsafe { libc::getuid() };
+    let mut ngroups: libc::c_int = 64;
+    let mut groups = [0u32; 64];
+
+    let c_user = std::ffi::CString::new(user.clone()).unwrap();
+    let result = unsafe {
+        libc::getgrouplist(c_user.as_ptr(), uid, groups.as_mut_ptr(), &mut ngroups)
+    };
+
+    if result < 0 {
+        return false;
+    }
+
+    for &gid in groups.iter().take(result as usize) {
+        let grp = unsafe { libc::getgrgid(gid as libc::gid_t) };
+        if !grp.is_null() {
+            let name = unsafe { std::ffi::CStr::from_ptr((*grp).gr_name) };
+            if name.to_bytes() == b"input" {
+                return true;
+            }
+        }
+    }
+
+    false
 }
 
 pub fn service_unit_path() -> PathBuf {
@@ -27,20 +49,6 @@ pub fn service_unit_path() -> PathBuf {
         .join("systemd")
         .join("user")
         .join("obs-hotkey.service")
-}
-
-fn real_home() -> PathBuf {
-    if let Ok(sudo_user) = std::env::var("SUDO_USER") {
-        if let Ok(pw) = std::fs::read_to_string("/etc/passwd") {
-            for line in pw.lines() {
-                let parts: Vec<&str> = line.split(':').collect();
-                if parts.len() >= 6 && parts[0] == sudo_user {
-                    return PathBuf::from(parts[5]);
-                }
-            }
-        }
-    }
-    dirs::home_dir().unwrap_or_else(|| PathBuf::from("."))
 }
 
 pub fn write_service_file(exe_path: &str, cfg_dir: &str) -> anyhow::Result<()> {

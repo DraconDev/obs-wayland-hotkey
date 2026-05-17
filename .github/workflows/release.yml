@@ -9,35 +9,9 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  create-release:
-    name: Create GitHub Release
-    runs-on: ubuntu-latest
-    outputs:
-      release_id: ${{ steps.create_release.outputs.id }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Extract metadata
-        id: meta
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=${GITHUB_REF}" >> $GITHUB_OUTPUT
-
-      - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v2
-        with:
-          draft: true
-          prerelease: ${{ contains(steps.meta.outputs.version, 'alpha') || contains(steps.meta.outputs.version, 'beta') || contains(steps.meta.outputs.version, 'rc') }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   build-amd64:
     name: Build amd64
     runs-on: ubuntu-latest
-    needs: create-release
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,20 +27,15 @@ jobs:
       - name: Strip
         run: strip target/x86_64-unknown-linux-gnu/release/obs-hotkey
 
-      - name: Upload
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload asset
+        uses: actions/upload-artifact@v4
         with:
-          release_id: ${{ needs.create-release.outputs.release_id }}
-          asset_path: target/x86_64-unknown-linux-gnu/release/obs-hotkey
-          asset_name: obs-hotkey-x86_64-unknown-linux-gnu
-          asset_content_type: application/octet-stream
+          name: obs-hotkey-amd64
+          path: target/x86_64-unknown-linux-gnu/release/obs-hotkey
 
   build-arm64:
     name: Build arm64
     runs-on: ubuntu-latest
-    needs: create-release
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -76,18 +45,64 @@ jobs:
         with:
           targets: aarch64-unknown-linux-gnu
 
+      - name: Install cross-toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
       - name: Build
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
         run: cargo build --release --bin obs-hotkey --target aarch64-unknown-linux-gnu
 
       - name: Strip
         run: strip target/aarch64-unknown-linux-gnu/release/obs-hotkey
 
-      - name: Upload
-        uses: actions/upload-release-asset@v1
+      - name: Upload asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: obs-hotkey-arm64
+          path: target/aarch64-unknown-linux-gnu/release/obs-hotkey
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-amd64, build-arm64]
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract metadata
+        id: meta
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download amd64 asset
+        uses: actions/download-artifact@v4
+        with:
+          name: obs-hotkey-amd64
+          path: artifacts/
+
+      - name: Download arm64 asset
+        uses: actions/download-artifact@v4
+        with:
+          name: obs-hotkey-arm64
+          path: artifacts/
+
+      - name: Rename assets
+        run: |
+          mv artifacts/obs-hotkey artifacts/obs-hotkey-x86_64-unknown-linux-gnu
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: ${{ contains(steps.meta.outputs.version, 'alpha') || contains(steps.meta.outputs.version, 'beta') || contains(steps.meta.outputs.version, 'rc') }}
+          files: |
+            artifacts/obs-hotkey-x86_64-unknown-linux-gnu
+            artifacts/obs-hotkey-arm64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          release_id: ${{ needs.create-release.outputs.release_id }}
-          asset_path: target/aarch64-unknown-linux-gnu/release/obs-hotkey
-          asset_name: obs-hotkey-aarch64-unknown-linux-gnu
-          asset_content_type: application/octet-stream
