@@ -1,7 +1,7 @@
-use evdev::Key;
+use evdev::{Device, Key};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 
@@ -9,16 +9,16 @@ pub fn get_key_code(name: &str) -> Option<u16> {
     KEY_NAME_TO_CODE.get(name).copied()
 }
 
-pub fn find_keyboards() -> anyhow::Result<Vec<evdev::Device>> {
-    let mut keyboards = Vec::new();
+pub fn find_keyboards() -> anyhow::Result<Vec<PathBuf>> {
+    let mut paths = Vec::new();
     for entry in std::fs::read_dir("/dev/input")? {
         let entry = entry?;
         let name = entry.file_name().to_str()?;
         if !name.starts_with("event") {
             continue;
         }
-        let path = Path::new("/dev/input").join(name);
-        let mut device = match evdev::Device::open(&path) {
+        let path = PathBuf::from("/dev/input").join(name);
+        let mut device = match Device::open(&path) {
             Ok(d) => d,
             Err(e) => {
                 log::warn!("could not open {}: {}", path.display(), e);
@@ -30,50 +30,64 @@ pub fn find_keyboards() -> anyhow::Result<Vec<evdev::Device>> {
             None => continue,
         };
         if supported.contains(Key::KEY_SCROLLLOCK) {
-            keyboards.push(device);
+            paths.push(path);
         }
     }
-    Ok(keyboards)
+    Ok(paths)
 }
 
 pub struct KeyEvent {
     pub code: u16,
     pub value: i32,
-    pub device_idx: usize,
 }
 
 pub struct DeviceHandle {
-    pub device: evdev::Device,
-    pub tx: Sender<KeyEvent>,
+    pub path: PathBuf,
+    pub tx: Sender<()>,
 }
 
 pub fn spawn_keyboard_reader(
-    mut device: evdev::Device,
+    path: PathBuf,
     device_idx: usize,
 ) -> (DeviceHandle, Receiver<KeyEvent>) {
     let (tx, rx) = mpsc::channel();
-    let dev = device.take().unwrap();
+    let (close_tx, close_rx) = mpsc::channel();
+
     thread::spawn(move || {
-        let mut events = match dev.fetch_events() {
-            Ok(e) => e,
+        let mut device = match Device::open(&path) {
+            Ok(d) => d,
             Err(e) => {
-                log::warn!("error reading device {}: {}", dev.name().unwrap_or("?"), e);
+                log::warn!("could not open {}: {}", path.display(), e);
                 return;
             }
         };
+        let name = device.name().unwrap_or("?").to_string();
+        log::info!("keyboard thread started: {} at {}", name, path.display());
+
+        let mut events = match device.fetch_events() {
+            Ok(e) => e,
+            Err(e) => {
+                log::warn!("error reading device {}: {}", name, e);
+                return;
+            }
+        };
+
         loop {
+            if close_rx.try_recv().is_ok() {
+                break;
+            }
+
             match events.next() {
                 Some(Ok(event)) => {
                     if event.event_type() == evdev::EventType::KEY && event.value() == 1 {
                         let _ = tx.send(KeyEvent {
                             code: event.code(),
                             value: event.value(),
-                            device_idx,
                         });
                     }
                 }
                 Some(Err(e)) => {
-                    log::warn!("event error: {}", e);
+                    log::warn!("event error on {}: {}", name, e);
                     break;
                 }
                 None => {
@@ -81,10 +95,11 @@ pub fn spawn_keyboard_reader(
                 }
             }
         }
-        log::info!("keyboard thread exiting");
+        log::info!("keyboard thread exiting: {}", name);
     });
+
     (
-        DeviceHandle { device, tx },
+        DeviceHandle { path, tx: close_tx },
         rx,
     )
 }
@@ -132,6 +147,12 @@ static KEY_CODE_TO_NAME: Lazy<HashMap<u16, &'static str>> = Lazy::new(|| {
 
 static KEY_NAME_TO_CODE: Lazy<HashMap<String, u16>> =
     Lazy::new(|| KEY_CODE_TO_NAME.iter().map(|(&k, &v)| (v.to_string(), k)).collect());
+
+impl Drop for DeviceHandle {
+    fn drop(&mut self) {
+        let _ = self.tx.send(());
+    }
+}
 
 #[cfg(test)]
 mod tests {

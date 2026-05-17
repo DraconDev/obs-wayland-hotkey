@@ -114,7 +114,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         if !b.key_name.is_empty() {
             if get_key_code(&b.key_name).is_some() {
                 log::info!("  {} → {}", b.key_name, b.label);
-            } else if !b.key_name.is_empty() {
+            } else {
                 log::warn!("Warning: unknown key '{}' for {}", b.key_name, b.label);
             }
         }
@@ -138,70 +138,68 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         anyhow::bail!("No valid hotkeys configured");
     }
 
-    let action_map: std::collections::HashMap<
-        &str,
-        std::sync::Arc<dyn Fn() + Send + Sync>,
-    > = std::collections::HashMap::from([
-        (
-            "toggle_recording",
-            std::sync::Arc::new({
-                let c = ctx.client.clone();
-                move || c.toggle_recording()
-            }) as _,
-        ),
-        (
-            "toggle_pause",
-            std::sync::Arc::new({
-                let c = ctx.client.clone();
-                move || c.toggle_pause()
-            }) as _,
-        ),
-        (
-            "toggle_streaming",
-            std::sync::Arc::new({
-                let c = ctx.client.clone();
-                move || c.toggle_streaming()
-            }) as _,
-        ),
-        (
-            "screenshot",
-            std::sync::Arc::new({
-                let c = ctx.client.clone();
-                let src = ctx.screenshot_source.clone();
-                let dir = ctx.screenshot_dir.clone();
-                move || c.screenshot(&src, &dir)
-            }) as _,
-        ),
-        (
-            "toggle_mute_mic",
-            std::sync::Arc::new({
-                let c = ctx.client.clone();
-                let mic = ctx.mic_name.clone();
-                move || c.toggle_mute_mic(&mic)
-            }) as _,
-        ),
-        (
-            "toggle_studio_mode",
-            std::sync::Arc::new({
-                let c = ctx.client.clone();
-                move || c.toggle_studio_mode()
-            }) as _,
-        ),
-        (
-            "toggle_replay_buffer",
-            std::sync::Arc::new({
-                let c = ctx.client.clone();
-                move || c.toggle_replay_buffer()
-            }) as _,
-        ),
-        (
-            "save_replay",
-            std::sync::Arc::new({
-                let c = ctx.client.clone();
-                move || c.save_replay()
-            }) as _,
-        ),
-    ]);
+    let action_map: std::collections::HashMap<&str, std::sync::Arc<dyn Fn() + Send + Sync>> =
+        std::collections::HashMap::from([
+            (
+                "toggle_recording",
+                std::sync::Arc::new({
+                    let c = ctx.client.clone();
+                    move || c.toggle_recording()
+                }) as _,
+            ),
+            (
+                "toggle_pause",
+                std::sync::Arc::new({
+                    let c = ctx.client.clone();
+                    move || c.toggle_pause()
+                }) as _,
+            ),
+            (
+                "toggle_streaming",
+                std::sync::Arc::new({
+                    let c = ctx.client.clone();
+                    move || c.toggle_streaming()
+                }) as _,
+            ),
+            (
+                "screenshot",
+                std::sync::Arc::new({
+                    let c = ctx.client.clone();
+                    let src = ctx.screenshot_source.clone();
+                    let dir = ctx.screenshot_dir.clone();
+                    move || c.screenshot(&src, &dir)
+                }) as _,
+            ),
+            (
+                "toggle_mute_mic",
+                std::sync::Arc::new({
+                    let c = ctx.client.clone();
+                    let mic = ctx.mic_name.clone();
+                    move || c.toggle_mute_mic(&mic)
+                }) as _,
+            ),
+            (
+                "toggle_studio_mode",
+                std::sync::Arc::new({
+                    let c = ctx.client.clone();
+                    move || c.toggle_studio_mode()
+                }) as _,
+            ),
+            (
+                "toggle_replay_buffer",
+                std::sync::Arc::new({
+                    let c = ctx.client.clone();
+                    move || c.toggle_replay_buffer()
+                }) as _,
+            ),
+            (
+                "save_replay",
+                std::sync::Arc::new({
+                    let c = ctx.client.clone();
+                    move || c.save_replay()
+                }) as _,
+            ),
+        ]);
 
     let mut binding_actions: std::collections::HashMap<u16, std::sync::Arc<dyn Fn() + Send + Sync>> =
         std::collections::HashMap::new();
@@ -216,13 +214,13 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         }
     }
 
-    let keyboards = find_keyboards()?;
-    if keyboards.is_empty() {
+    let keyboard_paths = find_keyboards()?;
+    if keyboard_paths.is_empty() {
         anyhow::bail!("No keyboard devices found! Make sure you're in the input group.");
     }
-    log::info!("Found {} keyboard device(s)", keyboards.len());
-    for k in &keyboards {
-        log::info!("  - {}", k.name());
+    log::info!("Found {} keyboard device(s)", keyboard_paths.len());
+    for p in &keyboard_paths {
+        log::info!("  - {}", p.display());
     }
 
     log::info!("Connecting to OBS WebSocket at {}...", ws_url);
@@ -249,11 +247,11 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         log::info!("Hotkeys are ready but will only work when OBS is running.");
     }
 
-    let (device_handles, rx_channels): (Vec<_>, Vec<_>) = keyboards
+    let (_device_handles, rx_channels): (Vec<_>, Vec<_>) = keyboard_paths
         .into_iter()
         .enumerate()
-        .map(|(i, dev)| {
-            let (handle, rx) = spawn_keyboard_reader(dev, i);
+        .map(|(i, path)| {
+            let (handle, rx) = spawn_keyboard_reader(path, i);
             (handle, rx)
         })
         .unzip();
@@ -276,11 +274,11 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
     });
 
     let close_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let close_flag_clone = close_flag.clone();
 
     std::thread::spawn(move || {
-        let mut buf = [0u8; 1];
-        std::io::stdin().read_exact(&mut buf).ok();
-        close_flag.store(true, std::sync::atomic::Ordering::SeqCst);
+        std::thread::sleep(std::time::Duration::from_secs(86400));
+        close_flag_clone.store(true, std::sync::atomic::Ordering::SeqCst);
     });
 
     loop {
@@ -289,10 +287,8 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
             break;
         }
 
-        let mut any_events = false;
         for rx in &rx_channels {
             while let Ok(event) = rx.try_recv() {
-                any_events = true;
                 if event.value == 1 {
                     if let Some(action) = binding_actions.get(&event.code) {
                         action();
