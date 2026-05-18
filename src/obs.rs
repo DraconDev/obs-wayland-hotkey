@@ -1,3 +1,5 @@
+use base64::Engine;
+use sha2::{Digest, Sha256};
 use serde::{Deserialize, Serialize};
 use std::net::TcpStream;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -78,14 +80,27 @@ impl OBSClient {
         log::info!("OBS WebSocket version: {}", hello.d.obs_web_socket_version);
 
         // obs-websocket 5.x supports rpcVersion 1 but needs eventSubscriptions
-        const EVENT_SUBSCRIPTIONS: u32 = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20 | 0x40 | 0x80;
+        let event_subscriptions: u32 = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20 | 0x40 | 0x80;
+        
+        // Check if authentication is required
+        let auth_string = if let Some(ref auth) = hello.d.authentication {
+            log::info!("OBS WebSocket requires authentication");
+            // For now, we can't authenticate without a password configured
+            // This will cause connection failure
+            anyhow::bail!(
+                "OBS WebSocket requires authentication but no password is configured. \
+                Please either:\n  1. Disable authentication in OBS WebSocket Server Settings, or\n  2. Add a password to the config file (obs_host format: ws://host:port/password)"
+            );
+        } else {
+            None
+        };
 
         let ident = IdentifyMessage {
             op: 1,
             d: IdentifyData { 
                 rpc_version: 1,
-                event_subscriptions: EVENT_SUBSCRIPTIONS,
-                authentication: None,  // TODO: implement if auth is required
+                event_subscriptions,
+                authentication: auth_string,
             },
         };
         let ident_json = serde_json::to_string(&ident).unwrap();
