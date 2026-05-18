@@ -1,21 +1,286 @@
-MIT License
+GNU AFFERO GENERAL PUBLIC LICENSE
+Version 3, 19 November 2007
 
-Copyright (c) 2025 DraconDev
+Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+Everyone is permitted to copy and distribute verbatim copies
+of this license document, but changing it is not allowed.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+                             Preamble
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The GNU Affero General Public License is a free, copyleft license for
+software and other kinds of works.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  The licenses for most software and other practical works are designed
+to take away your freedom to share and change the works. By contrast,
+our General Public Licenses are intended to guarantee your freedom to
+share and change all versions of a program--to make sure it remains free
+software for all its users.
+
+  When we speak of free software, we are referring to freedom, not
+price. Our General Public Licenses are designed to make sure that you
+have the freedom to distribute copies of free software (and charge for
+them if you wish), that you receive source code or can get it if you
+want it, that you can change the software or use pieces of it in new
+free programs, and that you know you can do these things.
+
+  Developers that use our General Public Licenses protect your freedom
+with two kinds of steps: (1) copyright the software, and (2) offer you
+this license which gives you legal permission to copy, distribute and/or
+modify the software.
+
+  The precise terms and conditions for copying, distribution and
+modification follow.
+
+TERMS AND CONDITIONS
+
+0. Definitions.
+
+  "This License" refers to version 3 of the GNU Affero General Public
+License.
+
+  "Copyright" also means copyright-like laws that apply to other kinds of
+works, such as semiconductor masks.
+
+  "The Program" refers to any copyrightable work licensed under this
+License. Each licensee is addressed as "you". "Licensees" and
+"recipients" may be individuals or organizations.
+
+  To "modify" a work means to copy from or adapt all or part of the work
+in a fashion requiring copyright permission, other than the making of an
+exact copy. The resulting work is called a "modified version" of the
+earlier work, or a work "based on" the earlier work.
+
+  A "covered work" means either the unmodified Program or a work based
+on the Program.
+
+  "Propagate" a work means to do anything with it that, without
+permission, would make you directly or secondarily liable for
+infringement under applicable copyright law, except executing on a user
+computer, virtual machine, or similar. Conveying a work means anything
+that propagates or modifies it.
+
+  An "organizational action" means actions that affect an organization
+or are taken on behalf of an organization, and do not merely have
+individual implications.
+
+  "Convey" means to engage in any of the above with or without user
+action, during the duration of the copyright.
+
+  You may make, run and propagate covered works that you do not
+convey, without conditions so long as your license otherwise remains
+in force. You may convey a covered work to others only for the purpose
+of having them make modifications exclusively for you, or provide you
+with facilities for running those works, provided that you comply with
+the terms of this License in carrying out any such activities. The above
+requirement applies both to the modified work and to the work based on
+the modified work.
+
+1. Source Code.
+
+  The "source code" for a work means the preferred form of the work for
+making modifications to it. "Object code" means any non-source form of a
+work.
+
+  A "Standard Interface" means an interface that either is an official
+standard defined by a recognized standards body or, in the case of
+interfaces specified for a particular programming language, one that
+is widely used among developers working in that language.
+
+  The "System Libraries" of an executable work include anything, other
+than the work as a whole, that (a) is included in the normal form of
+packaging a Major Component, but which is not part of that Major
+Component, and (b) serves only to enable use of the work with that
+Major Component, or (c) to implement a Standard Interface for which an
+implementation is available to the public in source code form. A
+"Major Component", in this context, means a major essential component
+(kernel, window system, and so on) of the specific operating system
+(if any) on which the executable work runs, or a compiler used to
+produce the work, or an interpreter used to run it.
+
+  The "Corresponding Source" for a work in source code form means all
+the source code needed to generate, install, and (for an executable
+work) run the object code and to modify the work, including scripts to
+control those activities. However, it does not include the work's
+System Libraries, or general-purpose tools or generally available free
+programs which are used unmodified in performing those activities but
+which are not part of the work.
+
+  The Corresponding Source need not include anything that users can
+regenerate automatically from other parts of the Corresponding Source.
+
+  The Corresponding Source for a covered work in source code form means
+the same thing as this License.
+
+2. Basic Permissions.
+
+  All rights granted under this License are granted for the term of
+copyright on the Program, and are irrevocable provided the stated
+conditions are met. This License explicitly affirms your unlimited
+permission to run the unmodified Program. The output from running a
+covered work is covered by this License only if the output, given its
+content, constitutes a covered work. This License acknowledges your
+rights of fair use or other equivalent, as provided by copyright law.
+
+  You may make, run and propagate covered works that you do not
+convey, without conditions so long as your license otherwise remains
+in force. You may convey covered works to others for the purpose of
+having them make modifications exclusively for you, or provide you
+with facilities for running those works, provided that you comply with
+the terms of this License in carrying out any such activities. The
+above requirement applies both to the modified work and to the work
+based on the modified work. If you add covered works to a library
+that is not itself a library, the library may still be used to
+compile and link the covered work, but the library and its contents
+are not by themselves a covered work.
+
+3. Detecting Disagreement.
+
+  Nothing in this License implies any duty on the part of the
+Licensor to detect or inform you of any disagreement between this
+License and any other agreement, license or legal notice. It is
+your responsibility to seek legal counsel to ensure that your
+planned activities are legally permissible.
+
+4. Internationalization.
+
+  A covered work may provide localization information through a
+translation in a System Library, but the Program and its documentation
+may be in a language that is not given any specific status under
+applicable law. Such localization does not affect the legal status
+of the covered work.
+
+5. Termination.
+
+  This License terminates automatically if you fail to comply with any
+of the conditions stated in this License. If you develop a covered
+work, you must make it widely available to others under this License.
+If you violate the terms of this License, all your rights under this
+License terminate immediately.
+
+6. Consequences of Termination.
+
+  On termination of this License, your right to use, copy, modify and
+convey a covered work ends. You may still have obligations under other
+agreements. Nothing in this License creates any obligation for you to
+continue using, copying, modifying or conveying a covered work. You
+may also have rights under applicable law to use, copy, modify and
+convey a covered work, or to seek an injunction on infringement of
+any patents. This License does not grant you permission to prevent
+others from using covered works, nor does it give any party any
+rights against any licensor.
+
+7. Patent Licensing.
+
+  Each contributor grants you a non-exclusive, worldwide, royalty-free
+patent license under certain contributor-essential patents to make,
+use, sell, offer for sale, import and otherwise transfer the work,
+where such license applies only to those patent claims licensable
+by such contributor that are necessarily infringed by their
+contribution(s) alone or by combination of their contribution(s)
+with the work to which such contribution(s) was submitted. If you
+initiate litigation against any entity (including a cross-claim or
+counterclaim in a lawsuit) alleging that the work or a contribution
+incorporated within the work constitutes direct or contributory
+patent infringement, then any patent licenses granted under this
+License for that work shall terminate as of the date such litigation
+is filed.
+
+8. No Trademark License.
+
+  This License does not grant any rights to use the name "GNU",
+"Affero" or any other trademark of the Free Software Foundation
+or its affiliates. You may not use such names in connection with
+software obtained under this License without specific prior
+written permission from the Foundation.
+
+9. Compatibility.
+
+  If you combine a covered work with a library in a way that causes
+the library, when compiled and linked with the covered work, to become
+a covered work, the library is covered by this License regardless of
+how the library is used. This provides sufficient permissions when
+the library is linked with the covered work in this way.
+
+10. Revised Versions of this License.
+
+  The Free Software Foundation may publish revised and/or new versions
+of the GNU Affero General Public License from time to time. Such new
+versions will be similar in spirit to the present version, but may differ
+in detail to address new problems or concerns.
+
+  Each version is given a distinguishing version number. If the Program
+specifies that a certain numbered version of the GNU Affero General
+Public License "or any later version" applies to it, you have the
+option of following the terms and conditions either of that numbered
+version or of any later version published by the Free Software
+Foundation. If the Program does not specify a version number of the
+GNU Affero General Public License, you may choose any version ever
+published by the Free Software Foundation.
+
+  If the Program specifies that a proxy can decide which future
+versions of the GNU Affero General Public License can be used, that
+proxy's public statement of acceptance of any version is permanent
+authorization for you to choose that version for the Program.
+
+  Later versions of this License may give you additional permissions.
+However, no additional obligations are imposed on any author or
+copyright holder as a result of your choosing to follow a later
+version.
+
+11. Disclaimer of Warranty.
+
+  THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
+APPLICABLE LAW. EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
+HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM "AS IS" WITHOUT
+WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE AND NONINFRINGEMENT. THE ENTIRE RISK AS TO THE
+QUALITY AND PERFORMANCE OF THE PROGRAM IS WITH YOU. SHOULD THE
+PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY
+SERVICING, REPAIR OR CORRECTION.
+
+12. Limitation of Liability.
+
+  IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN
+WRITING WILL ANY COPYRIGHT HOLDER, OR ANY PARTY THAT MODIFIES AND/OR
+CONVEYS THE PROGRAM AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES,
+INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES
+ARISING OUT OF THE USE OR INABILITY TO USE THE PROGRAM (INCLUDING
+BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING RENDERED INACCURATE OR
+LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM
+TO OPERATE WITH ANY OTHER PROGRAMS), EVEN IF SUCH HOLDER OR OTHER
+PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+13. Interpretation.
+
+  The laws of the United States and other jurisdictions sometimes
+assert that open source software is subject to export control
+laws and regulations. You are responsible for ensuring compliance
+with any such laws and regulations.
+
+  The validity of this License and the rights obligations under
+it are not governed by the United Nations Convention on
+Contracts for the International Sale of Goods, the application
+of which is expressly disclaimed.
+
+  If it is not possible to submit contributions in accordance with
+this License due to applicable law, or if you cannot fulfill any
+obligations under it, you may seek special permission from the
+copyright holder. Such arrangements do not modify the legal force
+of this License.
+
+14. Definitions.
+
+  For the avoidance of doubt, this License does not constitute
+or provide legal advice. You should consult a licensed attorney
+before engaging in any activities that may have legal implications.
+
+  "User" means any individual or entity that installs or runs,
+or causes to be installed or run, the Program or a work based on
+the Program.
+
+  "Modified Work" means any work that contains portions of the
+Program, or derivative works thereof, that are not part of the
+Program itself.
+
+END OF TERMS AND CONDITIONS
