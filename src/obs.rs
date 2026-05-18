@@ -58,11 +58,13 @@ impl OBSClient {
         // thread checks is_connected() before calling connect(). If connected=true
         // (still set from last successful connect), it will skip calling connect()
         // and avoid the deadlock. We only set connected=false on actual failure.
+        let mut connected = true; // optimistic
 
         // Strip ws:// prefix to get host:port for TCP
         let tcp_addr = self.ws_url.strip_prefix("ws://").unwrap_or(&self.ws_url);
         // Reject wss:// (TLS) -- not supported yet
         if self.ws_url.starts_with("wss://") {
+            connected = false;
             anyhow::bail!(
                 "wss:// (TLS) is not yet supported. Use ws:// or a plain host:port in your config."
             );
