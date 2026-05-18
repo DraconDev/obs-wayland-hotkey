@@ -54,17 +54,20 @@ impl OBSClient {
             let _ = c.ws.close(None);
         }
         *guard = None;
-        // NOTE: We intentionally do NOT set connected=false here. The reconnection
-        // thread checks is_connected() before calling connect(). If connected=true
-        // (still set from last successful connect), it will skip calling connect()
-        // and avoid the deadlock. We only set connected=false on actual failure.
-        let mut connected = true; // optimistic
+        // NOTE: We intentionally do NOT set connected=false while holding the lock.
+        // Doing so would flip the shared Arc<AtomicBool> state, which could cause
+        // is_connected() to return false and let the reconnect thread re-enter connect()
+        // while we still hold the lock → deadlock. We set connected=false only after
+        // releasing the lock, in the error path.
+        let mut failed = false; // tracks error state for post-lock cleanup
 
         // Strip ws:// prefix to get host:port for TCP
         let tcp_addr = self.ws_url.strip_prefix("ws://").unwrap_or(&self.ws_url);
         // Reject wss:// (TLS) -- not supported yet
         if self.ws_url.starts_with("wss://") {
-            connected = false;
+            failed = true;
+            drop(guard);
+            self.connected.store(false, Ordering::SeqCst);
             anyhow::bail!(
                 "wss:// (TLS) is not yet supported. Use ws:// or a plain host:port in your config."
             );
@@ -85,6 +88,9 @@ impl OBSClient {
         log::info!("OBS WebSocket version: {}", hello.d.obs_web_socket_version);
         // Reject if OBS requires authentication (not yet supported)
         if hello.d.authentication.is_some() {
+            failed = true;
+            drop(guard);
+            self.connected.store(false, Ordering::SeqCst);
             anyhow::bail!(
                 "OBS WebSocket has authentication enabled, which is not yet supported. \
                 Please disable authentication in OBS → Tools → WebSocket Server Settings."
@@ -114,6 +120,9 @@ impl OBSClient {
         let resp: serde_json::Value = serde_json::from_str(text)?;
         let op = resp.get("op").and_then(|o| o.as_u64()).unwrap_or(0);
         if op != 5 {
+            failed = true;
+            drop(guard);
+            self.connected.store(false, Ordering::SeqCst);
             anyhow::bail!("OBS rejected identification (op={}): {}", op, text);
         }
 
