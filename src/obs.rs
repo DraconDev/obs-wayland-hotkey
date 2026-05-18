@@ -1,5 +1,3 @@
-use base64::Engine;
-use sha2::{Digest, Sha256};
 use serde::{Deserialize, Serialize};
 use std::net::TcpStream;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -81,26 +79,13 @@ impl OBSClient {
 
         // obs-websocket 5.x supports rpcVersion 1 but needs eventSubscriptions
         let event_subscriptions: u32 = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20 | 0x40 | 0x80;
-        
-        // Check if authentication is required
-        let auth_string = if let Some(ref auth) = hello.d.authentication {
-            log::info!("OBS WebSocket requires authentication");
-            // For now, we can't authenticate without a password configured
-            // This will cause connection failure
-            anyhow::bail!(
-                "OBS WebSocket requires authentication but no password is configured. \
-                Please either:\n  1. Disable authentication in OBS WebSocket Server Settings, or\n  2. Add a password to the config file (obs_host format: ws://host:port/password)"
-            );
-        } else {
-            None
-        };
 
         let ident = IdentifyMessage {
             op: 1,
             d: IdentifyData { 
                 rpc_version: 1,
                 event_subscriptions,
-                authentication: auth_string,
+                authentication: None,  // TODO: implement password auth
             },
         };
         let ident_json = serde_json::to_string(&ident).unwrap();
@@ -377,10 +362,6 @@ struct HelloMessage {
 struct HelloData {
     #[serde(rename = "obsWebSocketVersion")]
     obs_web_socket_version: String,
-    #[serde(rename = "rpcVersion")]
-    rpc_version: u32,
-    #[serde(rename = "availableRequests", default)]
-    available_requests: Vec<String>,
     #[serde(rename = "authentication", default)]
     authentication: Option<AuthenticationChallenge>,
 }
@@ -405,7 +386,7 @@ struct IdentifyData {
     rpc_version: u32,
     #[serde(rename = "eventSubscriptions")]
     event_subscriptions: u32,
-    #[serde(rename = "authentication", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "authentication", default, skip_serializing_if = "Option::is_none")]
     authentication: Option<String>,
 }
 
@@ -425,32 +406,8 @@ struct RequestData {
     request_data: Option<serde_json::Value>,
 }
 
-use sha2::{Sha256, Digest};
-
-/// Computes the authentication string for obs-websocket 5.x
-/// Returns None if authentication is not required
-fn compute_auth(password: &str, challenge: &str, salt: &str) -> String {
-    // Step 1: Concatenate password + salt
-    let secret1 = format!("{}{}", password, salt);
-    
-    // Step 2: SHA256 hash and base64 encode
-    let mut hasher = Sha256::new();
-    hasher.update(secret1.as_bytes());
-    let base64_secret = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, hasher.finalize());
-    
-    // Step 3: Concatenate base64_secret + challenge
-    let secret2 = format!("{}{}", base64_secret, challenge);
-    
-    // Step 4: SHA256 hash and base64 encode
-    let mut hasher2 = Sha256::new();
-    hasher2.update(secret2.as_bytes());
-    base64::Engine::encode(&base64::engine::general_purpose::STANDARD, hasher2.finalize())
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_obs_client_creation() {
         let client = OBSClient::new("ws://localhost:4455".to_string());
