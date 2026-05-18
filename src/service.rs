@@ -278,14 +278,12 @@ pub fn run_teardown(purge: bool) {
         if !pids.is_empty() {
             println!();
             println!("  {} Stopping {} running process(es)...", heading("▶"), pids.len());
-            for pid in pids {
-                // Ignore errors (processes may already be gone)
+            for pid in &pids {
                 let _ = Command::new("kill").arg(format!("{}", pid)).output();
-                let _ = Command::new("kill").arg("-0").arg(format!("{}", pid)).output(); // check alive
             }
             std::thread::sleep(std::time::Duration::from_millis(500));
             // Force kill any that are still alive
-            for pid in pids {
+            for pid in &pids {
                 let _ = Command::new("kill").arg("-9").arg(format!("{}", pid)).output();
             }
         }
@@ -321,6 +319,11 @@ pub fn run_teardown(purge: bool) {
     println!("  {} Removing service files...", heading("▶"));
 
     let unit_path = service_unit_path();
+    let old_service = service_unit_path()
+        .parent()
+        .unwrap()
+        .join("obs-wayland-hotkey.service");
+
     if unit_path.exists() {
         std::fs::remove_file(&unit_path).ok();
         println!("  {} obs-hotkey.service removed", ok(""));
