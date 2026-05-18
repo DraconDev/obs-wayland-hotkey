@@ -6,9 +6,9 @@ use std::time::Duration;
 
 pub struct OBSClient {
     conn: Arc<Mutex<Option<Conn>>>,
-    connected: AtomicBool,
-    studio_mode_enabled: AtomicBool,
-    studio_mode_queried: AtomicBool,
+    connected: Arc<AtomicBool>,
+    studio_mode_enabled: Arc<AtomicBool>,
+    studio_mode_queried: Arc<AtomicBool>,
     ws_url: String,
 }
 
@@ -16,9 +16,9 @@ impl Clone for OBSClient {
     fn clone(&self) -> Self {
         Self {
             conn: Arc::clone(&self.conn),
-            connected: AtomicBool::new(self.connected.load(Ordering::SeqCst)),
-            studio_mode_enabled: AtomicBool::new(self.studio_mode_enabled.load(Ordering::SeqCst)),
-            studio_mode_queried: AtomicBool::new(self.studio_mode_queried.load(Ordering::SeqCst)),
+            connected: Arc::clone(&self.connected),
+            studio_mode_enabled: Arc::clone(&self.studio_mode_enabled),
+            studio_mode_queried: Arc::clone(&self.studio_mode_queried),
             ws_url: self.ws_url.clone(),
         }
     }
@@ -37,9 +37,9 @@ impl OBSClient {
     pub fn new(ws_url: String) -> Self {
         Self {
             conn: Arc::new(Mutex::new(None)),
-            connected: AtomicBool::new(false),
-            studio_mode_enabled: AtomicBool::new(false),
-            studio_mode_queried: AtomicBool::new(false),
+            connected: Arc::new(AtomicBool::new(false)),
+            studio_mode_enabled: Arc::new(AtomicBool::new(false)),
+            studio_mode_queried: Arc::new(AtomicBool::new(false)),
             ws_url,
         }
     }
