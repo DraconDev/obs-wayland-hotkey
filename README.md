@@ -19,6 +19,9 @@
 - **Auto-reconnect** — automatically reconnects if OBS restarts
 - **Multi-keyboard** — monitors all connected keyboards
 - **F13-F24 Support** — use extra keys as stream deck buttons
+- **Hotkey Debouncing** — 50ms debounce prevents accidental double-toggles
+- **Non-blocking Actions** — hotkeys stay responsive during network I/O
+- **Config Validation** — typos in config are rejected with clear errors
 
 ---
 
