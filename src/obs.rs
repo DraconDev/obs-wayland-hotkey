@@ -197,34 +197,34 @@ impl OBSClient {
     }
 
     fn read_response_guarded(&self, guard: &mut std::sync::MutexGuard<'_, Option<Conn>>) -> anyhow::Result<serde_json::Value> {
-        // Match on the underlying Option via as_mut to avoid borrow conflicts
-        // when we need to clear the connection on error.
-        match guard.as_mut() {
-            Some(conn) => match conn.ws.read() {
-                Ok(msg) => {
-                    let text = msg
-                        .into_text()
-                        .map_err(|e| anyhow::anyhow!("unexpected non-text WebSocket frame: {}", e))?;
-                    serde_json::from_str(&text).map_err(|e| anyhow::anyhow!("invalid JSON: {}", e))
-                }
-                Err(tungstenite::Error::Io(ref e))
-                    if e.kind() == std::io::ErrorKind::BrokenPipe
-                        || e.kind() == std::io::ErrorKind::ConnectionReset
-                        || e.kind() == std::io::ErrorKind::UnexpectedEof => {
-                    // Connection closed by OBS — clear the mutex value via get_mut(),
-                    // which requires no mutable reference to the guard itself.
-                    // We also set connected=false so send_request_with_data triggers
-                    // reconnection on the next call.
-                    if let Some(conn) = guard.get_mut() {
-                        *conn = None;
+        // Use guard.as_mut() to get &mut Option<Conn>, then pattern match on it.
+        // This avoids holding a &mut T borrow that would conflict with guard.get_mut().
+        let msg = match guard.as_mut() {
+            Some(conn) => conn.ws.read().map_err(|e| {
+                if let tungstenite::Error::Io(ref io) = e {
+                    match io.kind() {
+                        std::io::ErrorKind::BrokenPipe
+                        | std::io::ErrorKind::ConnectionReset
+                        | std::io::ErrorKind::UnexpectedEof => {
+                            // Connection closed by OBS — clear the mutex and flag so the
+                            // next request triggers reconnection.
+                            if let Some(c) = guard.get_mut() {
+                                *c = None;
+                            }
+                            self.connected.store(false, Ordering::SeqCst);
+                            return anyhow::anyhow!("OBS WebSocket closed");
+                        }
+                        _ => {}
                     }
-                    self.connected.store(false, Ordering::SeqCst);
-                    anyhow::bail!("OBS WebSocket closed: {:?}", e);
                 }
-                Err(e) => anyhow::bail!("WebSocket read error: {:?}", e),
-            },
+                anyhow::anyhow!("WebSocket read error: {:?}", e)
+            })?,
             None => anyhow::bail!("not connected to OBS"),
-        }
+        };
+        let text = msg
+            .into_text()
+            .map_err(|e| anyhow::anyhow!("unexpected non-text WebSocket frame: {}", e))?;
+        serde_json::from_str(&text).map_err(|e| anyhow::anyhow!("invalid JSON: {}", e))
     }
 
     /// Reads a response from the WebSocket connection.
