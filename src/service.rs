@@ -81,6 +81,33 @@ pub fn run_setup(config_path: &str) {
     // Expand tilde in config path before any operations
     let config_path = expand_home(config_path);
 
+    let exe_path = std::env::current_exe()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|_| "obs-hotkey".to_string());
+
+    // Show version info before doing anything
+    println!();
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    println!("  {}  obs-hotkey setup{}", BOLD, RESET);
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    println!();
+    println!("  {:<14} {}", "Installing:", key(&format!("v{}", env!("CARGO_PKG_VERSION"))));
+    println!("  {:<14} {}", "Binary:", muted(&exe_path));
+
+    // Show currently installed/running version if any
+    let unit_path = service_unit_path();
+    if unit_path.exists() {
+        if let Ok(existing) = std::fs::read_to_string(&unit_path) {
+            if let Some(line) = existing.lines().find(|l| l.starts_with("ExecStart=")) {
+                println!("  {:<14} {}", "Replacing:", muted(line.trim_start_matches("ExecStart=")));
+            }
+        }
+    }
+    if is_autostart_enabled() {
+        println!("  {:<14} {}", "Service:", ok("currently running"));
+    }
+    println!();
+
     if !in_input_group() {
         println!();
         println!(
@@ -119,10 +146,6 @@ pub fn run_setup(config_path: &str) {
             .output();
         let _ = std::fs::remove_file(&old_unit);
     }
-
-    let exe_path = std::env::current_exe()
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|_| "obs-hotkey".to_string());
 
     if let Err(e) = write_service_file(&exe_path, &config_path) {
         log::error!("Failed to write service file: {}", e);
@@ -192,6 +215,32 @@ pub fn run_setup(config_path: &str) {
 
 pub fn run_teardown(purge: bool) {
     use crate::ansi::*;
+
+    // Show version info before doing anything
+    let exe_version = format!("v{}", env!("CARGO_PKG_VERSION"));
+    println!();
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    println!("  {}  obs-hotkey teardown{}", BOLD, RESET);
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    println!();
+    println!("  {:<14} {}", "Removing:", key(&exe_version));
+
+    // Show currently installed/running version
+    let unit_path = service_unit_path();
+    if unit_path.exists() {
+        if let Ok(existing) = std::fs::read_to_string(&unit_path) {
+            if let Some(line) = existing.lines().find(|l| l.starts_with("ExecStart=")) {
+                println!("  {:<14} {}", "Service:", muted(line.trim_start_matches("ExecStart=")));
+            }
+        }
+    }
+    if is_autostart_enabled() {
+        println!("  {:<14} {}", "Status:", ok("currently running"));
+    }
+    if purge {
+        println!("  {:<14} {}", "Purge:", err("config will be deleted"));
+    }
+    println!();
 
     let old_service = service_unit_path()
         .parent()
