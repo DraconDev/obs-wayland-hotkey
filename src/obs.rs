@@ -129,6 +129,24 @@ impl OBSClient {
         request_type: &str,
         request_data: Option<serde_json::Value>,
     ) -> anyhow::Result<()> {
+        let request_id = format!(
+            "{}_{}",
+            request_type,
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        );
+        let req = RequestMessage {
+            op: 6,
+            d: RequestData {
+                request_type: request_type.to_string(),
+                request_id,
+                request_data,
+            },
+        };
+        let json = serde_json::to_string(&req)?;
+
         let mut guard = self.conn.lock().unwrap();
         let conn = match guard.as_mut() {
             Some(c) => c,
