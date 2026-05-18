@@ -1,5 +1,9 @@
 use clap::{Parser, Subcommand};
+use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 mod ansi;
 mod banner;
@@ -11,8 +15,14 @@ mod service;
 use config::config_path;
 use input::{find_keyboards, get_key_code, spawn_keyboard_reader};
 
+/// Delay between reconnection attempts when OBS is unreachable.
 const RETRY_DELAY_SECS: u64 = 30;
+/// Interval between connection health checks when already connected.
 const RECONNECT_INTERVAL_SECS: u64 = 60;
+/// Main event loop poll interval (ms).
+const EVENT_LOOP_POLL_MS: u64 = 10;
+/// Minimum time between duplicate key presses (debounce window).
+const DEBOUNCE_MS: u64 = 50;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -141,73 +151,69 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         anyhow::bail!("No valid hotkeys configured");
     }
 
-    let action_map: std::collections::HashMap<&str, std::sync::Arc<dyn Fn() + Send + Sync>> =
-        std::collections::HashMap::from([
-            (
-                "toggle_recording",
-                std::sync::Arc::new({
-                    let c = ctx.client.clone();
-                    move || c.toggle_recording()
-                }) as _,
-            ),
-            (
-                "toggle_pause",
-                std::sync::Arc::new({
-                    let c = ctx.client.clone();
-                    move || c.toggle_pause()
-                }) as _,
-            ),
-            (
-                "toggle_streaming",
-                std::sync::Arc::new({
-                    let c = ctx.client.clone();
-                    move || c.toggle_streaming()
-                }) as _,
-            ),
-            (
-                "screenshot",
-                std::sync::Arc::new({
-                    let c = ctx.client.clone();
-                    let src = ctx.screenshot_source.clone();
-                    let dir = ctx.screenshot_dir.clone();
-                    move || c.screenshot(&src, &dir)
-                }) as _,
-            ),
-            (
-                "toggle_mute_mic",
-                std::sync::Arc::new({
-                    let c = ctx.client.clone();
-                    let mic = ctx.mic_name.clone();
-                    move || c.toggle_mute_mic(&mic)
-                }) as _,
-            ),
-            (
-                "toggle_studio_mode",
-                std::sync::Arc::new({
-                    let c = ctx.client.clone();
-                    move || c.toggle_studio_mode()
-                }) as _,
-            ),
-            (
-                "toggle_replay_buffer",
-                std::sync::Arc::new({
-                    let c = ctx.client.clone();
-                    move || c.toggle_replay_buffer()
-                }) as _,
-            ),
-            (
-                "save_replay",
-                std::sync::Arc::new({
-                    let c = ctx.client.clone();
-                    move || c.save_replay()
-                }) as _,
-            ),
-        ]);
+    let action_map: HashMap<&str, Arc<dyn Fn() + Send + Sync>> = HashMap::from([
+        (
+            "toggle_recording",
+            Arc::new({
+                let c = ctx.client.clone();
+                move || c.toggle_recording()
+            }) as _,
+        ),
+        (
+            "toggle_pause",
+            Arc::new({
+                let c = ctx.client.clone();
+                move || c.toggle_pause()
+            }) as _,
+        ),
+        (
+            "toggle_streaming",
+            Arc::new({
+                let c = ctx.client.clone();
+                move || c.toggle_streaming()
+            }) as _,
+        ),
+        (
+            "screenshot",
+            Arc::new({
+                let c = ctx.client.clone();
+                let src = ctx.screenshot_source.clone();
+                let dir = ctx.screenshot_dir.clone();
+                move || c.screenshot(&src, &dir)
+            }) as _,
+        ),
+        (
+            "toggle_mute_mic",
+            Arc::new({
+                let c = ctx.client.clone();
+                let mic = ctx.mic_name.clone();
+                move || c.toggle_mute_mic(&mic)
+            }) as _,
+        ),
+        (
+            "toggle_studio_mode",
+            Arc::new({
+                let c = ctx.client.clone();
+                move || c.toggle_studio_mode()
+            }) as _,
+        ),
+        (
+            "toggle_replay_buffer",
+            Arc::new({
+                let c = ctx.client.clone();
+                move || c.toggle_replay_buffer()
+            }) as _,
+        ),
+        (
+            "save_replay",
+            Arc::new({
+                let c = ctx.client.clone();
+                move || c.save_replay()
+            }) as _,
+        ),
+    ]);
 
-    let mut binding_actions: std::collections::HashMap<
-        u16,
-        std::sync::Arc<dyn Fn() + Send + Sync>,
-    > = std::collections::HashMap::new();
+    let mut binding_actions: HashMap<u16, Arc<dyn Fn() + Send + Sync>> = HashMap::new();
     for b in &bindings {
         if b.key_name.is_empty() {
             continue;
@@ -228,35 +234,37 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         log::info!("  - {}", p.display());
     }
 
-    use ansi::*;
-
     // Background reconnection thread — retries forever with visible output
     let client_for_reconnect = ctx.client.clone();
-    let should_stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let should_stop = Arc::new(AtomicBool::new(false));
     let should_stop_clone = should_stop.clone();
 
     let reconnect_handle = std::thread::spawn(move || {
         loop {
-            if should_stop_clone.load(std::sync::atomic::Ordering::SeqCst) {
+            if should_stop_clone.load(Ordering::SeqCst) {
                 break;
             }
             if client_for_reconnect.is_connected() {
-                // Already connected — check again in 60s
-                std::thread::sleep(std::time::Duration::from_secs(RECONNECT_INTERVAL_SECS));
+                // Already connected — check again later
+                std::thread::sleep(Duration::from_secs(RECONNECT_INTERVAL_SECS));
                 continue;
+            }
+            // Re-check should_stop right before connect() to avoid
+            // unnecessary connection attempt during shutdown
+            if should_stop_clone.load(Ordering::SeqCst) {
+                break;
             }
             match client_for_reconnect.connect() {
                 Ok(()) => {
-                    println!("  {} Connected to OBS!{}", ok(""), RESET);
+                    log::info!("Connected to OBS!");
                 }
                 Err(e) => {
-                    println!(
-                        "  {} Could not reach OBS: {} — retrying in {}s...",
-                        muted("~"),
+                    log::warn!(
+                        "Could not reach OBS: {} — retrying in {}s...",
                         e,
                         RETRY_DELAY_SECS
                     );
-                    std::thread::sleep(std::time::Duration::from_secs(RETRY_DELAY_SECS));
+                    std::thread::sleep(Duration::from_secs(RETRY_DELAY_SECS));
                 }
             }
         }
@@ -273,24 +281,24 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
 
     println!(
         "  {} Hotkeys ready — connecting to OBS in background{}",
-        muted("~"),
-        RESET
+        ansi::muted("~"),
+        ansi::RESET
     );
-
-    let close_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
 
     ctrlc::set_handler({
         let should_stop_clone = should_stop.clone();
-        let close_flag_clone = close_flag.clone();
         move || {
-            close_flag_clone.store(true, std::sync::atomic::Ordering::SeqCst);
-            should_stop_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+            should_stop_clone.store(true, Ordering::SeqCst);
         }
     })
     .expect("error setting Ctrl-C handler");
 
+    // Debounce tracking: last press time per key code
+    let mut last_press: HashMap<u16, Instant> = HashMap::new();
+    let debounce = Duration::from_millis(DEBOUNCE_MS);
+
     loop {
-        if close_flag.load(std::sync::atomic::Ordering::SeqCst) {
+        if should_stop.load(Ordering::SeqCst) {
             log::info!("Shutting down...");
             break;
         }
@@ -299,16 +307,27 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
             while let Ok(event) = rx.try_recv() {
                 if event.value == 1 {
                     if let Some(action) = binding_actions.get(&event.code) {
-                        action();
+                        // Debounce: skip if this key was pressed within the window
+                        let now = Instant::now();
+                        if let Some(last) = last_press.get(&event.code) {
+                            if now.duration_since(*last) < debounce {
+                                continue;
+                            }
+                        }
+                        last_press.insert(event.code, now);
+                        // Spawn action in a background thread so the event
+                        // loop stays responsive during network I/O
+                        let action = action.clone();
+                        std::thread::spawn(move || action());
                     }
                 }
             }
         }
 
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        std::thread::sleep(Duration::from_millis(EVENT_LOOP_POLL_MS));
     }
 
-    should_stop.store(true, std::sync::atomic::Ordering::SeqCst);
+    should_stop.store(true, Ordering::SeqCst);
     ctx.client.close();
     let _ = reconnect_handle.join();
 

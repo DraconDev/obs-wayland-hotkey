@@ -1,8 +1,13 @@
 use serde::{Deserialize, Serialize};
-use std::net::TcpStream;
+use std::net::{SocketAddr, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+
+/// Timeout for TCP connect attempts to OBS WebSocket.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+/// Timeout for individual WebSocket reads (responses from OBS).
+const READ_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub struct OBSClient {
     conn: Arc<Mutex<Option<Conn>>>,
@@ -49,28 +54,32 @@ impl OBSClient {
     }
 
     pub fn connect(&self) -> anyhow::Result<()> {
+        // Set connected=false BEFORE acquiring the lock.
+        // This is safe because:
+        //   - If the reconnect thread sees connected=false, it will try to
+        //     call connect(), which will block on the lock (not deadlock,
+        //     since we don't hold it yet).
+        //   - If the main event loop sees connected=false, it will skip
+        //     sending and wait for the reconnect thread.
+        self.connected.store(false, Ordering::SeqCst);
+
         let mut guard = self.conn.lock().unwrap();
         if let Some(ref mut c) = *guard {
             let _ = c.ws.close(None);
         }
         *guard = None;
-        // NOTE: We set connected=false AFTER releasing the lock to avoid deadlock.
-        // If we set it while holding the lock, the reconnect thread could see
-        // connected=false via is_connected() and try to enter connect() while we
-        // still hold the lock → deadlock.
 
         // Strip ws:// prefix to get host:port for TCP
         let tcp_addr = self.ws_url.strip_prefix("ws://").unwrap_or(&self.ws_url);
         // Reject wss:// (TLS) -- not supported yet
         if self.ws_url.starts_with("wss://") {
-            drop(guard);
-            self.connected.store(false, Ordering::SeqCst);
             anyhow::bail!(
                 "wss:// (TLS) is not yet supported. Use ws:// or a plain host:port in your config."
             );
         }
-        let stream = TcpStream::connect_timeout(&tcp_addr.parse()?, Duration::from_secs(5))?;
-        stream.set_read_timeout(Some(Duration::from_secs(10)))?;
+        let addr: SocketAddr = tcp_addr.parse()?;
+        let stream = TcpStream::connect_timeout(&addr, CONNECT_TIMEOUT)?;
+        stream.set_read_timeout(Some(READ_TIMEOUT))?;
 
         let (mut ws, resp) = tungstenite::client(&self.ws_url, stream)?;
 
@@ -85,8 +94,6 @@ impl OBSClient {
         log::info!("OBS WebSocket version: {}", hello.d.obs_web_socket_version);
         // Reject if OBS requires authentication (not yet supported)
         if hello.d.authentication.is_some() {
-            drop(guard);
-            self.connected.store(false, Ordering::SeqCst);
             anyhow::bail!(
                 "OBS WebSocket has authentication enabled, which is not yet supported. \
                 Please disable authentication in OBS → Tools → WebSocket Server Settings."
@@ -97,10 +104,10 @@ impl OBSClient {
 
         let ident = IdentifyMessage {
             op: 1,
-            d: IdentifyData { 
+            d: IdentifyData {
                 rpc_version: 1,
                 event_subscriptions,
-                authentication: None,  // TODO: implement password auth
+                authentication: None,
             },
         };
         let ident_json = serde_json::to_string(&ident).unwrap();
@@ -116,8 +123,6 @@ impl OBSClient {
         let resp: serde_json::Value = serde_json::from_str(text)?;
         let op = resp.get("op").and_then(|o| o.as_u64()).unwrap_or(0);
         if op != 2 {
-            drop(guard);
-            self.connected.store(false, Ordering::SeqCst);
             anyhow::bail!("OBS rejected identification (op={}): {}", op, text);
         }
 
@@ -168,7 +173,7 @@ impl OBSClient {
             }
         };
         conn.ws.send(tungstenite::Message::Text(json.into()))?;
-        drop(guard);  // Release lock before reading response
+        drop(guard); // Release lock before reading response
 
         let resp = self.read_response()?;
         if let Some(status) = resp.get("d").and_then(|d| d.get("requestStatus")) {
@@ -273,13 +278,21 @@ impl OBSClient {
 
     pub fn toggle_studio_mode(&self) {
         log::info!("Toggling studio mode...");
+        // If state is unknown, query first to avoid sending wrong value
         if !self.studio_mode_queried.load(Ordering::SeqCst) {
             log::info!("Studio mode state unknown, querying...");
+            self.query_studio_mode();
+            if !self.studio_mode_queried.load(Ordering::SeqCst) {
+                log::warn!("Cannot toggle studio mode: failed to query current state");
+                return;
+            }
         }
         let new_state = !self.studio_mode_enabled.load(Ordering::SeqCst);
         let data = serde_json::json!({ "studioModeEnabled": new_state });
         if let Err(e) = self.send_request_with_data("SetStudioModeEnabled", Some(data)) {
             log::warn!("Error toggling studio mode: {}", e);
+            // Re-query to resync state — our local state may be wrong
+            self.studio_mode_queried.store(false, Ordering::SeqCst);
         } else {
             self.studio_mode_enabled.store(new_state, Ordering::SeqCst);
             log::info!("Studio mode set to: {}", new_state);
@@ -410,7 +423,7 @@ struct IdentifyData {
     rpc_version: u32,
     #[serde(rename = "eventSubscriptions")]
     event_subscriptions: u32,
-    #[serde(rename = "authentication", default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "authentication", skip_serializing_if = "Option::is_none")]
     authentication: Option<String>,
 }
 
@@ -445,5 +458,28 @@ mod tests {
         fn assert_send<T: Send + Sync>(_: &T) {}
         let client = OBSClient::new("ws://localhost:4455".to_string());
         assert_send(&client);
+    }
+
+    #[test]
+    fn test_identify_data_skips_none_auth() {
+        let ident = IdentifyData {
+            rpc_version: 1,
+            event_subscriptions: 255,
+            authentication: None,
+        };
+        let json = serde_json::to_string(&ident).unwrap();
+        assert!(!json.contains("authentication"));
+    }
+
+    #[test]
+    fn test_identify_data_includes_some_auth() {
+        let ident = IdentifyData {
+            rpc_version: 1,
+            event_subscriptions: 255,
+            authentication: Some("token123".to_string()),
+        };
+        let json = serde_json::to_string(&ident).unwrap();
+        assert!(json.contains("authentication"));
+        assert!(json.contains("token123"));
     }
 }
