@@ -129,35 +129,19 @@ impl OBSClient {
         request_type: &str,
         request_data: Option<serde_json::Value>,
     ) -> anyhow::Result<()> {
-        let request_id = format!(
-            "{}_{}",
-            request_type,
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-        );
-        let req = RequestMessage {
-            op: 6,
-            d: RequestData {
-                request_type: request_type.to_string(),
-                request_id,
-                request_data,
-            },
-        };
-        let json = serde_json::to_string(&req)?;
-
-        {
-            let mut guard = self.conn.lock().unwrap();
-            if !self.connected.load(Ordering::SeqCst) {
+        let mut guard = self.conn.lock().unwrap();
+        let conn = match guard.as_mut() {
+            Some(c) => c,
+            None => {
                 drop(guard);
                 log::info!("Not connected to OBS. Reconnecting...");
                 self.connect()?;
                 guard = self.conn.lock().unwrap();
+                guard.as_mut().unwrap()
             }
-            let conn = guard.as_mut().unwrap();
-            conn.ws.send(tungstenite::Message::Text(json.into()))?;
-        }
+        };
+        conn.ws.send(tungstenite::Message::Text(json.into()))?;
+        drop(guard);  // Release lock before reading response
 
         let resp = self.read_response()?;
         if let Some(status) = resp.get("d").and_then(|d| d.get("requestStatus")) {
