@@ -204,8 +204,10 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
             ),
         ]);
 
-    let mut binding_actions: std::collections::HashMap<u16, std::sync::Arc<dyn Fn() + Send + Sync>> =
-        std::collections::HashMap::new();
+    let mut binding_actions: std::collections::HashMap<
+        u16,
+        std::sync::Arc<dyn Fn() + Send + Sync>,
+    > = std::collections::HashMap::new();
     for b in &bindings {
         if b.key_name.is_empty() {
             continue;
@@ -269,7 +271,11 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         })
         .unzip();
 
-    println!("  {} Hotkeys ready — connecting to OBS in background{}", muted("~"), RESET);
+    println!(
+        "  {} Hotkeys ready — connecting to OBS in background{}",
+        muted("~"),
+        RESET
+    );
 
     let close_flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
 
@@ -280,7 +286,8 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
             close_flag_clone.store(true, std::sync::atomic::Ordering::SeqCst);
             should_stop_clone.store(true, std::sync::atomic::Ordering::SeqCst);
         }
-    }).expect("error setting Ctrl-C handler");
+    })
+    .expect("error setting Ctrl-C handler");
 
     loop {
         if close_flag.load(std::sync::atomic::Ordering::SeqCst) {
@@ -312,26 +319,34 @@ fn print_quickstart() {
     use ansi::*;
     println!();
     println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-    println!("  {}  obs-hotkey {}  {}", BOLD, env!("CARGO_PKG_VERSION"), RESET);
+    println!(
+        "  {}  obs-hotkey {}  {}",
+        BOLD,
+        env!("CARGO_PKG_VERSION"),
+        RESET
+    );
     println!("  {}  Wayland-compatible OBS hotkey daemon{}", DIM, RESET);
     println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     println!();
 
     println!("  {}", heading("▶ Quick Start"));
     println!();
-    println!("  {}" , heading("1.") + " " + "Enable OBS WebSocket Server");
+    println!("  {}", heading("1.") + " " + "Enable OBS WebSocket Server");
     println!("     Open OBS → Tools → WebSocket Server Settings");
     println!("     {}Enable{}", GREEN, RESET);
     println!("     (port 4455, no auth needed)");
     println!();
-    println!("  {}" , heading("2.") + " " + "Add yourself to the input group");
+    println!(
+        "  {}",
+        heading("2.") + " " + "Add yourself to the input group"
+    );
     println!("     {}", muted("sudo usermod -aG input $(whoami)"));
     println!("     {}", muted("(then log out and back in)"));
     println!();
-    println!("  {}" , heading("3.") + " " + "Set up auto-start on login");
+    println!("  {}", heading("3.") + " " + "Set up auto-start on login");
     println!("     {}", key("obs-hotkey setup"));
     println!();
-    println!("  {}" , heading("4.") + " " + "Run the daemon");
+    println!("  {}", heading("4.") + " " + "Run the daemon");
     println!("     {}", key("obs-hotkey daemon"));
     println!();
 
@@ -350,8 +365,16 @@ fn print_quickstart() {
     println!();
     println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     println!();
-    println!("  {}  Config:  {}", muted("~"), muted("~/.config/obs-hotkey/hotkeys.json"));
-    println!("  {}  Logs:    {}", muted("~"), muted("journalctl --user -u obs-hotkey.service -f"));
+    println!(
+        "  {}  Config:  {}",
+        muted("~"),
+        muted("~/.config/obs-hotkey/hotkeys.json")
+    );
+    println!(
+        "  {}  Logs:    {}",
+        muted("~"),
+        muted("journalctl --user -u obs-hotkey.service -f")
+    );
     println!();
 }
 
@@ -408,13 +431,20 @@ mod tests {
     #[test]
     fn test_cli_daemon_subcommand() {
         let cli = Cli::try_parse_from(["obs-hotkey", "daemon"]).unwrap();
-        assert!(matches!(cli.command, Some(Commands::Daemon { config: None })));
+        assert!(matches!(
+            cli.command,
+            Some(Commands::Daemon { config: None })
+        ));
     }
 
     #[test]
     fn test_cli_daemon_with_config() {
-        let cli = Cli::try_parse_from(["obs-hotkey", "daemon", "--config", "/path/to/config.json"]).unwrap();
-        assert!(matches!(cli.command, Some(Commands::Daemon { config: Some(_) })));
+        let cli = Cli::try_parse_from(["obs-hotkey", "daemon", "--config", "/path/to/config.json"])
+            .unwrap();
+        assert!(matches!(
+            cli.command,
+            Some(Commands::Daemon { config: Some(_) })
+        ));
     }
 
     #[test]
@@ -426,13 +456,19 @@ mod tests {
     #[test]
     fn test_cli_teardown_subcommand() {
         let cli = Cli::try_parse_from(["obs-hotkey", "teardown"]).unwrap();
-        assert!(matches!(cli.command, Some(Commands::Teardown { purge: false })));
+        assert!(matches!(
+            cli.command,
+            Some(Commands::Teardown { purge: false })
+        ));
     }
 
     #[test]
     fn test_cli_teardown_with_purge() {
         let cli = Cli::try_parse_from(["obs-hotkey", "teardown", "--purge"]).unwrap();
-        assert!(matches!(cli.command, Some(Commands::Teardown { purge: true })));
+        assert!(matches!(
+            cli.command,
+            Some(Commands::Teardown { purge: true })
+        ));
     }
 
     #[test]
@@ -449,7 +485,8 @@ mod tests {
 
     #[test]
     fn test_cli_config_flag_with_subcommand() {
-        let cli = Cli::try_parse_from(["obs-hotkey", "--config", "/path/config.json", "status"]).unwrap();
+        let cli =
+            Cli::try_parse_from(["obs-hotkey", "--config", "/path/config.json", "status"]).unwrap();
         assert_eq!(cli.config, Some(PathBuf::from("/path/config.json")));
         assert!(matches!(cli.command, Some(Commands::Status)));
     }

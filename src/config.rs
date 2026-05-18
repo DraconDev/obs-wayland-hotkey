@@ -74,7 +74,9 @@ pub fn config_path() -> PathBuf {
             .join(CONFIG_FILE_NAME);
     }
     let home = real_home();
-    home.join(".config").join(CONFIG_DIR_NAME).join(CONFIG_FILE_NAME)
+    home.join(".config")
+        .join(CONFIG_DIR_NAME)
+        .join(CONFIG_FILE_NAME)
 }
 
 pub fn expand_home(path: &str) -> String {
@@ -97,8 +99,8 @@ pub fn sanitize_obs_host(host: &str) -> String {
 }
 
 pub fn load_config(path: &Path) -> anyhow::Result<AppConfig> {
-    let data = fs::read_to_string(path)
-        .map_err(|e| anyhow::anyhow!("failed to read config: {}", e))?;
+    let data =
+        fs::read_to_string(path).map_err(|e| anyhow::anyhow!("failed to read config: {}", e))?;
     let mut cfg: AppConfig = serde_json::from_str(&data)
         .map_err(|e| anyhow::anyhow!("failed to parse config: {}", e))?;
     cfg.obs_host = sanitize_obs_host(&cfg.obs_host);
@@ -138,15 +140,24 @@ mod tests {
     #[test]
     fn test_sanitize_obs_host() {
         assert_eq!(sanitize_obs_host("localhost:4455"), "ws://localhost:4455");
-        assert_eq!(sanitize_obs_host("ws://localhost:4455"), "ws://localhost:4455");
-        assert_eq!(sanitize_obs_host("wss://localhost:4455"), "wss://localhost:4455");
+        assert_eq!(
+            sanitize_obs_host("ws://localhost:4455"),
+            "ws://localhost:4455"
+        );
+        assert_eq!(
+            sanitize_obs_host("wss://localhost:4455"),
+            "wss://localhost:4455"
+        );
         assert_eq!(sanitize_obs_host(""), "");
     }
 
     #[test]
     fn test_expand_home() {
         let home = real_home();
-        assert_eq!(expand_home("~/Pictures"), format!("{}/Pictures", home.display()));
+        assert_eq!(
+            expand_home("~/Pictures"),
+            format!("{}/Pictures", home.display())
+        );
         assert_eq!(expand_home("/tmp/abs"), "/tmp/abs");
     }
 

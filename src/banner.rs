@@ -10,11 +10,18 @@ pub struct HotkeyBinding {
 pub fn print_banner(_cfg: &AppConfig, bindings: &[HotkeyBinding], autostart: bool) {
     println!();
     println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-    println!("  {}  OBS Hotkey Controller  v{}{}", BOLD, env!("CARGO_PKG_VERSION"), RESET);
-    println!("  {}  Wayland-compatible  |  {} hotkeys configured{}",
+    println!(
+        "  {}  OBS Hotkey Controller  v{}{}",
+        BOLD,
+        env!("CARGO_PKG_VERSION"),
+        RESET
+    );
+    println!(
+        "  {}  Wayland-compatible  |  {} hotkeys configured{}",
         DIM,
         bindings.iter().filter(|b| !b.key_name.is_empty()).count(),
-        RESET);
+        RESET
+    );
     println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     println!();
 
@@ -38,7 +45,10 @@ pub fn print_banner(_cfg: &AppConfig, bindings: &[HotkeyBinding], autostart: boo
     println!();
 
     if !running_under_systemd() {
-        println!("  {} Listening for hotkeys... (Ctrl+C to exit){}", DIM, RESET);
+        println!(
+            "  {} Listening for hotkeys... (Ctrl+C to exit){}",
+            DIM, RESET
+        );
     }
 }
 
@@ -74,6 +84,9 @@ mod tests {
         std::env::remove_var("INVOCATION_ID");
         std::env::remove_var("JOURNAL_STREAM");
         let result = running_under_systemd();
-        assert!(!result, "should return false when not running under systemd");
+        assert!(
+            !result,
+            "should return false when not running under systemd"
+        );
     }
 }
