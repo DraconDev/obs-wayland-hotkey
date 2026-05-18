@@ -10,57 +10,28 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
-    name: Test on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
+  ci:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@v1
+      - uses: dtolnay/rust-toolchain@v1
         with:
           components: clippy, rustfmt
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - uses: Swatinem/rust-cache@v2
 
-      - name: Cache cargo index
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      - name: Format
+        run: cargo fmt --check
 
-      - name: Cache target directory
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Format check
-        run: cargo fmt --all -- --check
-
-      - name: Lockfile check
+      - name: Lockfile
         run: cargo check --locked
 
       - name: Clippy
-        run: cargo clippy --all --all-features -- -D warnings
+        run: cargo clippy -- -D warnings
 
       - name: Test
-        run: cargo test --all
+        run: cargo test
 
       - name: Build
-        run: cargo build --release --all
-
-      - name: Build bins
-        run: |
-          cargo build --release --bin obs-hotkey
-          ls -la target/release/obs-hotkey
-          file target/release/obs-hotkey
+        run: cargo build --release

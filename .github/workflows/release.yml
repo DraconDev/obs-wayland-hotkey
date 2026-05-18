@@ -10,97 +10,75 @@ env:
 
 jobs:
   build-amd64:
-    name: Build amd64
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@v1
+      - uses: dtolnay/rust-toolchain@v1
         with:
           targets: x86_64-unknown-linux-gnu
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: x86_64
 
       - name: Build
         run: |
           cargo build --release --bin obs-hotkey --target x86_64-unknown-linux-gnu
-          mv target/x86_64-unknown-linux-gnu/release/obs-hotkey target/x86_64-unknown-linux-gnu/release/obs-hotkey-x86_64-unknown-linux-gnu
+          mv target/x86_64-unknown-linux-gnu/release/obs-hotkey \
+             target/x86_64-unknown-linux-gnu/release/obs-hotkey-x86_64-unknown-linux-gnu
 
-      - name: Strip
-        run: strip target/x86_64-unknown-linux-gnu/release/obs-hotkey-x86_64-unknown-linux-gnu
+      - run: strip target/x86_64-unknown-linux-gnu/release/obs-hotkey-x86_64-unknown-linux-gnu
 
-      - name: Upload asset
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: obs-hotkey-amd64
           path: target/x86_64-unknown-linux-gnu/release/obs-hotkey-x86_64-unknown-linux-gnu
 
   build-arm64:
-    name: Build arm64
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@v1
+      - uses: dtolnay/rust-toolchain@v1
         with:
           targets: aarch64-unknown-linux-gnu
 
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: aarch64
+
       - name: Install cross-toolchain
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
 
       - name: Build
-        env:
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
         run: |
           cargo build --release --bin obs-hotkey --target aarch64-unknown-linux-gnu
-          mv target/aarch64-unknown-linux-gnu/release/obs-hotkey target/aarch64-unknown-linux-gnu/release/obs-hotkey-aarch64-unknown-linux-gnu
+          mv target/aarch64-unknown-linux-gnu/release/obs-hotkey \
+             target/aarch64-unknown-linux-gnu/release/obs-hotkey-aarch64-unknown-linux-gnu
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
 
-      - name: Strip
-        run: strip target/aarch64-unknown-linux-gnu/release/obs-hotkey-aarch64-unknown-linux-gnu
+      - run: aarch64-linux-gnu-strip target/aarch64-unknown-linux-gnu/release/obs-hotkey-aarch64-unknown-linux-gnu
 
-      - name: Upload asset
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: obs-hotkey-arm64
           path: target/aarch64-unknown-linux-gnu/release/obs-hotkey-aarch64-unknown-linux-gnu
 
-  create-release:
-    name: Create GitHub Release
+  release:
     runs-on: ubuntu-latest
     needs: [build-amd64, build-arm64]
-    outputs:
-      version: ${{ steps.meta.outputs.version }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Extract metadata
-        id: meta
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Download amd64 asset
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: obs-hotkey-amd64
-          path: artifacts/
+          path: artifacts
+          merge-multiple: true
 
-      - name: Download arm64 asset
-        uses: actions/download-artifact@v4
-        with:
-          name: obs-hotkey-arm64
-          path: artifacts/
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
           draft: true
-          prerelease: ${{ contains(steps.meta.outputs.version, 'alpha') || contains(steps.meta.outputs.version, 'beta') || contains(steps.meta.outputs.version, 'rc') }}
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
           files: |
             artifacts/obs-hotkey-x86_64-unknown-linux-gnu
             artifacts/obs-hotkey-aarch64-unknown-linux-gnu
