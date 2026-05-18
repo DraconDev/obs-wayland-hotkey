@@ -373,8 +373,7 @@ impl OBSClient {
                 request_data: None,
             },
         };
-        let json = serde_json::to_string(&req)
-            .map_err(|e| anyhow::anyhow!("failed to serialize request: {}", e))?;
+        let json = serde_json::to_string(&req).unwrap();
 
         {
             let mut guard = self.conn.lock().unwrap();

@@ -1,7 +1,6 @@
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -15,10 +14,6 @@ mod service;
 use config::config_path;
 use input::{find_keyboards, get_key_code, spawn_keyboard_reader};
 
-/// Delay between reconnection attempts when OBS is unreachable.
-const RETRY_DELAY_SECS: u64 = 30;
-/// Interval between connection health checks when already connected.
-const RECONNECT_INTERVAL_SECS: u64 = 60;
 /// Main event loop poll interval (ms).
 const EVENT_LOOP_POLL_MS: u64 = 10;
 /// Minimum time between duplicate key presses (debounce window).
@@ -75,6 +70,14 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
     let ws_url = if cfg.obs_host.is_empty() {
         "ws://localhost:4455".to_string()
     } else {
+        // Validate host — refuse to start if it looks malformed.
+        // This prevents confusing errors from the WebSocket layer.
+        if cfg.obs_host.contains('\0') {
+            anyhow::bail!("obs_host contains a null byte — check your config");
+        }
+        if cfg.obs_host.len() > 4096 {
+            anyhow::bail!("obs_host is suspiciously long (>4096 chars)");
+        }
         cfg.obs_host.clone()
     };
 
@@ -234,39 +237,13 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         log::info!("  - {}", p.display());
     }
 
-    // Background reconnection thread — retries forever with visible output
-    let client_for_reconnect = ctx.client.clone();
-    let should_stop = Arc::new(AtomicBool::new(false));
-    let should_stop_clone = should_stop.clone();
-
-    let reconnect_handle = std::thread::spawn(move || {
-        loop {
-            if should_stop_clone.load(Ordering::SeqCst) {
-                break;
-            }
-            if client_for_reconnect.is_connected() {
-                // Already connected — check again later
-                std::thread::sleep(Duration::from_secs(RECONNECT_INTERVAL_SECS));
-                continue;
-            }
-            // Re-check should_stop right before connect() to avoid
-            // unnecessary connection attempt during shutdown
-            if should_stop_clone.load(Ordering::SeqCst) {
-                break;
-            }
-            match client_for_reconnect.connect() {
-                Ok(()) => {
-                    log::info!("Connected to OBS!");
-                }
-                Err(e) => {
-                    log::warn!(
-                        "Could not reach OBS: {} — retrying in {}s...",
-                        e,
-                        RETRY_DELAY_SECS
-                    );
-                    std::thread::sleep(Duration::from_secs(RETRY_DELAY_SECS));
-                }
-            }
+    // Background connection thread — tries once to connect at startup.
+    // On failure, subsequent hotkey actions will trigger reconnection automatically.
+    std::thread::spawn(move || {
+        if let Err(e) = ctx.client.connect() {
+            log::warn!("Initial OBS connection failed: {}", e);
+        } else {
+            log::info!("Connected to OBS!");
         }
     });
 
@@ -285,24 +262,15 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         ansi::RESET
     );
 
-    ctrlc::set_handler({
-        let should_stop_clone = should_stop.clone();
-        move || {
-            should_stop_clone.store(true, Ordering::SeqCst);
-        }
-    })
-    .expect("error setting Ctrl-C handler");
+    // Ctrl-C cleanly exits the event loop
+    ctrlc::set_handler(|| {})
+        .expect("error setting Ctrl-C handler");
 
     // Debounce tracking: last press time per key code
     let mut last_press: HashMap<u16, Instant> = HashMap::new();
     let debounce = Duration::from_millis(DEBOUNCE_MS);
 
     loop {
-        if should_stop.load(Ordering::SeqCst) {
-            log::info!("Shutting down...");
-            break;
-        }
-
         for rx in &rx_channels {
             while let Ok(event) = rx.try_recv() {
                 if event.value == 1 {
@@ -326,12 +294,6 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
 
         std::thread::sleep(Duration::from_millis(EVENT_LOOP_POLL_MS));
     }
-
-    should_stop.store(true, Ordering::SeqCst);
-    ctx.client.close();
-    let _ = reconnect_handle.join();
-
-    Ok(())
 }
 
 fn print_quickstart() {
