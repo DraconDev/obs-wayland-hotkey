@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::Duration;
 
-use crate::config::real_home;
+use crate::config::{expand_home, real_home};
 
 pub fn is_autostart_enabled() -> bool {
     Command::new("systemctl")
@@ -52,7 +52,7 @@ pub fn service_unit_path() -> PathBuf {
         .join("obs-hotkey.service")
 }
 
-pub fn write_service_file(exe_path: &str, cfg_dir: &str) -> anyhow::Result<()> {
+pub fn write_service_file(exe_path: &str, config_path: &str) -> anyhow::Result<()> {
     let content = format!(
         r#"[Unit]
 Description=OBS Hotkey Controller
@@ -60,14 +60,14 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart={} daemon --config {}/hotkeys.json
+ExecStart={} daemon --config {}
 Restart=on-failure
 RestartSec=10s
 
 [Install]
 WantedBy=graphical-session.target
 "#,
-        exe_path, cfg_dir
+        exe_path, config_path
     );
     let path = service_unit_path();
     std::fs::create_dir_all(path.parent().unwrap())?;
@@ -77,6 +77,9 @@ WantedBy=graphical-session.target
 
 pub fn run_setup(config_path: &str) {
     use crate::ansi::*;
+
+    // Expand tilde in config path before any operations
+    let config_path = expand_home(config_path);
 
     if !in_input_group() {
         println!();
@@ -120,16 +123,8 @@ pub fn run_setup(config_path: &str) {
     let exe_path = std::env::current_exe()
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_else(|_| "obs-hotkey".to_string());
-    let cfg_dir = PathBuf::from(config_path)
-        .parent()
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|| {
-            dirs::config_dir()
-                .map(|p| p.join("obs-hotkey").to_string_lossy().to_string())
-                .unwrap_or_default()
-        });
 
-    if let Err(e) = write_service_file(&exe_path, &cfg_dir) {
+    if let Err(e) = write_service_file(&exe_path, &config_path) {
         log::error!("Failed to write service file: {}", e);
         std::process::exit(1);
     }
@@ -312,6 +307,9 @@ fn probe_obs_websocket(port: u16) -> bool {
 pub fn run_status(config_path: &str) {
     use crate::ansi::*;
 
+    // Expand tilde for consistent display
+    let config_path = expand_home(config_path);
+
     println!();
     println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     println!("  {}  OBS Hotkey Status{}", BOLD, RESET);
@@ -320,8 +318,8 @@ pub fn run_status(config_path: &str) {
 
     let autostart = is_autostart_enabled();
     let input_grp = in_input_group();
-    let cfg_exists = std::path::Path::new(config_path).exists();
-    let dir_exists = std::path::Path::new(config_path)
+    let cfg_exists = std::path::Path::new(&config_path).exists();
+    let dir_exists = std::path::Path::new(&config_path)
         .parent()
         .map(|p| p.exists())
         .unwrap_or(false);
@@ -353,14 +351,14 @@ pub fn run_status(config_path: &str) {
 
     // Config row
     if cfg_exists {
-        println!("  {:<14}  {}  {}", "Config:", ok(""), muted(config_path));
+        println!("  {:<14}  {}  {}", "Config:", ok(""), muted(&config_path));
     } else {
-        println!("  {:<14}  {}  ({})", "Config:", err(""), muted(config_path));
+        println!("  {:<14}  {}  ({})", "Config:", err(""), muted(&config_path));
     }
 
     // Config dir row
     if dir_exists {
-        let dir = std::path::Path::new(config_path)
+        let dir = std::path::Path::new(&config_path)
             .parent()
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default();
