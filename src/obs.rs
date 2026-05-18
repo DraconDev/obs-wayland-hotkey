@@ -77,18 +77,26 @@ impl OBSClient {
             })?)?;
         log::info!("OBS WebSocket version: {}", hello.d.obs_web_socket_version);
 
+        // obs-websocket 5.x supports rpcVersion 1 but needs eventSubscriptions
+        const EVENT_SUBSCRIPTIONS: u32 = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20 | 0x40 | 0x80;
+
         let ident = IdentifyMessage {
             op: 1,
-            d: IdentifyData { rpc_version: 1 },
+            d: IdentifyData { 
+                rpc_version: 1,
+                event_subscriptions: EVENT_SUBSCRIPTIONS,
+                authentication: None,  // TODO: implement if auth is required
+            },
         };
-        ws.send(tungstenite::Message::Text(
-            serde_json::to_string(&ident).unwrap().into(),
-        ))?;
+        let ident_json = serde_json::to_string(&ident).unwrap();
+        log::info!("Sending identify: {}", ident_json);
+        ws.send(tungstenite::Message::Text(ident_json.into()))?;
 
         msg = ws.read()?;
         let text = msg
             .to_text()
             .map_err(|e| anyhow::anyhow!("unexpected binary frame after identify: {}", e))?;
+        log::info!("Identify response: {}", text);
         if !text.starts_with("{") {
             anyhow::bail!("failed to identify to OBS: unexpected message: {}", text);
         }
@@ -354,9 +362,20 @@ struct HelloMessage {
 struct HelloData {
     #[serde(rename = "obsWebSocketVersion")]
     obs_web_socket_version: String,
-    #[allow(dead_code)]
     #[serde(rename = "rpcVersion")]
     rpc_version: u32,
+    #[serde(rename = "availableRequests", default)]
+    available_requests: Vec<String>,
+    #[serde(rename = "authentication", default)]
+    authentication: Option<AuthenticationChallenge>,
+}
+
+#[derive(Debug, Deserialize)]
+struct AuthenticationChallenge {
+    #[serde(rename = "challenge")]
+    challenge: String,
+    #[serde(rename = "salt")]
+    salt: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -369,6 +388,10 @@ struct IdentifyMessage {
 struct IdentifyData {
     #[serde(rename = "rpcVersion")]
     rpc_version: u32,
+    #[serde(rename = "eventSubscriptions")]
+    event_subscriptions: u32,
+    #[serde(rename = "authentication", skip_serializing_if = "Option::is_none")]
+    authentication: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -385,6 +408,28 @@ struct RequestData {
     request_id: String,
     #[serde(rename = "requestData")]
     request_data: Option<serde_json::Value>,
+}
+
+use sha2::{Sha256, Digest};
+
+/// Computes the authentication string for obs-websocket 5.x
+/// Returns None if authentication is not required
+fn compute_auth(password: &str, challenge: &str, salt: &str) -> String {
+    // Step 1: Concatenate password + salt
+    let secret1 = format!("{}{}", password, salt);
+    
+    // Step 2: SHA256 hash and base64 encode
+    let mut hasher = Sha256::new();
+    hasher.update(secret1.as_bytes());
+    let base64_secret = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, hasher.finalize());
+    
+    // Step 3: Concatenate base64_secret + challenge
+    let secret2 = format!("{}{}", base64_secret, challenge);
+    
+    // Step 4: SHA256 hash and base64 encode
+    let mut hasher2 = Sha256::new();
+    hasher2.update(secret2.as_bytes());
+    base64::Engine::encode(&base64::engine::general_purpose::STANDARD, hasher2.finalize())
 }
 
 #[cfg(test)]
