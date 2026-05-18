@@ -342,12 +342,9 @@ fn probe_obs_websocket(port: u16) -> bool {
 
     match ws.read() {
         Ok(msg) => {
-            // Should be a hello message — check it's valid JSON
-            if let Ok(text) = msg.to_text() {
-                text.starts_with("{")
-            } else {
-                false
-            }
+            let result = msg.to_text().map(|t| t.starts_with("{")).unwrap_or(false);
+            let _ = ws.close(None);  // Send proper WebSocket close frame
+            result
         }
         Err(_) => false,
     }
