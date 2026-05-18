@@ -20,18 +20,32 @@ pub fn in_input_group() -> bool {
     }
 
     let uid = unsafe { libc::getuid() };
-    let mut ngroups: libc::c_int = 64;
-    let mut groups = [0u32; 64];
-
     let c_user = std::ffi::CString::new(user.clone()).unwrap();
-    let result =
-        unsafe { libc::getgrouplist(c_user.as_ptr(), uid, groups.as_mut_ptr(), &mut ngroups) };
 
-    if result < 0 {
+    // Start with a reasonable buffer, grow if needed
+    let mut ngroups: libc::c_int = 64;
+    let mut groups = vec![0u32; ngroups as usize];
+
+    loop {
+        let result =
+            unsafe { libc::getgrouplist(c_user.as_ptr(), uid, groups.as_mut_ptr(), &mut ngroups) };
+
+        if result >= 0 {
+            break;
+        }
+
+        // Buffer too small — ngroups was updated with the required size
+        if ngroups as usize > groups.len() {
+            groups.resize(ngroups as usize, 0);
+            continue;
+        }
+
+        // getgrouplist failed for a reason other than buffer size
+        log::warn!("getgrouplist failed for user '{}'", user);
         return false;
     }
 
-    for &gid in groups.iter().take(result as usize) {
+    for &gid in groups.iter().take(ngroups as usize) {
         let grp = unsafe { libc::getgrgid(gid as libc::gid_t) };
         if !grp.is_null() {
             let name = unsafe { std::ffi::CStr::from_ptr((*grp).gr_name) };
@@ -370,7 +384,21 @@ pub fn run_status(config_path: &str) {
         .map(|p| p.exists())
         .unwrap_or(false);
 
-    let obs_ok = probe_obs_websocket(4455);
+    // Try to probe the port configured in the config file, fall back to 4455
+    let obs_port = if cfg_exists {
+        if let Ok(cfg) = crate::config::load_config(std::path::Path::new(&config_path)) {
+            cfg.obs_host
+                .rsplit(':')
+                .next()
+                .and_then(|s| s.parse::<u16>().ok())
+                .unwrap_or(4455)
+        } else {
+            4455
+        }
+    } else {
+        4455
+    };
+    let obs_ok = probe_obs_websocket(obs_port);
 
     // Auto-start row
     if autostart {

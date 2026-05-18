@@ -36,7 +36,16 @@ fi
 
 # Build from source into a temp location, then install to cargo bin
 echo "  Building obs-hotkey..."
-cargo build --release 2>&1 | tail -1
+if ! cargo build --release 2>&1 | tail -1; then
+    echo "  Error: build failed!"
+    exit 1
+fi
+
+# Verify the binary exists before installing
+if [ ! -f target/release/obs-hotkey ]; then
+    echo "  Error: binary not found after build!"
+    exit 1
+fi
 
 # Install the freshly-built binary (atomic replacement)
 install -DTp target/release/obs-hotkey "$CARGO_BIN/obs-hotkey"

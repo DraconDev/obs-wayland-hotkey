@@ -214,4 +214,18 @@ mod tests {
         assert_eq!(cfg.obs_host, "ws://custom:1234");
         std::fs::remove_dir_all(&temp).ok();
     }
+
+    #[test]
+    fn test_load_config_unknown_field_rejected() {
+        let temp = std::env::temp_dir();
+        let path = temp.join("hotkeys_unknown.json");
+        fs::write(
+            &path,
+            r#"{"obs_host":"ws://localhost:4455","hotkeys":{"toggle_recording":"f1","toggle_pause":"","toggle_streaming":"","screenshot":"","toggle_mute_mic":"","toggle_studio_mode":"","toggle_replay_buffer":"","save_replay":""},"screenshot_source":"","screenshot_dir":"","mic_name":"","unknown_field":true}"#,
+        )
+        .unwrap();
+        let result = load_config(&path);
+        assert!(result.is_err(), "expected error for unknown field");
+        fs::remove_file(&path).ok();
+    }
 }
