@@ -179,9 +179,11 @@ impl OBSClient {
             }
         };
         conn.ws.send(tungstenite::Message::Text(json.into()))?;
-        drop(guard); // Release lock before reading response
 
-        let resp = self.read_response()?;
+        // Keep lock while reading response to prevent connection close race.
+        // Without this, OBS could close the connection between send and read,
+        // causing "Broken pipe" instead of a clean reconnection trigger.
+        let resp = self.read_response_guarded(&mut guard)?;
         if let Some(status) = resp.get("d").and_then(|d| d.get("requestStatus")) {
             if !status
                 .get("result")
@@ -206,6 +208,13 @@ impl OBSClient {
     /// thread (e.g., the main event loop), which is the case for this
     /// daemon.
     fn read_response(&self) -> anyhow::Result<serde_json::Value> {
+        // Re-check connected before reading — the connection may have been
+        // closed by OBS between send_request_with_data releasing the lock and
+        // this read call acquiring it again. Without this check, a closed
+        // connection produces "Broken pipe" instead of a clear error.
+        if !self.connected.load(Ordering::SeqCst) {
+            anyhow::bail!("not connected to OBS");
+        }
         let mut guard = self.conn.lock().unwrap();
         let conn = guard
             .as_mut()
