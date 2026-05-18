@@ -57,11 +57,13 @@ impl OBSClient {
         self.connected.store(false, Ordering::SeqCst);
 
         // Strip ws:// prefix to get host:port for TCP
-        let tcp_addr = self
-            .ws_url
-            .strip_prefix("ws://")
-            .or_else(|| self.ws_url.strip_prefix("wss://"))
-            .unwrap_or(&self.ws_url);
+        let tcp_addr = self.ws_url.strip_prefix("ws://").unwrap_or(&self.ws_url);
+        // Reject wss:// (TLS) -- not supported yet
+        if self.ws_url.starts_with("wss://") {
+            anyhow::bail!(
+                "wss:// (TLS) is not yet supported. Use ws:// or a plain host:port in your config."
+            );
+        }
         let stream = TcpStream::connect(tcp_addr)?;
         stream.set_read_timeout(Some(Duration::from_secs(10)))?;
 
@@ -76,7 +78,13 @@ impl OBSClient {
                 anyhow::anyhow!("unexpected binary frame during handshake: {}", e)
             })?)?;
         log::info!("OBS WebSocket version: {}", hello.d.obs_web_socket_version);
-
+        // Reject if OBS requires authentication (not yet supported)
+        if hello.d.authentication.is_some() {
+            anyhow::bail!(
+                "OBS WebSocket has authentication enabled, which is not yet supported. \
+                Please disable authentication in OBS → Tools → WebSocket Server Settings."
+            );
+        }
         // obs-websocket 5.x supports rpcVersion 1 but needs eventSubscriptions
         let event_subscriptions: u32 = 0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20 | 0x40 | 0x80;
 
@@ -97,8 +105,11 @@ impl OBSClient {
             .to_text()
             .map_err(|e| anyhow::anyhow!("unexpected binary frame after identify: {}", e))?;
         log::info!("Identify response: {}", text);
-        if !text.starts_with("{") {
-            anyhow::bail!("failed to identify to OBS: unexpected message: {}", text);
+        // Verify we got Identified (op 5) response
+        let resp: serde_json::Value = serde_json::from_str(text)?;
+        let op = resp.get("op").and_then(|o| o.as_u64()).unwrap_or(0);
+        if op != 5 {
+            anyhow::bail!("OBS rejected identification (op={}): {}", op, text);
         }
 
         log::info!("Successfully identified to OBS WebSocket");
@@ -189,21 +200,21 @@ impl OBSClient {
     pub fn toggle_recording(&self) {
         log::info!("Toggling recording...");
         if let Err(e) = self.send_request("ToggleRecord") {
-            log::info!("Error toggling recording: {}", e);
+            log::warn!("Error toggling recording: {}", e);
         }
     }
 
     pub fn toggle_pause(&self) {
         log::info!("Toggling record pause...");
         if let Err(e) = self.send_request("ToggleRecordPause") {
-            log::info!("Error toggling pause: {}", e);
+            log::warn!("Error toggling pause: {}", e);
         }
     }
 
     pub fn toggle_streaming(&self) {
         log::info!("Toggling stream...");
         if let Err(e) = self.send_request("ToggleStream") {
-            log::info!("Error toggling stream: {}", e);
+            log::warn!("Error toggling stream: {}", e);
         }
     }
 
@@ -231,7 +242,7 @@ impl OBSClient {
             data["sourceName"] = serde_json::json!(source_name);
         }
         if let Err(e) = self.send_request_with_data("SaveSourceScreenshot", Some(data)) {
-            log::info!("Error taking screenshot: {}", e);
+            log::warn!("Error taking screenshot: {}", e);
         } else {
             log::info!("Screenshot saved");
         }
@@ -245,7 +256,7 @@ impl OBSClient {
         log::info!("Toggling mic mute...");
         let data = serde_json::json!({ "inputName": input_name });
         if let Err(e) = self.send_request_with_data("ToggleInputMute", Some(data)) {
-            log::info!("Error toggling mic mute: {}", e);
+            log::warn!("Error toggling mic mute: {}", e);
         }
     }
 
@@ -257,7 +268,7 @@ impl OBSClient {
         let new_state = !self.studio_mode_enabled.load(Ordering::SeqCst);
         let data = serde_json::json!({ "studioModeEnabled": new_state });
         if let Err(e) = self.send_request_with_data("SetStudioModeEnabled", Some(data)) {
-            log::info!("Error toggling studio mode: {}", e);
+            log::warn!("Error toggling studio mode: {}", e);
         } else {
             self.studio_mode_enabled.store(new_state, Ordering::SeqCst);
             log::info!("Studio mode set to: {}", new_state);
@@ -267,14 +278,14 @@ impl OBSClient {
     pub fn toggle_replay_buffer(&self) {
         log::info!("Toggling replay buffer...");
         if let Err(e) = self.send_request("ToggleReplayBuffer") {
-            log::info!("Error toggling replay buffer: {}", e);
+            log::warn!("Error toggling replay buffer: {}", e);
         }
     }
 
     pub fn save_replay(&self) {
         log::info!("Saving replay buffer...");
         if let Err(e) = self.send_request("SaveReplayBuffer") {
-            log::info!("Error saving replay: {}", e);
+            log::warn!("Error saving replay: {}", e);
         }
     }
 

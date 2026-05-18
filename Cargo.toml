@@ -1,6 +1,6 @@
 [package]
 name = "obs-hotkey"
-version = "1.0.37"
+version = "1.0.38"
 edition = "2021"
 license = "MIT"
 description = "Lightweight Rust daemon for controlling OBS Studio with global hotkeys on Wayland and X11"
@@ -16,8 +16,6 @@ path = "src/main.rs"
 [dependencies]
 evdev = "0.13"
 tungstenite = "0.29"
-sha2 = "0.10"
-base64 = "0.22"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 clap = { version = "4", features = ["derive"] }
