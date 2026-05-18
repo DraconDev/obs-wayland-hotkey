@@ -69,7 +69,7 @@ impl OBSClient {
                 "wss:// (TLS) is not yet supported. Use ws:// or a plain host:port in your config."
             );
         }
-        let stream = TcpStream::connect(tcp_addr)?;
+        let stream = TcpStream::connect_timeout(&tcp_addr.parse()?, Duration::from_secs(5))?;
         stream.set_read_timeout(Some(Duration::from_secs(10)))?;
 
         let (mut ws, resp) = tungstenite::client(&self.ws_url, stream)?;
