@@ -54,18 +54,15 @@ impl OBSClient {
             let _ = c.ws.close(None);
         }
         *guard = None;
-        // NOTE: We intentionally do NOT set connected=false while holding the lock.
-        // Doing so would flip the shared Arc<AtomicBool> state, which could cause
-        // is_connected() to return false and let the reconnect thread re-enter connect()
-        // while we still hold the lock → deadlock. We set connected=false only after
-        // releasing the lock, in the error path.
-        let mut failed = false; // tracks error state for post-lock cleanup
+        // NOTE: We set connected=false AFTER releasing the lock to avoid deadlock.
+        // If we set it while holding the lock, the reconnect thread could see
+        // connected=false via is_connected() and try to enter connect() while we
+        // still hold the lock → deadlock.
 
         // Strip ws:// prefix to get host:port for TCP
         let tcp_addr = self.ws_url.strip_prefix("ws://").unwrap_or(&self.ws_url);
         // Reject wss:// (TLS) -- not supported yet
         if self.ws_url.starts_with("wss://") {
-            failed = true;
             drop(guard);
             self.connected.store(false, Ordering::SeqCst);
             anyhow::bail!(
@@ -88,7 +85,6 @@ impl OBSClient {
         log::info!("OBS WebSocket version: {}", hello.d.obs_web_socket_version);
         // Reject if OBS requires authentication (not yet supported)
         if hello.d.authentication.is_some() {
-            failed = true;
             drop(guard);
             self.connected.store(false, Ordering::SeqCst);
             anyhow::bail!(
@@ -120,7 +116,6 @@ impl OBSClient {
         let resp: serde_json::Value = serde_json::from_str(text)?;
         let op = resp.get("op").and_then(|o| o.as_u64()).unwrap_or(0);
         if op != 5 {
-            failed = true;
             drop(guard);
             self.connected.store(false, Ordering::SeqCst);
             anyhow::bail!("OBS rejected identification (op={}): {}", op, text);
