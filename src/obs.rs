@@ -363,10 +363,12 @@ struct HelloData {
     #[serde(rename = "obsWebSocketVersion")]
     obs_web_socket_version: String,
     #[serde(rename = "authentication", default)]
+    #[allow(dead_code)]
     authentication: Option<AuthenticationChallenge>,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct AuthenticationChallenge {
     #[serde(rename = "challenge")]
     challenge: String,
@@ -408,6 +410,8 @@ struct RequestData {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn test_obs_client_creation() {
         let client = OBSClient::new("ws://localhost:4455".to_string());
