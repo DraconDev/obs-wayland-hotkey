@@ -256,16 +256,44 @@ pub fn run_teardown(purge: bool) {
     }
     println!();
 
-    let old_service = service_unit_path()
-        .parent()
-        .unwrap()
-        .join("obs-wayland-hotkey.service");
-    let old_binary = std::env::home_dir()
-        .map(|h| h.join(".cargo/bin/obs-wayland-hotkey"))
+    // Kill all running obs-hotkey processes before removing binaries.
+    // This prevents "text file busy" errors when removing the binary.
+    let stale_local_bin = std::env::home_dir()
+        .map(|h| h.join(".local/bin/obs-hotkey"))
         .unwrap_or_default();
-    let new_binary = std::env::home_dir()
-        .map(|h| h.join(".cargo/bin/obs-hotkey"))
-        .unwrap_or_default();
+
+    // Kill running processes first
+    if let Ok(output) = Command::new("pgrep").arg("-x").arg("obs-hotkey").output() {
+        let pids: Vec<u32> = output
+            .stdout
+            .split(|&b| b == b'\n')
+            .filter_map(|s| {
+                let s = s.trim_ascii();
+                if s.is_empty() {
+                    return None;
+                }
+                std::str::from_utf8(s).ok()?.parse().ok()
+            })
+            .collect();
+        if !pids.is_empty() {
+            println!();
+            println!("  {} Stopping {} running process(es)...", heading("▶"), pids.len());
+            for pid in pids {
+                // Ignore errors (processes may already be gone)
+                let _ = Command::new("kill").arg(format!("{}", pid)).output();
+                let _ = Command::new("kill").arg("-0").arg(format!("{}", pid)).output(); // check alive
+            }
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            // Force kill any that are still alive
+            for pid in pids {
+                let _ = Command::new("kill").arg("-9").arg(format!("{}", pid)).output();
+            }
+        }
+        if stale_local_bin.exists() {
+            println!("  {} Removing stale binary: {}", heading("▶"), stale_local_bin.display());
+            std::fs::remove_file(&stale_local_bin).ok();
+        }
+    }
 
     println!();
     println!("  {} Stopping and disabling services...", heading("▶"));
@@ -307,16 +335,20 @@ pub fn run_teardown(purge: bool) {
 
     println!("  {} Removing binaries...", heading("▶"));
 
-    if new_binary.exists() {
-        std::fs::remove_file(&new_binary).ok();
-        println!("  {} ~/.cargo/bin/obs-hotkey removed", ok(""));
-    }
-    if old_binary.exists() {
-        std::fs::remove_file(&old_binary).ok();
-        println!("  {} ~/.cargo/bin/obs-wayland-hotkey removed", ok(""));
-    }
-    if !new_binary.exists() && !old_binary.exists() {
-        println!("  {} No binaries found in ~/.cargo/bin", muted(""));
+    if let Some(home) = std::env::home_dir() {
+        let new_binary = home.join(".cargo/bin/obs-hotkey");
+        let old_binary = home.join(".cargo/bin/obs-wayland-hotkey");
+        if new_binary.exists() {
+            std::fs::remove_file(&new_binary).ok();
+            println!("  {} ~/.cargo/bin/obs-hotkey removed", ok(""));
+        }
+        if old_binary.exists() {
+            std::fs::remove_file(&old_binary).ok();
+            println!("  {} ~/.cargo/bin/obs-wayland-hotkey removed", ok(""));
+        }
+        if !new_binary.exists() && !old_binary.exists() {
+            println!("  {} No binaries found in ~/.cargo/bin", muted(""));
+        }
     }
 
     if purge {
