@@ -49,6 +49,7 @@ impl OBSClient {
         }
     }
 
+    #[allow(dead_code)]
     pub fn is_connected(&self) -> bool {
         self.connected.load(Ordering::SeqCst)
     }
@@ -348,6 +349,7 @@ impl OBSClient {
         }
     }
 
+    #[allow(dead_code)]
     pub fn close(&self) {
         let mut guard = self.conn.lock().unwrap();
         if let Some(ref mut c) = *guard {
