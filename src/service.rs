@@ -24,9 +24,8 @@ pub fn in_input_group() -> bool {
     let mut groups = [0u32; 64];
 
     let c_user = std::ffi::CString::new(user.clone()).unwrap();
-    let result = unsafe {
-        libc::getgrouplist(c_user.as_ptr(), uid, groups.as_mut_ptr(), &mut ngroups)
-    };
+    let result =
+        unsafe { libc::getgrouplist(c_user.as_ptr(), uid, groups.as_mut_ptr(), &mut ngroups) };
 
     if result < 0 {
         return false;
@@ -81,15 +80,24 @@ pub fn run_setup(config_path: &str) {
 
     if !in_input_group() {
         println!();
-        println!("  {} {}", warn(""), heading("Warning:") + " not in 'input' group");
+        println!(
+            "  {} {}",
+            warn(""),
+            heading("Warning:") + " not in 'input' group"
+        );
         println!();
         println!("  Add yourself with:");
         println!("    {} sudo usermod -aG input $(whoami)", key(""));
         println!();
         println!("  {} On NixOS:", muted(""));
-        println!("    {}users.users.\"$USER\".extraGroups = [ \"input\" ];{}",
-                 CYAN, RESET);
-        println!("  {} Then log out and back in for changes to take effect.", muted(""));
+        println!(
+            "    {}users.users.\"$USER\".extraGroups = [ \"input\" ];{}",
+            CYAN, RESET
+        );
+        println!(
+            "  {} Then log out and back in for changes to take effect.",
+            muted("")
+        );
         println!();
     }
 
@@ -152,7 +160,10 @@ pub fn run_setup(config_path: &str) {
     println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     println!();
     println!("  {}  Enable OBS WebSocket Server", heading("1."));
-    println!("     {}Open OBS → Tools → WebSocket Server Settings{}", CYAN, RESET);
+    println!(
+        "     {}Open OBS → Tools → WebSocket Server Settings{}",
+        CYAN, RESET
+    );
     println!("     Check {}Enable{} (port 4455, no auth)", GREEN, RESET);
     println!();
     println!("  {}  Default hotkeys configured:", heading("2."));
@@ -160,13 +171,22 @@ pub fn run_setup(config_path: &str) {
     println!("     {}Pause{}       → Toggle pause", CYAN, RESET);
     println!();
     println!("  {}  Test it:", heading("3."));
-    println!("     Press {}Scroll Lock{} — recording should toggle", CYAN, RESET);
+    println!(
+        "     Press {}Scroll Lock{} — recording should toggle",
+        CYAN, RESET
+    );
     println!();
     println!("  {}  View logs:", heading("4."));
-    println!("     {}", muted("journalctl --user -u obs-hotkey.service -f"));
+    println!(
+        "     {}",
+        muted("journalctl --user -u obs-hotkey.service -f")
+    );
     println!();
     println!("  {}  Service commands:", heading("5."));
-    println!("     {}systemctl --user restart obs-hotkey.service{}", CYAN, RESET);
+    println!(
+        "     {}systemctl --user restart obs-hotkey.service{}",
+        CYAN, RESET
+    );
     println!();
     println!("  {}  Customize:", heading("6."));
     println!("     {}", muted("~/.config/obs-hotkey/hotkeys.json"));
@@ -312,12 +332,24 @@ pub fn run_status(config_path: &str) {
     if autostart {
         println!("  {:<14}  {}", "Auto-start:", ok("enabled (systemd)"));
     } else {
-        println!("  {:<14}  {}  (run {} to enable)",
-                 "Auto-start:", warn("disabled"), key("obs-hotkey setup"));
+        println!(
+            "  {:<14}  {}  (run {} to enable)",
+            "Auto-start:",
+            warn("disabled"),
+            key("obs-hotkey setup")
+        );
     }
 
     // Input group row
-    println!("  {:<14}  {}", "Input group:", if input_grp { ok("member") } else { err("not a member") });
+    println!(
+        "  {:<14}  {}",
+        "Input group:",
+        if input_grp {
+            ok("member")
+        } else {
+            err("not a member")
+        }
+    );
 
     // Config row
     if cfg_exists {
@@ -328,7 +360,8 @@ pub fn run_status(config_path: &str) {
 
     // Config dir row
     if dir_exists {
-        let dir = std::path::Path::new(config_path).parent()
+        let dir = std::path::Path::new(config_path)
+            .parent()
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default();
         println!("  {:<14}  {}  {}", "Config dir:", ok(""), muted(&dir));
@@ -353,13 +386,21 @@ pub fn run_status(config_path: &str) {
     if daemon_active {
         println!("  {:<14}  {}", "Daemon:", ok("running"));
     } else {
-        println!("  {:<14}  {}  (run {} to enable)",
-                 "Daemon:", warn("not running"), key("obs-hotkey daemon"));
+        println!(
+            "  {:<14}  {}  (run {} to enable)",
+            "Daemon:",
+            warn("not running"),
+            key("obs-hotkey daemon")
+        );
     }
 
     println!();
     if !autostart {
-        println!("  Run {}obs-hotkey setup{} to enable auto-start.", key(""), key("setup"));
+        println!(
+            "  Run {}obs-hotkey setup{} to enable auto-start.",
+            key(""),
+            key("setup")
+        );
     }
 }
 
@@ -378,7 +419,10 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let old_home = std::env::var("HOME");
         std::env::set_var("HOME", temp.path());
-        let result = write_service_file("/usr/bin/obs-hotkey", temp.path().join(".config/obs-hotkey").to_str().unwrap());
+        let result = write_service_file(
+            "/usr/bin/obs-hotkey",
+            temp.path().join(".config/obs-hotkey").to_str().unwrap(),
+        );
         std::env::set_var("HOME", old_home.unwrap_or_default());
         assert!(result.is_ok());
     }

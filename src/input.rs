@@ -1,8 +1,8 @@
 use evdev::{Device, KeyCode};
-use std::sync::LazyLock;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::LazyLock;
 use std::thread;
 
 pub fn get_key_code(name: &str) -> Option<u16> {
@@ -67,7 +67,11 @@ pub fn spawn_keyboard_reader(
             }
         };
         let name = device.name().unwrap_or("?").to_string();
-        log::info!("keyboard thread started: {} at {}", name, path_clone.display());
+        log::info!(
+            "keyboard thread started: {} at {}",
+            name,
+            path_clone.display()
+        );
 
         // Use recv_timeout so the loop periodically checks close_rx.
         // This avoids blocking indefinitely in fetch_events().
@@ -104,10 +108,7 @@ pub fn spawn_keyboard_reader(
         log::info!("keyboard thread exiting: {}", name);
     });
 
-    (
-        DeviceHandle { path, tx: close_tx },
-        rx,
-    )
+    (DeviceHandle { path, tx: close_tx }, rx)
 }
 
 #[allow(dead_code)]
@@ -152,8 +153,12 @@ static KEY_CODE_TO_NAME: LazyLock<HashMap<u16, &'static str>> = LazyLock::new(||
     ])
 });
 
-static KEY_NAME_TO_CODE: LazyLock<HashMap<String, u16>> =
-    LazyLock::new(|| KEY_CODE_TO_NAME.iter().map(|(&k, &v)| (v.to_string(), k)).collect());
+static KEY_NAME_TO_CODE: LazyLock<HashMap<String, u16>> = LazyLock::new(|| {
+    KEY_CODE_TO_NAME
+        .iter()
+        .map(|(&k, &v)| (v.to_string(), k))
+        .collect()
+});
 
 impl Drop for DeviceHandle {
     fn drop(&mut self) {

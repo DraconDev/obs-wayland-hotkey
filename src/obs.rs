@@ -57,7 +57,8 @@ impl OBSClient {
         self.connected.store(false, Ordering::SeqCst);
 
         // Strip ws:// prefix to get host:port for TCP
-        let tcp_addr = self.ws_url
+        let tcp_addr = self
+            .ws_url
             .strip_prefix("ws://")
             .or_else(|| self.ws_url.strip_prefix("wss://"))
             .unwrap_or(&self.ws_url);
@@ -71,9 +72,9 @@ impl OBSClient {
 
         let mut msg = ws.read()?;
         let hello: HelloMessage =
-            serde_json::from_str(msg.to_text().map_err(|e| anyhow::anyhow!(
-                "unexpected binary frame during handshake: {}", e
-            ))?)?;
+            serde_json::from_str(msg.to_text().map_err(|e| {
+                anyhow::anyhow!("unexpected binary frame during handshake: {}", e)
+            })?)?;
         log::info!("OBS WebSocket version: {}", hello.d.obs_web_socket_version);
 
         let ident = IdentifyMessage {
@@ -85,9 +86,9 @@ impl OBSClient {
         ))?;
 
         msg = ws.read()?;
-        let text = msg.to_text().map_err(|e| anyhow::anyhow!(
-            "unexpected binary frame after identify: {}", e
-        ))?;
+        let text = msg
+            .to_text()
+            .map_err(|e| anyhow::anyhow!("unexpected binary frame after identify: {}", e))?;
         if !text.starts_with("{") {
             anyhow::bail!("failed to identify to OBS: unexpected message: {}", text);
         }
@@ -141,7 +142,11 @@ impl OBSClient {
 
         let resp = self.read_response()?;
         if let Some(status) = resp.get("d").and_then(|d| d.get("requestStatus")) {
-            if !status.get("result").and_then(|r| r.as_bool()).unwrap_or(false) {
+            if !status
+                .get("result")
+                .and_then(|r| r.as_bool())
+                .unwrap_or(false)
+            {
                 anyhow::bail!("request {} failed: {:?}", request_type, status);
             }
         }
@@ -161,7 +166,8 @@ impl OBSClient {
     /// daemon.
     fn read_response(&self) -> anyhow::Result<serde_json::Value> {
         let mut guard = self.conn.lock().unwrap();
-        let conn = guard.as_mut()
+        let conn = guard
+            .as_mut()
             .ok_or_else(|| anyhow::anyhow!("not connected to OBS"))?;
         let msg = conn.ws.read()?;
         let text = msg
@@ -198,7 +204,11 @@ impl OBSClient {
 
         // Ensure the screenshot directory exists
         if let Err(e) = std::fs::create_dir_all(save_dir) {
-            log::warn!("Could not create screenshot directory '{}': {}", save_dir, e);
+            log::warn!(
+                "Could not create screenshot directory '{}': {}",
+                save_dir,
+                e
+            );
         }
 
         let now_ms = std::time::SystemTime::now()
@@ -294,7 +304,11 @@ impl OBSClient {
                 return;
             }
             let conn = guard.as_mut().unwrap();
-            if conn.ws.send(tungstenite::Message::Text(json.into())).is_err() {
+            if conn
+                .ws
+                .send(tungstenite::Message::Text(json.into()))
+                .is_err()
+            {
                 log::warn!("Failed to send studio mode query");
                 return;
             }
