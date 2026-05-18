@@ -8,7 +8,7 @@ const CONFIG_DIR_NAME: &str = "obs-hotkey";
 const CONFIG_FILE_NAME: &str = "hotkeys.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct HotkeyConfig {
     pub toggle_recording: String,
     pub toggle_pause: String,
@@ -21,6 +21,7 @@ pub struct HotkeyConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct AppConfig {
     #[serde(rename = "obs_host")]
     pub obs_host: String,
