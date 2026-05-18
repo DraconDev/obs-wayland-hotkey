@@ -20,7 +20,13 @@ pub fn in_input_group() -> bool {
     }
 
     let uid = unsafe { libc::getuid() };
-    let c_user = std::ffi::CString::new(user.clone()).unwrap();
+    let c_user = match std::ffi::CString::new(user.clone()) {
+        Ok(c) => c,
+        Err(_) => {
+            log::warn!("user name '{}' contains a null byte — cannot check groups", user);
+            return false;
+        }
+    };
 
     // Start with a reasonable buffer, grow if needed
     let mut ngroups: libc::c_int = 64;
@@ -54,6 +60,13 @@ pub fn in_input_group() -> bool {
             }
         }
     }
+
+    // getgrouplist succeeded but 'input' group was not in the list
+    log::warn!(
+        "user '{}' has {} group(s) but 'input' is not among them — hint: sudo usermod -aG input $(whoami)",
+        user,
+        ngroups
+    );
 
     false
 }

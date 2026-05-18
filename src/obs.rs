@@ -116,7 +116,8 @@ impl OBSClient {
                 authentication: None,
             },
         };
-        let ident_json = serde_json::to_string(&ident).unwrap();
+        let ident_json = serde_json::to_string(&ident)
+            .map_err(|e| anyhow::anyhow!("failed to serialize identify message: {}", e))?;
         log::info!("Sending identify: {}", ident_json);
         ws.send(tungstenite::Message::Text(ident_json.into()))?;
 
@@ -372,7 +373,8 @@ impl OBSClient {
                 request_data: None,
             },
         };
-        let json = serde_json::to_string(&req).unwrap();
+        let json = serde_json::to_string(&req)
+            .map_err(|e| anyhow::anyhow!("failed to serialize request: {}", e))?;
 
         {
             let mut guard = self.conn.lock().unwrap();
