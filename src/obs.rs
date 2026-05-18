@@ -206,13 +206,10 @@ impl OBSClient {
                         std::io::ErrorKind::BrokenPipe
                         | std::io::ErrorKind::ConnectionReset
                         | std::io::ErrorKind::UnexpectedEof => {
-                            // Connection closed by OBS — clear the mutex and flag so the
-                            // next request triggers reconnection.
-                            if let Some(c) = guard.get_mut() {
-                                *c = None;
-                            }
+                            // Connection closed by OBS — set connected=false so the next
+                            // request triggers reconnection. The mutex will be cleaned
+                            // up on the next connect() call.
                             self.connected.store(false, Ordering::SeqCst);
-                            return anyhow::anyhow!("OBS WebSocket closed");
                         }
                         _ => {}
                     }
