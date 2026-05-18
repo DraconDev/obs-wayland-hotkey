@@ -196,6 +196,17 @@ impl OBSClient {
         Ok(())
     }
 
+    fn read_response_guarded(&self, guard: &mut std::sync::MutexGuard<'_, Option<Conn>>) -> anyhow::Result<serde_json::Value> {
+        let conn = guard
+            .as_mut()
+            .ok_or_else(|| anyhow::anyhow!("not connected to OBS"))?;
+        let msg = conn.ws.read()?;
+        let text = msg
+            .into_text()
+            .map_err(|e| anyhow::anyhow!("unexpected non-text WebSocket frame: {}", e))?;
+        serde_json::from_str(&text).map_err(|e| anyhow::anyhow!("invalid JSON: {}", e))
+    }
+
     /// Reads a response from the WebSocket connection.
     ///
     /// # Safety
@@ -216,16 +227,7 @@ impl OBSClient {
             anyhow::bail!("not connected to OBS");
         }
         let mut guard = self.conn.lock().unwrap();
-        let conn = guard
-            .as_mut()
-            .ok_or_else(|| anyhow::anyhow!("not connected to OBS"))?;
-        let msg = conn.ws.read()?;
-        let text = msg
-            .into_text()
-            .map_err(|e| anyhow::anyhow!("unexpected non-text WebSocket frame: {}", e))?;
-        let data: serde_json::Value =
-            serde_json::from_str(&text).map_err(|e| anyhow::anyhow!("invalid JSON: {}", e))?;
-        Ok(data)
+        self.read_response_guarded(&mut guard)
     }
 
     pub fn toggle_recording(&self) {
