@@ -197,10 +197,22 @@ impl OBSClient {
     }
 
     fn read_response_guarded(&self, guard: &mut std::sync::MutexGuard<'_, Option<Conn>>) -> anyhow::Result<serde_json::Value> {
-        let conn = guard
-            .as_mut()
-            .ok_or_else(|| anyhow::anyhow!("not connected to OBS"))?;
-        let msg = conn.ws.read()?;
+        let msg = match guard.as_mut() {
+            Some(c) => match c.ws.read() {
+                Ok(m) => m,
+                Err(tungstenite::Error::Io(ref e))
+                    if e.kind() == std::io::ErrorKind::BrokenPipe
+                        || e.kind() == std::io::ErrorKind::ConnectionReset
+                        || e.kind() == std::io::ErrorKind::UnexpectedEof => {
+                    // Connection was closed by OBS — clear state so next request reconnects
+                    *guard = None;
+                    self.connected.store(false, Ordering::SeqCst);
+                    anyhow::bail!("OBS WebSocket closed: {:?}", e);
+                }
+                Err(e) => anyhow::bail!("WebSocket read error: {:?}", e),
+            },
+            None => anyhow::bail!("not connected to OBS"),
+        };
         let text = msg
             .into_text()
             .map_err(|e| anyhow::anyhow!("unexpected non-text WebSocket frame: {}", e))?;
