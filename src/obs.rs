@@ -112,10 +112,10 @@ impl OBSClient {
             .to_text()
             .map_err(|e| anyhow::anyhow!("unexpected binary frame after identify: {}", e))?;
         log::info!("Identify response: {}", text);
-        // Verify we got Identified (op 5) response
+        // Verify we got Identified (op 2) response
         let resp: serde_json::Value = serde_json::from_str(text)?;
         let op = resp.get("op").and_then(|o| o.as_u64()).unwrap_or(0);
-        if op != 5 {
+        if op != 2 {
             drop(guard);
             self.connected.store(false, Ordering::SeqCst);
             anyhow::bail!("OBS rejected identification (op={}): {}", op, text);

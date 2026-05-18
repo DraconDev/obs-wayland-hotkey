@@ -2,7 +2,7 @@
 
 ## Status: COMPLETE
 
-## Fixed Issues
+## Issues Fixed (from code review)
 
 ### C1 - CRITICAL: OBSClient::clone() copies atomics by value -- reconnection broken ✅
 - **File:** src/obs.rs, lines 9-11
@@ -39,11 +39,33 @@
 - **Fix:** Added ws.close(None) before returning true
 - **Verification:** `grep "ws.close" src/service.rs`
 
-## Test Results
+---
+
+## Additional: Freezing/Hotkey Deadlock Fix
+
+### Root Cause
+Two deadlock-prone code paths in `OBSClient`:
+
+1. **send_request_with_data**: checked `is_connected()` BEFORE acquiring the lock, but then held the lock while calling `connect()` — which also needs the lock → **classic lock order reversal deadlock**.
+
+2. **connect()**: set `connected.store(false, Ordering::SeqCst)` WHILE holding the lock. The reconnect thread could see `connected=false` and re-enter `connect()` while the original caller still held the lock → **self-deadlock**.
+
+### Fixes Applied
+
+1. **send_request_with_data** (lines 143-172):
+   - Now acquires the lock FIRST, checks if conn is None inside the lock
+   - If None: drops guard, calls connect() (which re-acquires lock), re-acquires lock
+   - **Lock order: send_request_with_data → connect()** (consistent, no reversal)
+
+2. **connect()** (lines 51-130):
+   - Dropped guard BEFORE setting `connected.store(false)` on error paths
+   - `connected=false` now happens AFTER releasing the lock, so the reconnect thread won't re-enter while we hold the lock
+
+### Test Results
 - `cargo test`: 33/33 passed ✅
 - `cargo clippy -- -D warnings`: 0 warnings ✅
 
 ## Release
-- Version: 1.0.39
-- Published to crates.io ✅
-- Pushed to all remotes (origin, github, gitlab, codeberg) ✅
+- Version: 1.0.40 (local commit on sync'd remotes)
+- Remotes sync'd (origin, github, gitlab, codeberg) ✅
+- crates.io: v1.0.40 (already published with deadlock fix) ✅
