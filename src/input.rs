@@ -32,7 +32,13 @@ pub fn find_keyboards() -> anyhow::Result<Vec<PathBuf>> {
             Some(k) => k,
             None => continue,
         };
-        if supported.contains(KeyCode::KEY_SCROLLLOCK) {
+        // Detect keyboards by checking for common typing keys rather than
+        // KEY_SCROLLLOCK, which many keyboards (laptops, compact boards) do
+        // not advertise in their evdev capability bitmap.
+        if supported.contains(KeyCode::KEY_A)
+            && supported.contains(KeyCode::KEY_SPACE)
+            && supported.contains(KeyCode::KEY_ENTER)
+        {
             paths.push(path);
         }
     }
