@@ -188,7 +188,7 @@ impl OBSClient {
                 | std::io::ErrorKind::ConnectionReset
                 | std::io::ErrorKind::UnexpectedEof => {
                     self.connected.store(false, Ordering::SeqCst);
-                    **guard = None;
+                    *guard = None;
                 }
                 _ => {}
             }
