@@ -180,12 +180,24 @@ impl OBSClient {
                 guard.as_mut().unwrap()
             }
         };
-        conn.ws.send(tungstenite::Message::Text(json.into()))?;
+        // Send the request; if the connection is dead, clear it so the next call reconnects.
+    if let Err(e) = conn.ws.send(tungstenite::Message::Text(json.into())) {
+        if let tungstenite::Error::Io(ref io) = e {
+            match io.kind() {
+                std::io::ErrorKind::BrokenPipe
+                | std::io::ErrorKind::ConnectionReset
+                | std::io::ErrorKind::UnexpectedEof => {
+                    self.connected.store(false, Ordering::SeqCst);
+                    *guard = None;
+                }
+                _ => {}
+            }
+        }
+        return Err(anyhow::anyhow!("WebSocket send error: {:?}", e));
+    }
 
-        // Keep lock while reading response to prevent connection close race.
-        // Without this, OBS could close the connection between send and read,
-        // causing "Broken pipe" instead of a clean reconnection trigger.
-        let resp = self.read_response_guarded(&mut guard)?;
+    // Keep lock while reading response to prevent connection close race.
+    let resp = self.read_response_guarded(&mut guard)?;
         if let Some(status) = resp.get("d").and_then(|d| d.get("requestStatus")) {
             if !status
                 .get("result")
@@ -199,26 +211,29 @@ impl OBSClient {
     }
 
     fn read_response_guarded(&self, guard: &mut std::sync::MutexGuard<'_, Option<Conn>>) -> anyhow::Result<serde_json::Value> {
-        // Use guard.as_mut() to get &mut Option<Conn>, then pattern match on it.
-        // This avoids holding a &mut T borrow that would conflict with guard.get_mut().
-        let msg = match guard.as_mut() {
-            Some(conn) => conn.ws.read().map_err(|e| {
+        let conn = match guard.as_mut() {
+            Some(conn) => conn,
+            None => anyhow::bail!("not connected to OBS"),
+        };
+
+        let msg = match conn.ws.read() {
+            Ok(m) => m,
+            Err(e) => {
                 if let tungstenite::Error::Io(ref io) = e {
                     match io.kind() {
                         std::io::ErrorKind::BrokenPipe
                         | std::io::ErrorKind::ConnectionReset
                         | std::io::ErrorKind::UnexpectedEof => {
-                            // Connection closed by OBS — set connected=false so the next
-                            // request triggers reconnection. The mutex will be cleaned
-                            // up on the next connect() call.
+                            // Connection closed by OBS — clear the dead Conn so the next
+                            // request triggers reconnection instead of reusing the dead socket.
                             self.connected.store(false, Ordering::SeqCst);
+                            *guard = None;
                         }
                         _ => {}
                     }
                 }
-                anyhow::anyhow!("WebSocket read error: {:?}", e)
-            })?,
-            None => anyhow::bail!("not connected to OBS"),
+                return Err(anyhow::anyhow!("WebSocket read error: {:?}", e));
+            }
         };
         let text = msg
             .into_text()
@@ -384,12 +399,19 @@ impl OBSClient {
                 return;
             }
             let conn = guard.as_mut().unwrap();
-            if conn
-                .ws
-                .send(tungstenite::Message::Text(json.into()))
-                .is_err()
-            {
-                log::warn!("Failed to send studio mode query");
+            if let Err(e) = conn.ws.send(tungstenite::Message::Text(json.into())) {
+                if let tungstenite::Error::Io(ref io) = e {
+                    match io.kind() {
+                        std::io::ErrorKind::BrokenPipe
+                        | std::io::ErrorKind::ConnectionReset
+                        | std::io::ErrorKind::UnexpectedEof => {
+                            self.connected.store(false, Ordering::SeqCst);
+                            *guard = None;
+                        }
+                        _ => {}
+                    }
+                }
+                log::warn!("Failed to send studio mode query: {}", e);
                 return;
             }
         }
