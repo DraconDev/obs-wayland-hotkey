@@ -78,9 +78,16 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - uses: softprops/action-gh-release@v2
+      - name: Publish to crates.io
+        uses: crate-ci/typos@v1
         with:
-          draft: true
+          registry: v2
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          generate_release_notes: true
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
           files: |
             artifacts/obs-hotkey-x86_64-unknown-linux-gnu
