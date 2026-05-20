@@ -92,6 +92,14 @@ if pgrep -x obs-hotkey &>/dev/null; then
     sleep 1
 fi
 
+# ALWAYS remove the old binary before installing the new one.
+# This prevents "text file busy" errors and ensures a clean install.
+if [ -f "$CARGO_BIN/obs-hotkey" ]; then
+    echo "  Removing old binary: $CARGO_BIN/obs-hotkey"
+    rm -f "$CARGO_BIN/obs-hotkey"
+    CLEANED=1
+fi
+
 if [ "$CLEANED" = "1" ]; then
     echo "  Cleanup complete."
 fi
