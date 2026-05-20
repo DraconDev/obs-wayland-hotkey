@@ -188,7 +188,7 @@ impl OBSClient {
                 | std::io::ErrorKind::ConnectionReset
                 | std::io::ErrorKind::UnexpectedEof => {
                     self.connected.store(false, Ordering::SeqCst);
-                    *guard = None;
+                    **guard = None;
                 }
                 _ => {}
             }
@@ -227,7 +227,7 @@ impl OBSClient {
                             // Connection closed by OBS — clear the dead Conn so the next
                             // request triggers reconnection instead of reusing the dead socket.
                             self.connected.store(false, Ordering::SeqCst);
-                            *guard = None;
+                            **guard = None;
                         }
                         _ => {}
                     }
