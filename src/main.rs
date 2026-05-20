@@ -59,7 +59,8 @@ struct ActionContext {
 }
 
 fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
-    let config_path = PathBuf::from(config_path_str);
+    let config_path_str = config::expand_home(config_path_str);
+    let config_path = PathBuf::from(&config_path_str);
     let dir_path = config_path.parent().unwrap_or(&config_path);
 
     config::ensure_config(dir_path, &config_path)?;

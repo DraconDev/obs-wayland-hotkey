@@ -135,6 +135,14 @@ pub fn run_setup(config_path: &str) {
     }
     println!();
 
+    // Ensure config directory and default config exist before starting the
+    // service, so the daemon doesn't fail on first run due to missing paths.
+    let cfg_dir = std::path::Path::new(&config_path).parent()
+        .unwrap_or_else(|| std::path::Path::new("."));
+    if let Err(e) = crate::config::ensure_config(cfg_dir, std::path::Path::new(&config_path)) {
+        log::warn!("Could not ensure config exists: {}", e);
+    }
+
     if !in_input_group() {
         println!();
         println!(
@@ -194,9 +202,25 @@ pub fn run_setup(config_path: &str) {
         std::process::exit(1);
     }
 
-    let _ = Command::new("systemctl")
+    match Command::new("systemctl")
         .args(["--user", "start", "obs-hotkey.service"])
-        .output();
+        .output()
+    {
+        Ok(output) if output.status.success() => {
+            println!("  {} Service started", ok(""));
+        }
+        Ok(output) => {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            println!(
+                "  {} Service failed to start: {}",
+                err(""),
+                stderr.trim()
+            );
+        }
+        Err(e) => {
+            println!("  {} Could not start service: {}", err(""), e);
+        }
+    }
 
     // Final setup summary
     println!();
