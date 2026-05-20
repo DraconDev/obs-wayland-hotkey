@@ -79,9 +79,9 @@ jobs:
           merge-multiple: true
 
       - name: Publish to crates.io
-        uses: crate-ci/typos@v1
-        with:
-          registry: v2
+        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
