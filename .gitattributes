@@ -21,6 +21,7 @@ test_secret.txt filter=dracon diff=dracon merge=dracon
 .dracon/data/ -filter
 .dracon/data/keys/ -filter
 .dracon/data/keys/*.pub -filter
+.dracon/keys/*.pub -filter
 Cargo.lock -filter
 Cargo.toml -filter
 clippy.toml -filter
