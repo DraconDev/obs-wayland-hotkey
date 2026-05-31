@@ -1,9 +1,24 @@
 # --- BEGIN DRACON MANAGED BLOCK ---
 # managed by dracon-warden
 *.age filter=dracon diff=dracon merge=dracon
+*.bash filter=dracon diff=dracon merge=dracon
 *.env filter=dracon diff=dracon merge=dracon
+*.go filter=dracon diff=dracon merge=dracon
+*.js filter=dracon diff=dracon merge=dracon
+*.json filter=dracon diff=dracon merge=dracon
+*.jsx filter=dracon diff=dracon merge=dracon
 *.key filter=dracon diff=dracon merge=dracon
+*.md filter=dracon diff=dracon merge=dracon
 *.pem filter=dracon diff=dracon merge=dracon
+*.py filter=dracon diff=dracon merge=dracon
+*.rs filter=dracon diff=dracon merge=dracon
+*.sh filter=dracon diff=dracon merge=dracon
+*.sql filter=dracon diff=dracon merge=dracon
+*.toml filter=dracon diff=dracon merge=dracon
+*.ts filter=dracon diff=dracon merge=dracon
+*.tsx filter=dracon diff=dracon merge=dracon
+*.yaml filter=dracon diff=dracon merge=dracon
+*.yml filter=dracon diff=dracon merge=dracon
 .cargo/config.toml filter=dracon diff=dracon merge=dracon
 .env filter=dracon diff=dracon merge=dracon
 .env.* filter=dracon diff=dracon merge=dracon
@@ -16,8 +31,24 @@ plan/pages/snapshots/*.json filter=dracon diff=dracon merge=dracon
 plan/pages/templates/*.json filter=dracon diff=dracon merge=dracon
 secrets/** filter=dracon diff=dracon merge=dracon
 test_secret.txt filter=dracon diff=dracon merge=dracon
+*.dll -filter
+*.dylib -filter
 *.events.jsonl -filter
+*.exe -filter
+*.gif -filter
+*.ico -filter
+*.jpeg -filter
+*.jpg -filter
+*.o -filter
+*.otf -filter
+*.png -filter
 *.pub -filter
+*.so -filter
+*.svg -filter
+*.ttf -filter
+*.woff -filter
+*.woff2 -filter
+.cache/ -filter
 .dracon/data/ -filter
 .dracon/data/keys/ -filter
 .dracon/data/keys/*.pub -filter
@@ -29,6 +60,8 @@ deny.toml -filter
 events.jsonl -filter
 flake.lock -filter
 flake.nix -filter
+node_modules/ -filter
 rust-toolchain.toml -filter
 rustfmt.toml -filter
+target/ -filter
 # --- END DRACON MANAGED BLOCK ---
