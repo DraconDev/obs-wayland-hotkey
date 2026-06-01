@@ -48,7 +48,6 @@ test_secret.txt filter=dracon diff=dracon merge=dracon
 *.ttf -filter
 *.woff -filter
 *.woff2 -filter
-.cache/ -filter
 .dracon/data/ -filter
 .dracon/data/keys/ -filter
 .dracon/data/keys/*.pub -filter
@@ -60,8 +59,6 @@ deny.toml -filter
 events.jsonl -filter
 flake.lock -filter
 flake.nix -filter
-node_modules/ -filter
 rust-toolchain.toml -filter
 rustfmt.toml -filter
-target/ -filter
 # --- END DRACON MANAGED BLOCK ---

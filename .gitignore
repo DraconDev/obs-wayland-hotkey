@@ -88,7 +88,6 @@ tasks*.json
 !*.ttf
 !*.woff
 !*.woff2
-!.cache/
 !.dracon/data/
 !.dracon/data/keys/
 !.dracon/data/keys/*.pub
@@ -100,8 +99,6 @@ tasks*.json
 !events.jsonl
 !flake.lock
 !flake.nix
-!node_modules/
 !rust-toolchain.toml
 !rustfmt.toml
-!target/
 # --- END DRACON MANAGED BLOCK ---
