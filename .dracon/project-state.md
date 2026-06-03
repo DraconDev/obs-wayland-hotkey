@@ -16,3 +16,8 @@
 # sequential test 1780463889
 # python test 1780464086922149126
 # final simple test 1780464197921552927
+# parallel python test 1780464302835557193
+# all-parallel test 1780464412054283179
+# no-daemon test 1780464540450768912
+# clean test 1780464650974166610
+# individual test 1780476190
