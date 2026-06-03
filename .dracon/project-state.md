@@ -21,3 +21,6 @@
 # no-daemon test 1780464540450768912
 # clean test 1780464650974166610
 # individual test 1780476190
+# parallel killpg test 1780476987
+# daemon-stopped test 1780477309
+new line
