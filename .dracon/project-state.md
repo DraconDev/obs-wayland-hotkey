@@ -24,3 +24,4 @@
 # parallel killpg test 1780476987
 # daemon-stopped test 1780477309
 new line
+# multi-test 1780487542
