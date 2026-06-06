@@ -19,6 +19,7 @@
 *.sqlite
 *.sqlite3
 .DS_Store
+.cache/
 .direnv/
 .dracon/*
 .git/
