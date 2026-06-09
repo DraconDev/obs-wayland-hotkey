@@ -532,6 +532,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[test]
     fn test_cli_no_args_shows_no_subcommand() {
