@@ -74,10 +74,6 @@ impl KeyChord {
         Ok(Self { tokens })
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.tokens.is_empty()
-    }
-
     pub fn matches(&self, pressed: &HashSet<u16>) -> bool {
         self.tokens
             .iter()

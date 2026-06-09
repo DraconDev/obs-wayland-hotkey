@@ -279,11 +279,6 @@ fn build_banner_bindings(bindings: &[ActionBinding]) -> Vec<banner::HotkeyBindin
         .iter()
         .map(|binding| banner::HotkeyBinding {
             key_name: binding.key_name.clone(),
-            action: if binding.actions.len() == 1 {
-                "action"
-            } else {
-                "combo"
-            },
             label: binding.label.clone(),
         })
         .collect()
@@ -327,7 +322,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
     let banner_bindings = build_banner_bindings(&action_bindings);
 
     for binding in &action_bindings {
-        log::info!("  {} → {}", binding.key_name, binding.label);
+        log::info!("  {} → {}", binding.chord.display(), binding.label);
     }
 
     let autostart = service::is_autostart_enabled();
