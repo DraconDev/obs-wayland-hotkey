@@ -327,6 +327,28 @@ impl OBSClient {
         }
     }
 
+    pub fn set_mic_volume(&self, input_name: &str, volume: f64) {
+        if input_name.is_empty() {
+            log::info!("Mic input name not configured, skipping volume set");
+            return;
+        }
+        if !(volume.is_finite() && volume >= 0.0) {
+            log::warn!("Invalid mic volume multiplier: {}", volume);
+            return;
+        }
+
+        log::info!("Setting mic volume to {}x...", volume);
+        let data = serde_json::json!({
+            "inputName": input_name,
+            "inputVolumeMul": volume,
+        });
+        if let Err(e) = self.send_request_with_data("SetInputVolume", Some(data)) {
+            log::warn!("Error setting mic volume: {}", e);
+        } else {
+            log::info!("Mic volume set to {}x", volume);
+        }
+    }
+
     pub fn toggle_studio_mode(&self) {
         log::info!("Toggling studio mode...");
         // If state is unknown, query first to avoid sending wrong value
