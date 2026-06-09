@@ -238,23 +238,28 @@ static KEY_TOKENS: LazyLock<Vec<KeyToken>> = LazyLock::new(|| {
             &["ctrl", "control"],
             &[KeyCode::KEY_LEFTCTRL, KeyCode::KEY_RIGHTCTRL],
         ),
+        KeyToken::new(&["right ctrl"], &[KeyCode::KEY_RIGHTCTRL]),
         KeyToken::new(&["left shift"], &[KeyCode::KEY_LEFTSHIFT]),
         KeyToken::new(
             &["shift"],
             &[KeyCode::KEY_LEFTSHIFT, KeyCode::KEY_RIGHTSHIFT],
         ),
+        KeyToken::new(&["right shift"], &[KeyCode::KEY_RIGHTSHIFT]),
         KeyToken::new(&["left alt"], &[KeyCode::KEY_LEFTALT]),
         KeyToken::new(
             &["alt", "option"],
             &[KeyCode::KEY_LEFTALT, KeyCode::KEY_RIGHTALT],
         ),
+        KeyToken::new(&["right alt"], &[KeyCode::KEY_RIGHTALT]),
         KeyToken::new(&["left super"], &[KeyCode::KEY_LEFTMETA]),
         KeyToken::new(
             &["super", "command", "win"],
             &[KeyCode::KEY_LEFTMETA, KeyCode::KEY_RIGHTMETA],
         ),
+        KeyToken::new(&["right super"], &[KeyCode::KEY_RIGHTMETA]),
         KeyToken::new(&["left meta"], &[KeyCode::KEY_LEFTMETA]),
         KeyToken::new(&["meta"], &[KeyCode::KEY_LEFTMETA, KeyCode::KEY_RIGHTMETA]),
+        KeyToken::new(&["right meta"], &[KeyCode::KEY_RIGHTMETA]),
         KeyToken::new(&["caps lock"], &[KeyCode::KEY_CAPSLOCK]),
         KeyToken::new(&["scroll lock"], &[KeyCode::KEY_SCROLLLOCK]),
         KeyToken::new(&["pause"], &[KeyCode::KEY_PAUSE]),
@@ -350,6 +355,11 @@ mod tests {
         assert!(!chord.matches(&HashSet::from([29, 59])));
     }
 
+    #[test]
+    fn test_parse_key_chord_right_side_aliases() {
+        let chord = KeyChord::parse("right ctrl + right shift + right alt + right super + f1").unwrap();
+        assert!(chord.matches(&HashSet::from([97, 54, 100, 126, 59])));
+    }
     #[test]
     fn test_parse_key_chord_unknown_key() {
         let result = KeyChord::parse("ctrl + nope");
