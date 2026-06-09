@@ -172,6 +172,12 @@ fn build_action_map(ctx: &ActionContext) -> HashMap<&'static str, Arc<dyn Fn() +
     ])
 }
 
+fn run_actions(actions: Vec<Arc<dyn Fn() + Send + Sync>>) {
+    for action in actions {
+        action();
+    }
+}
+
 fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<ActionBinding> {
     let action_map = build_action_map(ctx);
     let mut bindings = Vec::new();
@@ -397,11 +403,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
                             {
                                 let actions = binding.actions.clone();
                                 let label = binding.label.clone();
-                                std::thread::spawn(move || {
-                                    for action in actions {
-                                        action();
-                                    }
-                                });
+                                std::thread::spawn(move || run_actions(actions));
                                 log::info!("Triggered hotkey: {}", label);
                             }
                         }
