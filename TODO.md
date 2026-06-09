@@ -45,7 +45,6 @@
 ## Future
 
 - [ ] Password/auth support for OBS WebSocket (currently assumes no auth)
-- [ ] Hotkey chord support (e.g., Ctrl+Shift+F1)
 - [ ] Wayland idle inhibit on recording start
 - [x] Publish to crates.io — done, v1.0.24
 - [ ] Integration tests — would need a mock OBS WebSocket server

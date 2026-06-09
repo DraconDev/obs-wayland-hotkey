@@ -15,6 +15,9 @@
 - **Wayland & X11 Support** — works on both display servers
 - **Single Static Binary** — no runtime dependencies
 - **Global Hotkeys** — works even when OBS is not focused
+- **Chord Hotkeys** — use combinations like `ctrl + shift + f1`
+- **Action Combos** — trigger multiple OBS actions from one key chord
+- **Mic Volume Presets** — set input volume as part of a combo
 - **Auto-start on Login** — systemd user service integration
 - **Auto-reconnect** — automatically reconnects if OBS restarts
 - **Multi-keyboard** — monitors all connected keyboards
@@ -156,7 +159,70 @@ Edit `~/.config/obs-hotkey/hotkeys.json`:
   },
   "screenshot_source": "",
   "screenshot_dir": "~/Pictures",
-  "mic_name": ""
+  "mic_name": "",
+  "mic_volume": 1.0,
+  "hotkey_combos": []
+}
+```
+
+Existing single-action hotkeys still work. To trigger multiple OBS actions from one key chord, add entries to `hotkey_combos`:
+
+```json
+{
+  "obs_host": "ws://localhost:4455",
+  "hotkeys": {
+    "toggle_recording": "",
+    "toggle_pause": "",
+    "toggle_streaming": "",
+    "screenshot": "",
+    "toggle_mute_mic": "",
+    "toggle_studio_mode": "",
+    "toggle_replay_buffer": "",
+    "save_replay": ""
+  },
+  "screenshot_source": "",
+  "screenshot_dir": "~/Pictures",
+  "mic_name": "Microphone",
+  "mic_volume": 0.75,
+  "hotkey_combos": [
+    {
+      "name": "record_and_set_mic",
+      "keys": ["ctrl", "shift", "r"],
+      "actions": ["toggle_recording", "set_mic_volume"]
+    }
+  ]
+}
+```
+
+A combo entry may use either `"key": "ctrl + f1"` or `"keys": ["ctrl", "shift", "f1"]`. Actions run in the order listed.
+
+### Key Combos
+
+Key combos are written as physical keys separated by `+`:
+
+```json
+"ctrl + shift + f1"
+```
+
+Generic modifier names match either left or right key:
+
+- `ctrl` / `control`
+- `shift`
+- `alt` / `option`
+- `super` / `command` / `win`
+- `meta`
+
+Left/right-specific names are also supported, for example `left ctrl` or `right shift`.
+
+### Action Combos
+
+`hotkey_combos` lets one chord run multiple actions. This is useful for workflows OBS does not support natively, such as starting recording and setting your mic volume in the same gesture.
+
+```json
+{
+  "name": "record_and_set_mic",
+  "key": "ctrl + f1",
+  "actions": ["toggle_recording", "set_mic_volume"]
 }
 ```
 
@@ -164,6 +230,7 @@ Edit `~/.config/obs-hotkey/hotkeys.json`:
 
 - Function keys: `f1` – `f24`
 - Special keys: `scroll lock`, `pause`, `home`, `end`, `page up`, `page down`, `insert`, `delete`
+- Modifiers: `ctrl`, `shift`, `alt`, `super`, `meta`, plus left/right-specific variants
 
 ### Available Actions
 
@@ -174,6 +241,7 @@ Edit `~/.config/obs-hotkey/hotkeys.json`:
 | `toggle_streaming` | `ToggleStream` | Start/stop streaming |
 | `screenshot` | `SaveSourceScreenshot` | Saves PNG to `screenshot_dir` |
 | `toggle_mute_mic` | `ToggleInputMute` | Requires `mic_name` in config |
+| `set_mic_volume` | `SetInputVolume` | Requires `mic_name` and `mic_volume` |
 | `toggle_studio_mode` | `SetStudioModeEnabled` | Toggles studio mode |
 | `toggle_replay_buffer` | `ToggleReplayBuffer` | Requires replay buffer enabled |
 | `save_replay` | `SaveReplayBuffer` | Saves current replay buffer |
