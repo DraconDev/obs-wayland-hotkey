@@ -3,7 +3,6 @@ use crate::config::AppConfig;
 
 pub struct HotkeyBinding {
     pub key_name: String,
-    pub action: &'static str,
     pub label: String,
 }
 
@@ -67,12 +66,10 @@ mod tests {
         let bindings = vec![
             HotkeyBinding {
                 key_name: "scroll lock".to_string(),
-                action: "toggle_recording",
                 label: "Toggle Recording".to_string(),
             },
             HotkeyBinding {
                 key_name: "".to_string(),
-                action: "toggle_pause",
                 label: "Toggle Pause/Resume".to_string(),
             },
         ];

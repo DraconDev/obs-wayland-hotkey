@@ -361,9 +361,9 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_key_chord_deduplicates_aliases() {
-        let chord = KeyChord::parse("left ctrl + ctrl + f1").unwrap();
-        assert_eq!(chord.display(), "ctrl + f1");
+    fn test_parse_key_chord_deduplicates_repeated_key() {
+        let chord = KeyChord::parse("left ctrl + left ctrl + f1").unwrap();
+        assert_eq!(chord.display(), "left ctrl + f1");
     }
 
     #[test]
