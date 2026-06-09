@@ -357,7 +357,8 @@ mod tests {
 
     #[test]
     fn test_parse_key_chord_right_side_aliases() {
-        let chord = KeyChord::parse("right ctrl + right shift + right alt + right super + f1").unwrap();
+        let chord =
+            KeyChord::parse("right ctrl + right shift + right alt + right super + f1").unwrap();
         assert!(chord.matches(&HashSet::from([97, 54, 100, 126, 59])));
     }
     #[test]
