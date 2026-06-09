@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -12,7 +12,7 @@ mod obs;
 mod service;
 
 use config::config_path;
-use input::{find_keyboards, get_key_code, spawn_keyboard_reader};
+use input::{find_keyboards, spawn_keyboard_reader};
 
 /// Main event loop poll interval (ms).
 const EVENT_LOOP_POLL_MS: u64 = 10;
@@ -56,106 +56,53 @@ struct ActionContext {
     screenshot_source: String,
     screenshot_dir: String,
     mic_name: String,
+    mic_volume: f64,
 }
 
-fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
-    let config_path_str = config::expand_home(config_path_str);
-    let config_path = PathBuf::from(&config_path_str);
-    let dir_path = config_path.parent().unwrap_or(&config_path);
+#[derive(Clone)]
+struct ActionBinding {
+    id: String,
+    key_name: String,
+    chord: input::KeyChord,
+    label: String,
+    actions: Vec<Arc<dyn Fn() + Send + Sync>>,
+}
 
-    config::ensure_config(dir_path, &config_path)?;
+const ACTION_DEFINITIONS: &[(&str, &str)] = &[
+    ("toggle_recording", "Toggle Recording"),
+    ("toggle_pause", "Toggle Pause/Resume"),
+    ("toggle_streaming", "Toggle Streaming"),
+    ("screenshot", "Screenshot"),
+    ("toggle_mute_mic", "Toggle Mic Mute"),
+    ("set_mic_volume", "Set Mic Volume"),
+    ("toggle_studio_mode", "Toggle Studio Mode"),
+    ("toggle_replay_buffer", "Toggle Replay Buffer"),
+    ("save_replay", "Save Replay"),
+];
 
-    let cfg = config::load_config(&config_path)?;
-    log::info!("Loaded config from: {}", config_path.display());
-
-    let ws_url = if cfg.obs_host.is_empty() {
-        "ws://localhost:4455".to_string()
-    } else {
-        // Validate host — refuse to start if it looks malformed.
-        // This prevents confusing errors from the WebSocket layer.
-        if cfg.obs_host.contains('\0') {
-            anyhow::bail!("obs_host contains a null byte — check your config");
-        }
-        if cfg.obs_host.len() > 4096 {
-            anyhow::bail!("obs_host is suspiciously long (>4096 chars)");
-        }
-        cfg.obs_host.clone()
-    };
-
-    let bindings = vec![
-        banner::HotkeyBinding {
-            key_name: cfg.hotkeys.toggle_recording.clone(),
-            action: "toggle_recording",
-            label: "Toggle Recording",
-        },
-        banner::HotkeyBinding {
-            key_name: cfg.hotkeys.toggle_pause.clone(),
-            action: "toggle_pause",
-            label: "Toggle Pause/Resume",
-        },
-        banner::HotkeyBinding {
-            key_name: cfg.hotkeys.toggle_streaming.clone(),
-            action: "toggle_streaming",
-            label: "Toggle Streaming",
-        },
-        banner::HotkeyBinding {
-            key_name: cfg.hotkeys.screenshot.clone(),
-            action: "screenshot",
-            label: "Screenshot",
-        },
-        banner::HotkeyBinding {
-            key_name: cfg.hotkeys.toggle_mute_mic.clone(),
-            action: "toggle_mute_mic",
-            label: "Toggle Mic Mute",
-        },
-        banner::HotkeyBinding {
-            key_name: cfg.hotkeys.toggle_studio_mode.clone(),
-            action: "toggle_studio_mode",
-            label: "Toggle Studio Mode",
-        },
-        banner::HotkeyBinding {
-            key_name: cfg.hotkeys.toggle_replay_buffer.clone(),
-            action: "toggle_replay_buffer",
-            label: "Toggle Replay Buffer",
-        },
-        banner::HotkeyBinding {
-            key_name: cfg.hotkeys.save_replay.clone(),
-            action: "save_replay",
-            label: "Save Replay",
-        },
-    ];
-
-    let client = obs::OBSClient::new(ws_url.clone());
-
-    for b in &bindings {
-        if !b.key_name.is_empty() {
-            if get_key_code(&b.key_name).is_some() {
-                log::info!("  {} → {}", b.key_name, b.label);
-            } else {
-                log::warn!("Warning: unknown key '{}' for {}", b.key_name, b.label);
-            }
-        }
-    }
-
-    let autostart = service::is_autostart_enabled();
-
-    let ctx = ActionContext {
-        client: client.clone(),
-        screenshot_source: cfg.screenshot_source.clone(),
-        screenshot_dir: config::expand_home(&cfg.screenshot_dir),
-        mic_name: cfg.mic_name.clone(),
-    };
-
-    banner::print_banner(&cfg, &bindings, autostart);
-
-    if bindings
+fn action_label(action: &str) -> &str {
+    ACTION_DEFINITIONS
         .iter()
-        .all(|b| b.key_name.is_empty() || get_key_code(&b.key_name).is_none())
-    {
-        anyhow::bail!("No valid hotkeys configured");
-    }
+        .find_map(|(name, label)| (*name == action).then_some(*label))
+        .unwrap_or(action)
+}
 
-    let action_map: HashMap<&str, Arc<dyn Fn() + Send + Sync>> = HashMap::from([
+fn is_known_action(action: &str) -> bool {
+    ACTION_DEFINITIONS
+        .iter()
+        .any(|(name, _)| *name == action)
+}
+
+fn action_labels(actions: &[String]) -> String {
+    actions
+        .iter()
+        .map(|action| action_label(action))
+        .collect::<Vec<_>>()
+        .join(" + ")
+}
+
+fn build_action_map(ctx: &ActionContext) -> HashMap<&'static str, Arc<dyn Fn() + Send + Sync>> {
+    HashMap::from([
         (
             "toggle_recording",
             Arc::new({
@@ -195,6 +142,15 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
             }) as _,
         ),
         (
+            "set_mic_volume",
+            Arc::new({
+                let c = ctx.client.clone();
+                let mic = ctx.mic_name.clone();
+                let volume = ctx.mic_volume;
+                move || c.set_mic_volume(&mic, volume)
+            }) as _,
+        ),
+        (
             "toggle_studio_mode",
             Arc::new({
                 let c = ctx.client.clone();
@@ -215,18 +171,184 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
                 move || c.save_replay()
             }) as _,
         ),
-    ]);
+    ])
+}
 
-    let mut binding_actions: HashMap<u16, Arc<dyn Fn() + Send + Sync>> = HashMap::new();
-    for b in &bindings {
-        if b.key_name.is_empty() {
+fn build_action_bindings(
+    cfg: &config::AppConfig,
+    ctx: &ActionContext,
+) -> Vec<ActionBinding> {
+    let action_map = build_action_map(ctx);
+    let mut bindings = Vec::new();
+
+    let single_action_bindings = [
+        (
+            "toggle_recording",
+            cfg.hotkeys.toggle_recording.as_str(),
+        ),
+        ("toggle_pause", cfg.hotkeys.toggle_pause.as_str()),
+        (
+            "toggle_streaming",
+            cfg.hotkeys.toggle_streaming.as_str(),
+        ),
+        ("screenshot", cfg.hotkeys.screenshot.as_str()),
+        (
+            "toggle_mute_mic",
+            cfg.hotkeys.toggle_mute_mic.as_str(),
+        ),
+        (
+            "toggle_studio_mode",
+            cfg.hotkeys.toggle_studio_mode.as_str(),
+        ),
+        (
+            "toggle_replay_buffer",
+            cfg.hotkeys.toggle_replay_buffer.as_str(),
+        ),
+        ("save_replay", cfg.hotkeys.save_replay.as_str()),
+    ];
+
+    for (action, key_name) in single_action_bindings {
+        if key_name.trim().is_empty() {
             continue;
         }
-        if let Some(code) = get_key_code(&b.key_name) {
-            if let Some(action) = action_map.get(b.action) {
-                binding_actions.insert(code, action.clone());
+
+        let chord = match input::KeyChord::parse(key_name) {
+            Ok(chord) => chord,
+            Err(e) => {
+                log::warn!("Invalid hotkey for {}: {}", action_label(action), e);
+                continue;
             }
+        };
+
+        let action_fn = match action_map.get(action) {
+            Some(action_fn) => action_fn.clone(),
+            None => {
+                log::warn!("Unknown action '{}' for {}", action, action_label(action));
+                continue;
+            }
+        };
+
+        bindings.push(ActionBinding {
+            id: action.to_string(),
+            key_name: key_name.to_string(),
+            chord,
+            label: action_label(action).to_string(),
+            actions: vec![action_fn],
+        });
+    }
+
+    for combo in &cfg.hotkey_combos {
+        let key_spec = combo.key_spec();
+        if key_spec.trim().is_empty() {
+            log::warn!("Ignoring hotkey_combo '{}' with an empty key", combo.name);
+            continue;
         }
+
+        let chord = match input::KeyChord::parse(&key_spec) {
+            Ok(chord) => chord,
+            Err(e) => {
+                log::warn!("Invalid hotkey for combo '{}': {}", combo.name, e);
+                continue;
+            }
+        };
+
+        let mut actions = Vec::with_capacity(combo.actions.len());
+        let mut valid = true;
+        for action in &combo.actions {
+            if !is_known_action(action) {
+                log::warn!(
+                    "Unknown action '{}' in hotkey_combo '{}'",
+                    action,
+                    combo.name
+                );
+                valid = false;
+                break;
+            }
+            actions.push(
+                action_map
+                    .get(action.as_str())
+                    .expect("known action must have a runner")
+                    .clone(),
+            );
+        }
+
+        if !valid || actions.is_empty() {
+            continue;
+        }
+
+        bindings.push(ActionBinding {
+            id: format!("combo:{}", combo.name),
+            key_name: key_spec,
+            chord,
+            label: action_labels(&combo.actions),
+            actions,
+        });
+    }
+
+    bindings
+}
+
+fn build_banner_bindings(bindings: &[ActionBinding]) -> Vec<banner::HotkeyBinding> {
+    bindings
+        .iter()
+        .map(|binding| banner::HotkeyBinding {
+            key_name: binding.key_name.clone(),
+            action: if binding.actions.len() == 1 {
+                "action"
+            } else {
+                "combo"
+            },
+            label: binding.label.clone(),
+        })
+        .collect()
+}
+
+fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
+    let config_path_str = config::expand_home(config_path_str);
+    let config_path = PathBuf::from(&config_path_str);
+    let dir_path = config_path.parent().unwrap_or(&config_path);
+
+    config::ensure_config(dir_path, &config_path)?;
+
+    let cfg = config::load_config(&config_path)?;
+    log::info!("Loaded config from: {}", config_path.display());
+
+    let ws_url = if cfg.obs_host.is_empty() {
+        "ws://localhost:4455".to_string()
+    } else {
+        // Validate host — refuse to start if it looks malformed.
+        // This prevents confusing errors from the WebSocket layer.
+        if cfg.obs_host.contains('\0') {
+            anyhow::bail!("obs_host contains a null byte — check your config");
+        }
+        if cfg.obs_host.len() > 4096 {
+            anyhow::bail!("obs_host is suspiciously long (>4096 chars)");
+        }
+        cfg.obs_host.clone()
+    };
+
+    let client = obs::OBSClient::new(ws_url.clone());
+
+    let ctx = ActionContext {
+        client: client.clone(),
+        screenshot_source: cfg.screenshot_source.clone(),
+        screenshot_dir: config::expand_home(&cfg.screenshot_dir),
+        mic_name: cfg.mic_name.clone(),
+        mic_volume: cfg.mic_volume,
+    };
+
+    let action_bindings = build_action_bindings(&cfg, &ctx);
+    let banner_bindings = build_banner_bindings(&action_bindings);
+
+    for binding in &action_bindings {
+        log::info!("  {} → {}", binding.key_name, binding.label);
+    }
+
+    let autostart = service::is_autostart_enabled();
+    banner::print_banner(&cfg, &banner_bindings, autostart);
+
+    if action_bindings.is_empty() {
+        anyhow::bail!("No valid hotkeys configured");
     }
 
     let keyboard_paths = find_keyboards()?;
@@ -267,16 +389,20 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
     ctrlc::set_handler(|| {})
         .expect("error setting Ctrl-C handler");
 
-    // Debounce tracking: last press time per key code
+    let mut pressed_keys: HashSet<u16> = HashSet::new();
+    let mut active_bindings: HashSet<String> = HashSet::new();
     let mut last_press: HashMap<u16, Instant> = HashMap::new();
     let debounce = Duration::from_millis(DEBOUNCE_MS);
 
     loop {
         for rx in &rx_channels {
             while let Ok(event) = rx.try_recv() {
-                if event.value == 1 {
-                    if let Some(action) = binding_actions.get(&event.code) {
-                        // Debounce: skip if this key was pressed within the window
+                match event.value {
+                    1 => {
+                        if !pressed_keys.insert(event.code) {
+                            continue;
+                        }
+
                         let now = Instant::now();
                         if let Some(last) = last_press.get(&event.code) {
                             if now.duration_since(*last) < debounce {
@@ -284,11 +410,33 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
                             }
                         }
                         last_press.insert(event.code, now);
-                        // Spawn action in a background thread so the event
-                        // loop stays responsive during network I/O
-                        let action = action.clone();
-                        std::thread::spawn(move || action());
+
+                        for binding in &action_bindings {
+                            if binding.chord.matches(&pressed_keys)
+                                && active_bindings.insert(binding.id.clone())
+                            {
+                                let actions = binding.actions.clone();
+                                let label = binding.label.clone();
+                                std::thread::spawn(move || {
+                                    for action in actions {
+                                        action();
+                                    }
+                                });
+                                log::info!("Triggered hotkey: {}", label);
+                            }
+                        }
                     }
+                    0 => {
+                        pressed_keys.remove(&event.code);
+                        active_bindings.retain(|binding_id| {
+                            action_bindings
+                                .iter()
+                                .find(|binding| binding.id == *binding_id)
+                                .map(|binding| !binding.chord.matches(&pressed_keys))
+                                .unwrap_or(true)
+                        });
+                    }
+                    _ => {}
                 }
             }
         }
@@ -489,5 +637,34 @@ mod tests {
     fn test_cli_unknown_subcommand() {
         let result = Cli::try_parse_from(["obs-hotkey", "invalid-subcommand"]);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_action_label_lookup() {
+        assert_eq!(action_label("toggle_recording"), "Toggle Recording");
+        assert_eq!(action_label("set_mic_volume"), "Set Mic Volume");
+        assert_eq!(action_label("unknown"), "unknown");
+    }
+
+    #[test]
+    fn test_action_labels_join_combo() {
+        let actions = vec!["toggle_recording".to_string(), "set_mic_volume".to_string()];
+        assert_eq!(action_labels(&actions), "Toggle Recording + Set Mic Volume");
+    }
+
+    #[test]
+    fn test_build_banner_bindings_preserves_combo_label() {
+        let chord = input::KeyChord::parse("ctrl + f1").unwrap();
+        let bindings = vec![ActionBinding {
+            id: "combo:record_and_mic".to_string(),
+            key_name: "ctrl + f1".to_string(),
+            chord,
+            label: "Toggle Recording + Set Mic Volume".to_string(),
+            actions: Vec::new(),
+        }];
+
+        let banner_bindings = build_banner_bindings(&bindings);
+        assert_eq!(banner_bindings.len(), 1);
+        assert_eq!(banner_bindings[0].label, "Toggle Recording + Set Mic Volume");
     }
 }
