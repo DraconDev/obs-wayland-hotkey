@@ -146,16 +146,16 @@ fn validate_config(cfg: &AppConfig) -> anyhow::Result<()> {
             anyhow::bail!("hotkey_combos entries require a non-empty name");
         }
         if combo.key.is_some() && !combo.keys.is_empty() {
-            anyhow::bail!(
-                "hotkey_combo '{}' cannot set both key and keys",
-                combo.name
-            );
+            anyhow::bail!("hotkey_combo '{}' cannot set both key and keys", combo.name);
         }
         if combo.key.is_none() && combo.keys.is_empty() {
             anyhow::bail!("hotkey_combo '{}' must set key or keys", combo.name);
         }
         if combo.actions.is_empty() {
-            anyhow::bail!("hotkey_combo '{}' must include at least one action", combo.name);
+            anyhow::bail!(
+                "hotkey_combo '{}' must include at least one action",
+                combo.name
+            );
         }
     }
 
@@ -250,7 +250,10 @@ mod tests {
         assert_eq!(cfg.hotkey_combos.len(), 1);
         assert_eq!(cfg.hotkey_combos[0].name, "record_and_mic");
         assert_eq!(cfg.hotkey_combos[0].key_spec(), "ctrl + f1");
-        assert_eq!(cfg.hotkey_combos[0].actions, vec!["toggle_recording", "set_mic_volume"]);
+        assert_eq!(
+            cfg.hotkey_combos[0].actions,
+            vec!["toggle_recording", "set_mic_volume"]
+        );
         assert_eq!(cfg.mic_volume, 0.75);
         fs::remove_file(&path).ok();
     }
@@ -294,7 +297,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBiM29PbmlEYjUxWnBYVzMxNDhvaHM1Q1AwbmRKRmlyaUlUV2piVURNTTBFCnpBZnc5UWJ2MTVTdUV2NnRLTFh1ZGNOZ0Uvc3Nmd29KeGJseWErSVNtcDAKLT4gWDI1NTE5IDN3SEJpVmRFbjRNTm5jQ1NjZVQzRkE1dHJCeTByVXJhYkFkZGY3WmEvQUEKdHdZdXVxMHh3ZGlKcE1vd2tvNjVaMnhIbnJPWXF6NmQvUEcwa3FaVEtjWQotPiBYMjU1MTkgUHA1YVE2VitDTHpjN2g3VURENnhOY2pKWmVyTzBycjhnZGZJVUV6SEtYNApEZUljZThOZUhWWkQ2clkxY09tMmtnSE1BeWZwK3VZK050V1JoZitRTUlNCi0+IFgyNTUxOSBtaEN6cEk1WDBCWUNhMnJNVjhKZXNWcWdpbmV2VVB4NlJpVXhxL3ViVDFrCkpZSVJJMkM1WWRyREI0MmpranVVK1YvR01CeWpDSithMTlXUTUveWF5VkUKLT4gWDI1NTE5IDFKKzZOdmh3c3hQY2hhMnIzblZodGdJeVByNmdNdE93VERGTVBTSHIrQjQKWm1LL3h4WXM3aU9zTXpIUTdGRS9sYnZmc01zT3dvb3k1Z1prMCtUTGNVSQotPiBgO19WPS1ncmVhc2UgbUs9fHVvWyBTXUc2cTRyVQpDQ1JsZWVXNkJqL0hRcCtoRngvdlRwUVpNZ0dSYktPcEtlZDRlRTA4YlpKanN1UzExQjFGCi0tLSBubkFvMnZhSTBTOTZZN2JLODZkYTFQUnQ4OFUyUEtCb1hnTTFqOHVhN00wCoOGNIvhqCUwcSXwBLBsOCZfOmf1CBQMiqgA8YZzDYpK3b+koOPYrr67Ux1nza3Kfsn3r2ZekgNkRg==]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSAvSkdTN3ZtMlZWeWRpK3ppOWtJRHRJRG9rQXhTWFVxTXBMU2x0NGFpQndRCjhKLzZhTm5ZNDlWUDZub1FCR2s5OXdoMDJFRUdMTGNKMGlwa2xvVFljZEUKLT4gWDI1NTE5IGR5V1F0MndjRmtqdGVNTW50T1AvU0pvTkdXS0VQYkpQU3Vka3IvMVlNVGMKc0ZUb2VJUHVnZDBJVDQ5TSs0bmRQWjdnYXlHM2RKRlZla1BnbTFBQjBUWQotPiBYMjU1MTkgTmltMGlaT3kwZ0lEZWUvR04vR2VQbG1mS2pzbXlHOVJFc3BGb3p5NVBVcwpXZHlJQkd2M0FPSmFadlViUDhxSk9SUlB0TVV2b1hLcXVWRSszMHZwVVNBCi0+IFgyNTUxOSBRYy94NXZBeXpIZFJiSXpBQ3NDMGc0Vnh2U2RJZWd3Q1BUU09DY1IyS25BCkhSMVV5elY0UkYyR0lVTzlJYmpLRzBpTmdrVlhnYm5tNTZwaHF2LzhXTXMKLT4gWDI1NTE5IGN0UTZ1UlFpSnNvemM5eW5Sb1pOQXF5YlJMK3hzRnEwemk4MTFEajdwMVEKT0xFbGhZWW1iblhZK3RWMmVxbnUvNEN5U3hwTFNNaTlMSlBBa0JaYnc0OAotPiBnIjVuQkd7LWdyZWFzZSBKOyVkISM3IEJlVgo4d1drbmtFUFVKR2drcUwzVGNHaDNUMkRDWnlyM0lEOVJUTXp5dFNhSnhRCi0tLSBrMUdhbm14U2pXMHZDNGpiLzhrd3UrM2Q1cXY0NTRoYjdsaHp1c05KcTBrCkzpsjcMpQRz5UMbTTvCslVXjN2IqWNbnFg2kNbxMHg/FAb9NC8Dco4tQ5ap/5Ih5uRem+4cKaTzWw==]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -306,7 +309,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBvck9Ici9nQTV0dzRENEpqWWFhYWx2MWNVc0x3WUlSRUoxU3c5dTA4MG1zCnRmejc0UEJiajlLWWxCNTVhM2liZ0ZVOHBxRm5idUUwNUxYT01jQWVzZFUKLT4gWDI1NTE5IGc2bWRNeVNXS0tlQUxIdjExeXZzdEZJRWRyR2x5V0I3SzZmQm5iV0hRM0kKWVhFc1RySElkUW8rTWM0Y1pucXhtb2hwWStPblB1bldBZlNuWUFHM09kcwotPiBYMjU1MTkgSERveUhHSFppMjFQek4wUDgzVnNSdFZEcnhKVTRwWnJ6aGF6SjAydzlHZwoxQVhhRkV2THEzZnJaaWl4RjdQeGVOOXZPczFsQkszTGpSQ0FMbkhVcWNRCi0+IFgyNTUxOSBHSUZlVmdPek8vaTNTQzdadXJDYXBUa0ZUaXByUDhsMnpuc014RVpCeVRVCkNtdGJjdC9pSGcyRGhhdEdhdUF1UkN1US9xV3dUZFQ4T2p4N3ZNSSt2c2sKLT4gWDI1NTE5IFNXTklpd3phdWtPY0h0bHRRWXZ3QU55WEQ4RTVWRTVJRFA0dkt0UlV2eVkKUXE2SUsrS2Eyem5aS25PdVViU1kwNlVHR0lFcnVZOUVHa0FBU1cxaDlXawotPiBeYG4tZ3JlYXNlCklVNGhnU0RCelphWThTSWJpT3JYQ1BBNDl0QkRDek1TTHNMSkZRCi0tLSBPdjZnaWpvdkJzQkxHTGtBdHhNaGRaYWt2aytWV1pyZWxWOVFLZkxJaVpFCvs4BXpLBgniFgQKCItDF/n1bY3ZXq+YmQYby4rDmL8D/jMadAW7pt5c3Yc4YRXHOhf5ewlQmvoq04YXsw==]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBsSHZCdWt5ai9yV3RJMVd5S1h0djJ1SUlKQ2tqSGo5dmcrNVZUOHczbmlFCmFxeFVpZEQ2VFBmMjdoR3NrUmlJS2VGM2p2aEZFbW94NkJYYWVxaDJhWGMKLT4gWDI1NTE5IHRyN2ZMMFVjZWNWY0ZLZ3dZNzZycklud29uQjFOczJrMmtoak82TUJsakkKSHpWemRZdmE1WVQwc3laQnlIVTBIRGNpcUpWdHZIN3hUZkxIdjQxejBlOAotPiBYMjU1MTkgdFJDWjI0UzRGWk40cTdjNitxemJWc1ZWYkZEUGt6ejF0MFF1L1hBNCtTNAprWnRvRUhTWGVpUkErMTk0anprQlRwQ1VLcStHSklvRUt6YmFZQTFzc1RjCi0+IFgyNTUxOSBKa1RpV1dpeXRQbzN5Ym5BcWRWWkttOXRBdHEyMG9uNkQzK29BV1NEakNJCjNrOE8zM1pTWEQyc1Zoa0NPblVtZlB3WnFDUUkzcVdDUlRiU05XdmNIMXMKLT4gWDI1NTE5IFNRZ1NjOXpudXBmcWIyV1FsWUdtM0JZMXFqOE5MVFJlcXVxVEtyR3lpVU0KM3M2VmljeFhydUNqV0hORWErbmdtTmgwV1h4Qno4clgzTlNobDZUeWdndwotPiBmdS1fJC1ncmVhc2UgZGk/PiByTHdlKFZoIGcgLGVlfjcsJAo1bDhsVU0zOXE3WmRjNnlzMGZZaFpjWU1jRVIrb3lKRXlNZUJRU3ZRYSt6ZTR0SjlTaTRBd1VHRWEvODdSQXdUCkFvSW5GZ29wK0VMQks1Tko4UTZPZzZvdwotLS0gMVBHaW5oV21pWDNxODFnT1dIT01ZYXdIK0QwNmVqYVlsOHY4NHZRcnNyMAqZH4vqPovQC7fem0LxyjrpIs7lC5Wm/ZPoTvTwu2msx2UdmcZOWcM7hPdls/xICny3L5tI8ISmriB2KfU=]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test2");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");

@@ -103,7 +103,7 @@ impl KeyToken {
     fn new(names: &[&'static str], codes: &[KeyCode]) -> Self {
         Self {
             names: names.to_vec(),
-            codes: codes.iter().map(|code| *code as u16).collect(),
+            codes: codes.iter().map(|code| code.code()).collect(),
         }
     }
 
@@ -238,13 +238,25 @@ pub fn key_name(code: u16) -> Option<String> {
 static KEY_TOKENS: LazyLock<Vec<KeyToken>> = LazyLock::new(|| {
     vec![
         KeyToken::new(&["left ctrl"], &[KeyCode::KEY_LEFTCTRL]),
-        KeyToken::new(&["ctrl", "control"], &[KeyCode::KEY_LEFTCTRL, KeyCode::KEY_RIGHTCTRL]),
+        KeyToken::new(
+            &["ctrl", "control"],
+            &[KeyCode::KEY_LEFTCTRL, KeyCode::KEY_RIGHTCTRL],
+        ),
         KeyToken::new(&["left shift"], &[KeyCode::KEY_LEFTSHIFT]),
-        KeyToken::new(&["shift"], &[KeyCode::KEY_LEFTSHIFT, KeyCode::KEY_RIGHTSHIFT]),
+        KeyToken::new(
+            &["shift"],
+            &[KeyCode::KEY_LEFTSHIFT, KeyCode::KEY_RIGHTSHIFT],
+        ),
         KeyToken::new(&["left alt"], &[KeyCode::KEY_LEFTALT]),
-        KeyToken::new(&["alt", "option"], &[KeyCode::KEY_LEFTALT, KeyCode::KEY_RIGHTALT]),
+        KeyToken::new(
+            &["alt", "option"],
+            &[KeyCode::KEY_LEFTALT, KeyCode::KEY_RIGHTALT],
+        ),
         KeyToken::new(&["left super"], &[KeyCode::KEY_LEFTMETA]),
-        KeyToken::new(&["super", "command", "win"], &[KeyCode::KEY_LEFTMETA, KeyCode::KEY_RIGHTMETA]),
+        KeyToken::new(
+            &["super", "command", "win"],
+            &[KeyCode::KEY_LEFTMETA, KeyCode::KEY_RIGHTMETA],
+        ),
         KeyToken::new(&["left meta"], &[KeyCode::KEY_LEFTMETA]),
         KeyToken::new(&["meta"], &[KeyCode::KEY_LEFTMETA, KeyCode::KEY_RIGHTMETA]),
         KeyToken::new(&["caps lock"], &[KeyCode::KEY_CAPSLOCK]),

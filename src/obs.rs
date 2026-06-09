@@ -79,11 +79,11 @@ impl OBSClient {
             );
         }
         // Resolve host:port with DNS, apply connect timeout
-        let socket_addrs: Vec<SocketAddr> = tcp_addr
-            .to_socket_addrs()?
-            .collect();
+        let socket_addrs: Vec<SocketAddr> = tcp_addr.to_socket_addrs()?.collect();
         let stream = TcpStream::connect_timeout(
-            socket_addrs.first().ok_or_else(|| anyhow::anyhow!("could not resolve '{}'", tcp_addr))?,
+            socket_addrs
+                .first()
+                .ok_or_else(|| anyhow::anyhow!("could not resolve '{}'", tcp_addr))?,
             CONNECT_TIMEOUT,
         )?;
         stream.set_read_timeout(Some(READ_TIMEOUT))?;
@@ -181,23 +181,23 @@ impl OBSClient {
             }
         };
         // Send the request; if the connection is dead, clear it so the next call reconnects.
-    if let Err(e) = conn.ws.send(tungstenite::Message::Text(json.into())) {
-        if let tungstenite::Error::Io(ref io) = e {
-            match io.kind() {
-                std::io::ErrorKind::BrokenPipe
-                | std::io::ErrorKind::ConnectionReset
-                | std::io::ErrorKind::UnexpectedEof => {
-                    self.connected.store(false, Ordering::SeqCst);
-                    *guard = None;
+        if let Err(e) = conn.ws.send(tungstenite::Message::Text(json.into())) {
+            if let tungstenite::Error::Io(ref io) = e {
+                match io.kind() {
+                    std::io::ErrorKind::BrokenPipe
+                    | std::io::ErrorKind::ConnectionReset
+                    | std::io::ErrorKind::UnexpectedEof => {
+                        self.connected.store(false, Ordering::SeqCst);
+                        *guard = None;
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
+            return Err(anyhow::anyhow!("WebSocket send error: {:?}", e));
         }
-        return Err(anyhow::anyhow!("WebSocket send error: {:?}", e));
-    }
 
-    // Keep lock while reading response to prevent connection close race.
-    let resp = self.read_response_guarded(&mut guard)?;
+        // Keep lock while reading response to prevent connection close race.
+        let resp = self.read_response_guarded(&mut guard)?;
         if let Some(status) = resp.get("d").and_then(|d| d.get("requestStatus")) {
             if !status
                 .get("result")
@@ -210,7 +210,10 @@ impl OBSClient {
         Ok(())
     }
 
-    fn read_response_guarded(&self, guard: &mut std::sync::MutexGuard<'_, Option<Conn>>) -> anyhow::Result<serde_json::Value> {
+    fn read_response_guarded(
+        &self,
+        guard: &mut std::sync::MutexGuard<'_, Option<Conn>>,
+    ) -> anyhow::Result<serde_json::Value> {
         let conn = match guard.as_mut() {
             Some(conn) => conn,
             None => anyhow::bail!("not connected to OBS"),

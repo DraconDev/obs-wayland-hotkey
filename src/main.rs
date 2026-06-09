@@ -88,9 +88,7 @@ fn action_label(action: &str) -> &str {
 }
 
 fn is_known_action(action: &str) -> bool {
-    ACTION_DEFINITIONS
-        .iter()
-        .any(|(name, _)| *name == action)
+    ACTION_DEFINITIONS.iter().any(|(name, _)| *name == action)
 }
 
 fn action_labels(actions: &[String]) -> String {
@@ -174,28 +172,16 @@ fn build_action_map(ctx: &ActionContext) -> HashMap<&'static str, Arc<dyn Fn() +
     ])
 }
 
-fn build_action_bindings(
-    cfg: &config::AppConfig,
-    ctx: &ActionContext,
-) -> Vec<ActionBinding> {
+fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<ActionBinding> {
     let action_map = build_action_map(ctx);
     let mut bindings = Vec::new();
 
     let single_action_bindings = [
-        (
-            "toggle_recording",
-            cfg.hotkeys.toggle_recording.as_str(),
-        ),
+        ("toggle_recording", cfg.hotkeys.toggle_recording.as_str()),
         ("toggle_pause", cfg.hotkeys.toggle_pause.as_str()),
-        (
-            "toggle_streaming",
-            cfg.hotkeys.toggle_streaming.as_str(),
-        ),
+        ("toggle_streaming", cfg.hotkeys.toggle_streaming.as_str()),
         ("screenshot", cfg.hotkeys.screenshot.as_str()),
-        (
-            "toggle_mute_mic",
-            cfg.hotkeys.toggle_mute_mic.as_str(),
-        ),
+        ("toggle_mute_mic", cfg.hotkeys.toggle_mute_mic.as_str()),
         (
             "toggle_studio_mode",
             cfg.hotkeys.toggle_studio_mode.as_str(),
@@ -386,8 +372,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
     );
 
     // Ctrl-C cleanly exits the event loop
-    ctrlc::set_handler(|| {})
-        .expect("error setting Ctrl-C handler");
+    ctrlc::set_handler(|| {}).expect("error setting Ctrl-C handler");
 
     let mut pressed_keys: HashSet<u16> = HashSet::new();
     let mut active_bindings: HashSet<String> = HashSet::new();
@@ -665,6 +650,9 @@ mod tests {
 
         let banner_bindings = build_banner_bindings(&bindings);
         assert_eq!(banner_bindings.len(), 1);
-        assert_eq!(banner_bindings[0].label, "Toggle Recording + Set Mic Volume");
+        assert_eq!(
+            banner_bindings[0].label,
+            "Toggle Recording + Set Mic Volume"
+        );
     }
 }

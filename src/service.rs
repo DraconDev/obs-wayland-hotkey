@@ -23,7 +23,10 @@ pub fn in_input_group() -> bool {
     let c_user = match std::ffi::CString::new(user.clone()) {
         Ok(c) => c,
         Err(_) => {
-            log::warn!("user name '{}' contains a null byte — cannot check groups", user);
+            log::warn!(
+                "user name '{}' contains a null byte — cannot check groups",
+                user
+            );
             return false;
         }
     };
@@ -118,7 +121,11 @@ pub fn run_setup(config_path: &str) {
     println!("  {}  obs-hotkey setup{}", BOLD, RESET);
     println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     println!();
-    println!("  {:<14} {}", "Installing:", key(&format!("v{}", env!("CARGO_PKG_VERSION"))));
+    println!(
+        "  {:<14} {}",
+        "Installing:",
+        key(&format!("v{}", env!("CARGO_PKG_VERSION")))
+    );
     println!("  {:<14} {}", "Binary:", muted(&exe_path));
 
     // Show currently installed/running version if any
@@ -126,7 +133,11 @@ pub fn run_setup(config_path: &str) {
     if unit_path.exists() {
         if let Ok(existing) = std::fs::read_to_string(&unit_path) {
             if let Some(line) = existing.lines().find(|l| l.starts_with("ExecStart=")) {
-                println!("  {:<14} {}", "Replacing:", muted(line.trim_start_matches("ExecStart=")));
+                println!(
+                    "  {:<14} {}",
+                    "Replacing:",
+                    muted(line.trim_start_matches("ExecStart="))
+                );
             }
         }
     }
@@ -137,7 +148,8 @@ pub fn run_setup(config_path: &str) {
 
     // Ensure config directory and default config exist before starting the
     // service, so the daemon doesn't fail on first run due to missing paths.
-    let cfg_dir = std::path::Path::new(&config_path).parent()
+    let cfg_dir = std::path::Path::new(&config_path)
+        .parent()
         .unwrap_or_else(|| std::path::Path::new("."));
     if let Err(e) = crate::config::ensure_config(cfg_dir, std::path::Path::new(&config_path)) {
         log::warn!("Could not ensure config exists: {}", e);
@@ -211,11 +223,7 @@ pub fn run_setup(config_path: &str) {
         }
         Ok(output) => {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            println!(
-                "  {} Service failed to start: {}",
-                err(""),
-                stderr.trim()
-            );
+            println!("  {} Service failed to start: {}", err(""), stderr.trim());
         }
         Err(e) => {
             println!("  {} Could not start service: {}", err(""), e);
@@ -281,7 +289,11 @@ pub fn run_teardown(purge: bool) {
     if unit_path.exists() {
         if let Ok(existing) = std::fs::read_to_string(&unit_path) {
             if let Some(line) = existing.lines().find(|l| l.starts_with("ExecStart=")) {
-                println!("  {:<14} {}", "Service:", muted(line.trim_start_matches("ExecStart=")));
+                println!(
+                    "  {:<14} {}",
+                    "Service:",
+                    muted(line.trim_start_matches("ExecStart="))
+                );
             }
         }
     }
@@ -314,18 +326,29 @@ pub fn run_teardown(purge: bool) {
             .collect();
         if !pids.is_empty() {
             println!();
-            println!("  {} Stopping {} running process(es)...", heading("▶"), pids.len());
+            println!(
+                "  {} Stopping {} running process(es)...",
+                heading("▶"),
+                pids.len()
+            );
             for pid in &pids {
                 let _ = Command::new("kill").arg(format!("{}", pid)).output();
             }
             std::thread::sleep(std::time::Duration::from_millis(500));
             // Force kill any that are still alive
             for pid in &pids {
-                let _ = Command::new("kill").arg("-9").arg(format!("{}", pid)).output();
+                let _ = Command::new("kill")
+                    .arg("-9")
+                    .arg(format!("{}", pid))
+                    .output();
             }
         }
         if stale_local_bin.exists() {
-            println!("  {} Removing stale binary: {}", heading("▶"), stale_local_bin.display());
+            println!(
+                "  {} Removing stale binary: {}",
+                heading("▶"),
+                stale_local_bin.display()
+            );
             std::fs::remove_file(&stale_local_bin).ok();
         }
     }
@@ -429,7 +452,7 @@ fn probe_obs_websocket(port: u16) -> bool {
     match ws.read() {
         Ok(msg) => {
             let result = msg.to_text().map(|t| t.starts_with("{")).unwrap_or(false);
-            let _ = ws.close(None);  // Send proper WebSocket close frame
+            let _ = ws.close(None); // Send proper WebSocket close frame
             result
         }
         Err(_) => false,
@@ -499,7 +522,12 @@ pub fn run_status(config_path: &str) {
     if cfg_exists {
         println!("  {:<14}  {}  {}", "Config:", ok(""), muted(&config_path));
     } else {
-        println!("  {:<14}  {}  ({})", "Config:", err(""), muted(&config_path));
+        println!(
+            "  {:<14}  {}  ({})",
+            "Config:",
+            err(""),
+            muted(&config_path)
+        );
     }
 
     // Config dir row
