@@ -104,7 +104,7 @@ impl KeyToken {
     }
 
     fn matches_name(&self, name: &str) -> bool {
-        self.names.iter().any(|known| *known == name)
+        self.names.contains(&name)
     }
 
     fn matches_any_pressed(&self, pressed: &HashSet<u16>) -> bool {
