@@ -653,4 +653,25 @@ mod tests {
             "Toggle Recording + Set Mic Volume"
         );
     }
+
+    #[test]
+    fn test_run_actions_executes_combo_actions() {
+        let count = Arc::new(AtomicUsize::new(0));
+        let first = Arc::new({
+            let count = count.clone();
+            move || {
+                count.fetch_add(1, Ordering::SeqCst);
+            }
+        }) as Arc<dyn Fn() + Send + Sync>;
+        let second = Arc::new({
+            let count = count.clone();
+            move || {
+                count.fetch_add(1, Ordering::SeqCst);
+            }
+        }) as Arc<dyn Fn() + Send + Sync>;
+
+        run_actions(vec![first, second]);
+
+        assert_eq!(count.load(Ordering::SeqCst), 2);
+    }
 }
