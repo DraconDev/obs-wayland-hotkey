@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 mod ansi;
 mod banner;
 mod config;
+mod http_api;
 mod input;
 mod notify;
 mod obs;

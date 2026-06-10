@@ -555,7 +555,7 @@ pub fn run_status(config_path: &str) {
         println!("  {:<14}  {}  (is OBS running?)", "OBS WS:", err("✗"));
     }
 
-    if let Ok(cfg) = &cfg {
+    if let Ok(Some(cfg)) = &cfg {
         match OBSClient::new(ws_url.clone()).get_status(&cfg.mic_name) {
             Ok(status) => {
                 println!(
@@ -706,11 +706,19 @@ pub fn run_doctor(config_path: &str) -> anyhow::Result<()> {
     };
 
     let combo_validation = crate::validate_combo_actions(&cfg);
-    print_check("Combo actions", combo_validation.is_ok(), &combo_validation.as_ref().map(|_| "ok").unwrap_or_else(|e| e.to_string()));
+    let combo_detail: String = match combo_validation.as_ref() {
+        Ok(_) => "ok".to_string(),
+        Err(e) => e.to_string(),
+    };
+    print_check("Combo actions", combo_validation.is_ok(), &combo_detail);
     failed |= combo_validation.is_err();
 
     let chord_validation = crate::validate_configured_chords(&cfg);
-    print_check("Hotkey chords", chord_validation.is_ok(), &chord_validation.as_ref().map(|_| "ok").unwrap_or_else(|e| e.to_string()));
+    let chord_detail: String = match chord_validation.as_ref() {
+        Ok(_) => "ok".to_string(),
+        Err(e) => e.to_string(),
+    };
+    print_check("Hotkey chords", chord_validation.is_ok(), &chord_detail);
     failed |= chord_validation.is_err();
 
     let input_grp = in_input_group();

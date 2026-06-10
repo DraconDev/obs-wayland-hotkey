@@ -38,7 +38,7 @@ struct Conn {
     ws: tungstenite::WebSocket<TcpStream>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ObsStatus {
     pub stream_active: bool,
     pub stream_timecode: Option<String>,
