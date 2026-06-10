@@ -176,9 +176,8 @@ These should remain out of scope unless the product direction changes.
 1. Expand named actions from Companion/CLI patterns: source visibility, input volume/fade, media, virtual camera, profile, scene collection, transition helpers.
 2. Add `custom OBS request` action and `/obs/request` endpoint.
 3. Enrich `GET /status` into Companion-friendly feedback JSON.
-4. Add named macros / reusable sequences.
+4. Document macro integration recipes for Companion, Touch Portal, Home Assistant, and MIDI/Touch Portal bridges.
 5. Add `list` discovery helpers.
-6. Write integration recipes for Companion, Touch Portal, Home Assistant, and MIDI/Touch Portal bridges.
 
 ## Bottom line
 
