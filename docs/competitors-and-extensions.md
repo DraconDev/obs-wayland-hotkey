@@ -100,7 +100,8 @@ These are high-value, low-risk extensions grounded in what similar programs alre
    - Justification: Companion's Custom Command and Touch Portal Custom Request are high-value escape hatches. This avoids maintaining every OBS request as a first-class obs-hotkey action.
 
 3. **Make status feedback useful for buttons**
-   - Extend `GET /status` to include stable booleans and timecodes for recording, streaming, replay, current scene, preview scene if available, studio mode, virtual camera, profile, scene collection, disk space, FPS/CPU/memory, and input mute/volume.
+   - **Implemented:** `GET /status` now returns a feedback-friendly `obs` envelope with stable nested objects for recording, streaming, replay buffer, current scene, and configured input, while retaining the legacy `status` object.
+   - **Still worth extending:** add preview scene, studio mode, virtual camera, profile, scene collection, disk space, FPS/CPU/memory, source visibility, and input mute/volume for richer feedbacks.
    - Justification: Companion's value is not just actions; it is feedbacks and variables. obs-hotkey's HTTP listener should be Companion-friendly.
 
 4. **Document macro integration recipes**
@@ -178,7 +179,7 @@ These should remain out of scope unless the product direction changes.
 
 1. Expand named actions from Companion/CLI patterns: source visibility, input volume/fade, media, virtual camera, profile, scene collection, transition helpers.
 2. Add `custom OBS request` action and `/obs/request` endpoint.
-3. Enrich `GET /status` into Companion-friendly feedback JSON.
+3. Extend the implemented `GET /status` feedback envelope with preview scene, studio mode, virtual camera, profile, scene collection, disk space, FPS/CPU/memory, source visibility, and input mute/volume.
 4. Document macro integration recipes for Companion, Touch Portal, Home Assistant, and MIDI/Touch Portal bridges.
 5. Add `list` discovery helpers.
 
