@@ -251,6 +251,14 @@ fn validate_combo_actions(cfg: &config::AppConfig) -> anyhow::Result<()> {
                     combo.name
                 );
             }
+            if item.name() == "switch_scene"
+                && item.scene().map(str::trim).unwrap_or("").is_empty()
+            {
+                anyhow::bail!(
+                    "hotkey_combo '{}' uses switch_scene without a scene name",
+                    combo.name
+                );
+            }
         }
 
         let needs_mic = combo
@@ -943,8 +951,10 @@ mod tests {
             name: "bad".to_string(),
             key: Some("f1".to_string()),
             keys: Vec::new(),
-            actions: vec!["not_real".to_string()],
+            actions: vec![ActionItem::Bare("not_real".to_string())],
             action_delays_ms: Vec::new(),
+            release_actions: Vec::new(),
+            release_action_delays_ms: Vec::new(),
         });
 
         let result = validate_combo_actions(&cfg);
@@ -959,15 +969,19 @@ mod tests {
             name: "dup".to_string(),
             key: Some("f1".to_string()),
             keys: Vec::new(),
-            actions: vec!["toggle_recording".to_string()],
+            actions: vec![ActionItem::Bare("toggle_recording".to_string())],
             action_delays_ms: Vec::new(),
+            release_actions: Vec::new(),
+            release_action_delays_ms: Vec::new(),
         });
         cfg.hotkey_combos.push(config::HotkeyCombo {
             name: "dup".to_string(),
             key: Some("f2".to_string()),
             keys: Vec::new(),
-            actions: vec!["toggle_streaming".to_string()],
+            actions: vec![ActionItem::Bare("toggle_streaming".to_string())],
             action_delays_ms: Vec::new(),
+            release_actions: Vec::new(),
+            release_action_delays_ms: Vec::new(),
         });
 
         let result = validate_combo_actions(&cfg);
@@ -982,12 +996,108 @@ mod tests {
             name: "record_and_mic".to_string(),
             key: Some("ctrl + f1".to_string()),
             keys: Vec::new(),
-            actions: vec!["toggle_recording".to_string(), "set_mic_volume".to_string()],
+            actions: vec![
+                ActionItem::Bare("toggle_recording".to_string()),
+                ActionItem::Bare("set_mic_volume".to_string()),
+            ],
             action_delays_ms: Vec::new(),
+            release_actions: Vec::new(),
+            release_action_delays_ms: Vec::new(),
         });
 
         let result = validate_combo_actions(&cfg);
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_combo_actions_rejects_release_mic_volume_without_mic_name() {
+        let mut cfg = config::default_config();
+        cfg.hotkey_combos.push(config::HotkeyCombo {
+            name: "push_to_mute".to_string(),
+            key: Some("f1".to_string()),
+            keys: Vec::new(),
+            actions: vec![ActionItem::Bare("toggle_recording".to_string())],
+            action_delays_ms: Vec::new(),
+            release_actions: vec![ActionItem::Bare("set_mic_volume".to_string())],
+            release_action_delays_ms: Vec::new(),
+        });
+
+        let result = validate_combo_actions(&cfg);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_combo_actions_rejects_switch_scene_without_scene_name() {
+        let mut cfg = config::default_config();
+        cfg.hotkey_combos.push(config::HotkeyCombo {
+            name: "to_scene".to_string(),
+            key: Some("f1".to_string()),
+            keys: Vec::new(),
+            actions: vec![ActionItem::Detailed {
+                action: "switch_scene".to_string(),
+                scene: None,
+            }],
+            action_delays_ms: Vec::new(),
+            release_actions: Vec::new(),
+            release_action_delays_ms: Vec::new(),
+        });
+
+        let result = validate_combo_actions(&cfg);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_combo_actions_accepts_release_actions() {
+        let mut cfg = config::default_config();
+        cfg.hotkey_combos.push(config::HotkeyCombo {
+            name: "push_to_talk".to_string(),
+            key: Some("f1".to_string()),
+            keys: Vec::new(),
+            actions: vec![ActionItem::Bare("toggle_recording".to_string())],
+            action_delays_ms: Vec::new(),
+            release_actions: vec![ActionItem::Bare("toggle_recording".to_string())],
+            release_action_delays_ms: Vec::new(),
+        });
+
+        let result = validate_combo_actions(&cfg);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_cli_action_subcommand() {
+        let cli = Cli::try_parse_from([
+            "obs-hotkey",
+            "action",
+            "toggle_recording",
+        ])
+        .unwrap();
+        match cli.command {
+            Some(Commands::Action { name, scene, .. }) => {
+                assert_eq!(name, "toggle_recording");
+                assert!(scene.is_none());
+            }
+            _ => panic!("expected Action subcommand"),
+        }
+    }
+
+    #[test]
+    fn test_cli_action_subcommand_with_scene() {
+        let cli = Cli::try_parse_from([
+            "obs-hotkey",
+            "action",
+            "switch_scene",
+            "--scene",
+            "Gaming",
+        ])
+        .unwrap();
+        match cli.command {
+            Some(Commands::Action { name, scene, .. }) => {
+                assert_eq!(name, "switch_scene");
+                assert_eq!(scene.as_deref(), Some("Gaming"));
+            }
+            _ => panic!("expected Action subcommand"),
+        }
     }
 }

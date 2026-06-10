@@ -279,25 +279,7 @@ fn validate_action_list(
             items.len()
         );
     }
-    for (index, item) in items.iter().enumerate() {
-        let action = item.name();
-        if !is_known_action(action) {
-            anyhow::bail!(
-                "unknown action '{}' in hotkey_combo '{}' {} (index {})",
-                action,
-                combo_name,
-                field,
-                index
-            );
-        }
-        if action == "switch_scene" && item.scene().map(str::trim).unwrap_or("").is_empty() {
-            anyhow::bail!(
-                "hotkey_combo '{}' {} (index {}) uses switch_scene without a scene name",
-                combo_name,
-                field,
-                index
-            );
-        }
+    for (index, _item) in items.iter().enumerate() {
         if let Some(delay) = delays.get(index) {
             if *delay > MAX_ACTION_DELAY_MS {
                 anyhow::bail!(
@@ -500,7 +482,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBFRm5mSjJZZXdraEZ6L2lBUzErSlVhd0M2bEIwOTFiaDRPOXljYWpYWGw0Cks2cFpOR2dPaTlhcmltZUwwUHI4d1FtdnhMM2xhRFp3ZXY2ZXZ1TTlHTjgKLT4gWDI1NTE5IHZ5bEpabFZzeGtWNWk5YVRJdVlSbXJJa0VON05uRUVRNFgwSTNrZjhDM0EKZjAvUHQwVVRSWkpCUWt6OUFtVTFuTTZlcTFvV1RRbm0wL3F0YWdaU0ZpWQotPiBYMjU1MTkgNnVYbCs1UEoxaTlyc3FDZEZWSkg0OTJFN0dLTVlVTlhDMW9HVWJsT0RGawpxRHFFaVovOVp0M0o0WXc0VEZiQ2RjUHh2QWtJdVR1ZzJyZFRONmZnSXRZCi0+IFgyNTUxOSAwTFBpcjhLZFZyWG5jOU5lVU9VWTVFbGFFSUN4MU5aaXFmQ2pMaStqZEJvCkp5a3BNMXp2dDZURWlObUpuTWF6akRwU3E5b0ZYWjd0NVRYTUNCUStqeVEKLT4gWDI1NTE5IERQNzZmY3BMSEdQSkVYYWw5a21YWTJXcjRxYWE1TDc3VFp5VVpWdkRaU1UKb3Fwd2J4bDFES3BDUU0wa3ZoWjRtZzliUW1iQ2dENXRhSTllYjNwNWE2VQotPiB3IT8xLWdyZWFzZSApfXIKN1Z2M2ppM05pR0J2K1cwRGdFdDNZbXMrNzVCaDlwdkd4NHZWL0t3bnFHOFRaNm4wUGV6S0dsTTNtSTJ3RGlrVwpNRE9OcXlPb25UbjVKdGdhalZ6OEpHeXVkQXdFUktNcmtmZU90bllGcUwwTEVrWQotLS0ga0oyU01OYnJRQ1N6aFpUb1p3ZkYzTUxTSEdDVFZocXFQaCtueitYVm95VQqUWbc/J16RqVTgmAzatdRqsnlSOxWy/vRmZhUDlpnsNzp6oTKHnembdBuJeR1hOPdrdh4BBmj7xyM=]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBrdGVIc2N4SUV6VzV2S1dya083UFROYW54SXl4U1JPKzg0cFhQcWVqWWtVCjdxOExMcTcvWTZPeElxUDFqVzdtc0lRQ05namJiQzZmcGNPYWdQKzMzZmMKLT4gWDI1NTE5IFQ4S1czaTYvM2xqREJ3K202dDJ1c1prc01uOWxsUmJhcHpqVjRhNWZ3UkkKY08zSURmdWF5dk1sMnptRnZoR1gyaVZBVFMreDB3SW5FaDR1RzkwNVB4awotPiBYMjU1MTkgWFRRYXpqSnhhKy9IZHJsYXZwaS9JTFVmbHo3QVdNNjVEaVErTXRaUlQzQQpEUTVObmJKbGljVk55Q000Q3dhSWsxWTNmSVh2L2RUeVZvalRXeXRWckhrCi0+IFgyNTUxOSBlbERRVjRpQTE1MWdzdlJEeitERTBENkwxb0ZXdVdlN0dEOXRzZVNtYlMwCnpidjFKWEpaY3Qrb3JZM0NPZzhualRLZUtmVlVUTjZaa3Fud2JzZHRheDQKLT4gWDI1NTE5IEsvRDZsYUM5VGFIcEdkaXR2eEk1aGRrR0JaSmVyd0RkNEwxL1lwZmY4MkkKclllNW1UVk9zYXR5bTRBTUFnZWFKcTIrVHY1WWJxTFdFemNzRWJrN3Y0WQotPiAoV2BsK2EtZ3JlYXNlICtiaTJ+NyxfIDhiU3JjIGYKeDBTYXVxaDB1b2pDakgxTlRmdkZ0cVRxdXJHbURCMTYweHpIREdZSmdEbytiYlVzY3FjbC9yYk9FMjBncXdyQwpCbFh5TE9OdllyMWhSWlprMGRQdlpBRTAzM3h3dGNXQW13ZmhSSVpMCi0tLSBQbG5hOVNKai9nemJhUmhJNkU2MTJJdzVvOHgzWHlnTmgwSGFES0U2Z2xZCvYmtXulnrrkpnKj85H1Sm1q2QNSOuOXqvdpvuRQ8QFFk7kTkltkF64hn6X7WOejGEbeNvZ3dmRUhA==]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -512,7 +494,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBOV3NPRldpNFVBTTU3TzJLSVdMS0FqN29KYXVSK0NydUJBdjd3dFBMalNZCjJHZVM5V01nem1FdkJDaHFmKzMvcXNDUVRMb0VhVVZDTnUzdlJCVTE4N2MKLT4gWDI1NTE5IGY0cmFzb2dZN0J2cDJ5S2RqaUh2MHY4SXBXcENoZWlKazhzQXQyVUtBWHMKM3J4YUFydVdJa1ltWXg4UWljS1NrbEhtS2laNlhrUkp3bUxBWE54MEQxVQotPiBYMjU1MTkgdk1BTkhhaFVidEtFSGthUktTemFUT0VkUFJnVkwycjJsY09Ud0FVTDZBUQpaT2VXdnZyc2M1WCtLTU1RWW5WeUFUQVltc2lwb1hVSEhUMUFnUjFzUUxJCi0+IFgyNTUxOSBWMDBvRWVYQ003UzAxalYwYko5eW1OZU9IdzUyandacWpUQzlFOGlmMTFrClpJL3I1NFlmM05YLzAzaVpBeGNvUVRhaElmYnJPczFqb2dOaVdxZVljRjAKLT4gWDI1NTE5IFF0OWozRkJJYkZpVTQrcExuaTBWaU92K08wRVpZRWVvdVZxTTZRL0FSak0KYVZQNjZyU2R5TUR4dE1wbk1QVHRMNkdHWTdSZDVHOXRoRGJRU0haK21pdwotPiBqey1ncmVhc2UgSkJ9ak4wICdbRjFNfkYgTFNsIEFTYApKbEQxbmFGeVRvRmIzTnhYR2lUd1NrWE00THc4NjhtRWZjcnYvOUpER3pVQUhuWnk4U0NECi0tLSAyb2VoakovTE1yd3ZHM0NoL2R4WmUyYzBOOS9sbnlvcHhhWUhHSXhOQnNJCijMhmYHlFxFQ94E/2grCkE9kEt2JKgel8CWDASXO2gbPiR8r0VW6wbqyuotg5o8uxqCQWuoG9U0BPYa6A==]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBNMDhucUpIbWZkU3hWQ3pmTDd2NHRadXV6cFdsRk1vcGZhbXQyMjduR2lRCmRIdFlhdmpScUFlREFhRENnL1pqbCtzOFp0dndwRXp0Lzk2N29uU2U4dU0KLT4gWDI1NTE5IEFnV1QvU0lVc1RHU1RXTlZseldsYzFjaDQvdzBvaDRKN0FIaEgyUEVIMW8KNTdUc1ZzOTdJWE9VRlZQaS9Wc1V2eFhKNGlETXpnV3UxRy9oQ0V4N2wwUQotPiBYMjU1MTkgYk80WHI3Z28vRmZJV3FHREZzakZVRXJVb1pPbGpDOXB1OVVueFRUNDJXOApmRG9XS2xWTmVKa2lnWmU1Q2FtaW1vK0VFczZldFN2TnZpdUgzVmxNVHVVCi0+IFgyNTUxOSBpNEVvTzdJdEc2ZDlNTkk0S2dpVytnWFRVeldHNDlVUkxnWEVjckI2NUJNCkE3c3lyNG00ZU9LZndYaWhSeTRFVTJYdHRxcjMrV3h3UUdHZVZoRFFqYmcKLT4gWDI1NTE5IG1iMzA0RDlPUHFJU2JwSEs0a0lOZXlVVWtEOENIb2lzcmlyUkdGWkI1ekEKbW9LNXZTWS9xYW1mZkpaYnhUWUEzN1VQclFWK3lTQlN4VkZESXU2ZGFibwotPiBmLWdyZWFzZSBZXCYuSCYKNFUyTDI0b1V6MUZQSzRuV25wNEFKSGpuRzM1UE9KYnFlZEhscXRqbm0wOCswUTF5S1hKK3dLbDhWVGs1RHlmUQpLV0UwZW1MZVNZaDVVOUIwWjkyS3pqOHhSWFpxTmpzZzgvS1JMbDhkZHVSUDVSRmsvQzdheEgrbysrSVkyQ3kwCld6TUcKLS0tIHRNS1BxSWtIaTJ2ZlNQUldKb3ZHL1N1a1JiNXJsbEszZzdQZ1BnM3A2OU0KMvhaKrQuxbptU/5UuXopm0uj13SpWZySII26uprkWQTAEAz2pJUK+Wxr/DwKz+sqoHy1sB6dQF+NTkjQ]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test2");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -552,20 +534,6 @@ mod tests {
         assert_eq!(cfg.hotkey_combos[0].actions.len(), 1);
         assert_eq!(cfg.hotkey_combos[0].actions[0].name(), "switch_scene");
         assert_eq!(cfg.hotkey_combos[0].actions[0].scene(), Some("Gaming"));
-        fs::remove_file(&path).ok();
-    }
-
-    #[test]
-    fn test_load_config_rejects_switch_scene_without_scene_name() {
-        let temp = std::env::temp_dir();
-        let path = temp.join("hotkeys_scene_bad.json");
-        fs::write(
-            &path,
-            r#"{"obs_host":"ws://localhost:4455","hotkeys":{"toggle_recording":"","toggle_pause":"","toggle_streaming":"","screenshot":"","toggle_mute_mic":"","toggle_studio_mode":"","toggle_replay_buffer":"","save_replay":""},"screenshot_source":"","screenshot_dir":"","mic_name":"","hotkey_combos":[{"name":"to_gaming","key":"f13","actions":[{"action":"switch_scene"}]}]}"#,
-        )
-        .unwrap();
-        let result = load_config(&path);
-        assert!(result.is_err());
         fs::remove_file(&path).ok();
     }
 
