@@ -379,7 +379,11 @@ pub(crate) fn validate_combo_actions(cfg: &config::AppConfig) -> anyhow::Result<
                 && is_known_action(item.name())
                 && item.scene().map(str::trim).unwrap_or("").is_empty()
             {
-        }
+                anyhow::bail!(
+                    "hotkey_combo '{}' uses switch_scene without a scene name",
+                    combo.name
+                );
+            }
 
         let needs_mic = combo
             .actions
