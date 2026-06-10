@@ -28,6 +28,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Existing single-action hotkeys remain backward-compatible and can also use chord syntax.
 
+### Added (Tier 1 Observability)
+- `obs-hotkey doctor` subcommand that runs a startup diagnostic checklist (config, combos, chords, input group, keyboards, OBS WebSocket, notify, http).
+- Richer `obs-hotkey status` output: it now also queries OBS for recording / streaming / replay buffer status, current program scene, and mic mute + volume.
+- Desktop notification on every action trigger (configurable command, defaults to `notify-send`).
+- `obs-hotkey action <name>` now also fires the configured desktop notification.
+- Optional localhost-only HTTP listener (`http` config block) exposing `GET /health`, `GET /status`, `POST /actions`, and `POST /actions/<name>` for Companion / Touch Portal / Home Assistant / MIDI-controller bridges.
+- HTTP listener supports an optional `token`; non-loopback binds require a token; `127.0.0.1` binds are accepted without a token for local automation.
+- New `docs/tier1-observability.md` describing the Tier 1 design, behavior, and safety boundaries.
+
+### Changed (Tier 1 Observability)
+- `obs-hotkey status` now reports the live OBS state when reachable, and prints a single-line failure summary when OBS is offline.
+
 ## [1.0.56] - 2026-05-20
 
 ### Added
