@@ -262,6 +262,27 @@ fn run_http_action(
     }
 }
 
+fn run_http_macro(
+    macro_name: String,
+    app_cfg: &AppConfig,
+    ctx: &ActionContext,
+    notify_cfg: &NotifyConfig,
+) -> HttpResponse {
+    match crate::run_macro_by_name(&macro_name, ctx, app_cfg) {
+        Ok(()) => {
+            notify::send_notification(notify_cfg, &format!("HTTP macro {} triggered", macro_name));
+            HttpResponse {
+                status: 200,
+                body: json!({"ok": true, "message": format!("macro {} triggered", macro_name)}),
+            }
+        }
+        Err(e) => HttpResponse {
+            status: 400,
+            body: json!({"ok": false, "error": e.to_string()}),
+        },
+    }
+}
+
 fn write_response(
     stream: &mut std::net::TcpStream,
     status: u16,

@@ -617,7 +617,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         mic_volume: cfg.mic_volume,
     };
 
-    http_api::spawn(cfg.http.clone(), ctx.clone(), cfg.notify.clone());
+    http_api::spawn(cfg.http.clone(), cfg.clone(), ctx.clone(), cfg.notify.clone());
 
     let action_bindings = build_action_bindings(&cfg, &ctx);
     let banner_bindings = build_banner_bindings(&action_bindings);
