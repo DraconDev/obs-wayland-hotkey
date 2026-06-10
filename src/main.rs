@@ -57,7 +57,9 @@ enum Commands {
         about = "Trigger a single OBS action or named macro once, without running the daemon. Useful for scripts and systemd timers."
     )]
     Action {
-        #[arg(help = "Action or macro name, e.g. toggle_recording, switch_scene, countdown_record")]
+        #[arg(
+            help = "Action or macro name, e.g. toggle_recording, switch_scene, countdown_record"
+        )]
         name: String,
         #[arg(long = "scene", help = "Scene name, required for switch_scene")]
         scene: Option<String>,
