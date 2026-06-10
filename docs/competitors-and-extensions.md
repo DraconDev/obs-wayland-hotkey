@@ -61,7 +61,7 @@ These tools are the closest functional cousins to `obs-hotkey action`, but they 
 
 1. **Broad OBS action library** — CLIs and Companion expose source visibility, filter visibility/settings, input volume/fade, media controls, virtual camera, profiles, scene collections, transitions, recording split/chapter, and custom OBS requests.
 2. **Feedbacks and variables** — Companion maintains button feedbacks, audio meters, disk-space feedback, recording/streaming timecodes, scene active/preview state, source visibility, and media status.
-3. **Sequences/macros** — MIDItoOBS allows multiple actions on one button; obs-hotkey has action combos, but not named reusable macros or conditional sequences.
+3. **Sequences/macros** — MIDItoOBS allows multiple actions on one button; obs-hotkey has action combos and now has named reusable macros, but still avoids conditional sequences.
 4. **Config discovery and ergonomics** — CLIs list scenes/items/sources/inputs/filters; obs-hotkey currently requires the user to know names and edit JSON.
 5. **Integration surfaces** — Companion, Touch Portal, Stream Deck, MIDI, and CLIs all need either direct OBS WebSocket or a simple HTTP/JSON bridge. obs-hotkey now has a Tier 1 HTTP listener, but it is still minimal.
 6. **Diagnostics** — obs-hotkey's `doctor` is newer than most general CLIs; keep it as a differentiator.
@@ -78,11 +78,11 @@ As of this repo, obs-hotkey already has:
 - `release_actions` and `release_action_delays_ms` for push-to-release patterns.
 - `switch_scene` with a per-combo `scene` parameter.
 - `allowed_devices` for multi-keyboard setups.
-- `obs-hotkey action <name>` one-shot CLI.
+- `obs-hotkey action <name>` one-shot CLI, including named macro invocation.
 - Richer `obs-hotkey status`.
 - `obs-hotkey doctor`.
 - Desktop notifications.
-- Optional localhost HTTP listener for Companion/Touch Portal-style integrations.
+- Optional localhost HTTP listener for Companion/Touch Portal-style integrations, including named macro endpoints.
 
 ## Extension plan
 
@@ -103,7 +103,7 @@ These are high-value, low-risk extensions grounded in what similar programs alre
    - Extend `GET /status` to include stable booleans and timecodes for recording, streaming, replay, current scene, preview scene if available, studio mode, virtual camera, profile, scene collection, disk space, FPS/CPU/memory, and input mute/volume.
    - Justification: Companion's value is not just actions; it is feedbacks and variables. obs-hotkey's HTTP listener should be Companion-friendly.
 
-4. **Add named macros / reusable sequences**
+4. **Document macro integration recipes**
    - Config example:
      ```json
      {
@@ -116,7 +116,7 @@ These are high-value, low-risk extensions grounded in what similar programs alre
        }
      }
      ```
-   - Justification: MIDItoOBS supports assigning multiple actions to one button; obs-hotkey already has combos but lacks reusable named sequences. This makes HTTP/Companion/Touch Portal buttons easier to maintain.
+   - Justification: obs-hotkey now supports named macros. The next ergonomic win is showing operators how to wire them into Companion generic HTTP, Touch Portal, Home Assistant REST command, and MIDI/Touch Portal bridge patterns.
 
 5. **Add config discovery helpers**
    - Add `obs-hotkey list scenes`, `obs-hotkey list inputs`, `obs-hotkey list sources`, `obs-hotkey list scene-items --scene <name>`.

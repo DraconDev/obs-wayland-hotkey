@@ -31,7 +31,7 @@ If you only need a single `F12` to toggle recording, OBS native hotkeys will do 
 - **Push-to-Release Actions** — run a second set of actions when the chord is released (push-to-record / push-to-talk)
 - **Scene Switching** — dedicated `switch_scene` action for the most common pro workflow
 - **Keyboard Allowlist** — restrict hotkey capture to specific /dev/input devices in multi-keyboard setups
-- **One-shot CLI** — `obs-hotkey action <name>` triggers a single action from scripts and systemd timers
+- **One-shot CLI** — `obs-hotkey action <name>` triggers a named action or macro from scripts and systemd timers
 - **Mic Volume Presets** — set input volume as part of a combo
 - **Auto-start on Login** — systemd user service integration
 - **Auto-reconnect** — automatically reconnects if OBS restarts
@@ -149,7 +149,7 @@ obs-hotkey daemon       # Run the hotkey daemon
 obs-hotkey setup        # Install systemd user service
 obs-hotkey teardown     # Remove service and binaries
 obs-hotkey status       # Check service, config, and OBS connectivity
-obs-hotkey action NAME  # Trigger a single OBS action once (no daemon)
+obs-hotkey action NAME  # Trigger a named action or macro once (no daemon)
 ```
 
 ### Global flags
@@ -443,7 +443,7 @@ The names are the kernel-assigned device names reported by evdev. To find yours,
 
 ### One-shot Action CLI
 
-`obs-hotkey action <name>` connects to OBS once, runs a single action or named macro, and exits. It does not start the event loop or watch any keyboards.
+`obs-hotkey action <name>` connects to OBS once, runs a single action or named macro, and exits. It does not start the event loop or watch any keyboards. Macros cannot use `--scene` because scenes are passed by the macro's action objects.
 
 ```bash
 obs-hotkey action toggle_recording
