@@ -498,22 +498,9 @@ pub fn run_status(config_path: &str) {
         .parent()
         .map(|p| p.exists())
         .unwrap_or(false);
-
-    // Try to probe the port configured in the config file, fall back to 4455
-    let obs_port = if cfg_exists {
-        if let Ok(cfg) = crate::config::load_config(std::path::Path::new(&config_path)) {
-            cfg.obs_host
-                .rsplit(':')
-                .next()
-                .and_then(|s| s.parse::<u16>().ok())
-                .unwrap_or(4455)
-        } else {
-            4455
-        }
-    } else {
-        4455
-    };
-    let obs_ok = probe_obs_websocket(obs_port);
+    let cfg = cfg_exists.then(|| load_config(std::path::Path::new(&config_path))).transpose();
+    let ws_url = ws_url_from_config_path(&config_path);
+    let obs_ok = probe_obs_websocket_url(&ws_url);
 
     // Auto-start row
     if autostart {
@@ -568,6 +555,62 @@ pub fn run_status(config_path: &str) {
         println!("  {:<14}  {}  (is OBS running?)", "OBS WS:", err("✗"));
     }
 
+    if let Ok(cfg) = &cfg {
+        match OBSClient::new(ws_url.clone()).get_status(&cfg.mic_name) {
+            Ok(status) => {
+                println!(
+                    "  {:<14}  {}  {}",
+                    "Recording:",
+                    if status.record_active { ok("") } else { warn("") },
+                    if status.record_active {
+                        format!("active{}", status.record_timecode.as_deref().map(|s| format!(" {}", s)).unwrap_or_default())
+                    } else {
+                        "inactive".to_string()
+                    }
+                );
+                println!(
+                    "  {:<14}  {}  {}",
+                    "Streaming:",
+                    if status.stream_active { ok("") } else { warn("") },
+                    if status.stream_active {
+                        format!("active{}", status.stream_timecode.as_deref().map(|s| format!(" {}", s)).unwrap_or_default())
+                    } else {
+                        "inactive".to_string()
+                    }
+                );
+                println!(
+                    "  {:<14}  {}  {}",
+                    "Replay:",
+                    if status.replay_active { ok("") } else { warn("") },
+                    if status.replay_active { "active" } else { "inactive" }
+                );
+                println!(
+                    "  {:<14}  {}  {}",
+                    "Scene:",
+                    ok(""),
+                    status.current_scene.as_deref().unwrap_or("unknown")
+                );
+                if !cfg.mic_name.trim().is_empty() {
+                    println!(
+                        "  {:<14}  {}  {}{}",
+                        "Mic:",
+                        ok(""),
+                        cfg.mic_name,
+                        status.input_muted.map(|m| if m { " muted" } else { " unmuted" }).unwrap_or_default()
+                    );
+                    if let Some(volume) = status.input_volume_mul {
+                        println!("  {:<14}  {}  {:.2}x", "Mic volume:", ok(""), volume);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("  {:<14}  {}  {}", "OBS status:", warn(""), e);
+            }
+        }
+    } else if let Err(e) = &cfg {
+        println!("  {:<14}  {}  {}", "Config parse:", err(""), e);
+    }
+
     // Daemon activity check - is the process running?
     let daemon_active = std::process::Command::new("systemctl")
         .args(["--user", "is-active", "obs-hotkey.service"])
@@ -594,6 +637,137 @@ pub fn run_status(config_path: &str) {
             key("setup")
         );
     }
+}
+
+fn probe_obs_websocket_url(url: &str) -> bool {
+    let socket_addrs: Vec<std::net::SocketAddr> = match url
+        .strip_prefix("ws://")
+        .unwrap_or(url)
+        .to_socket_addrs()
+    {
+        Ok(addrs) => addrs.collect(),
+        Err(_) => return false,
+    };
+    let Some(addr) = socket_addrs.first() else {
+        return false;
+    };
+    let stream = match TcpStream::connect_timeout(addr, Duration::from_secs(1)) {
+        Ok(s) => s,
+        Err(_) => return false,
+    };
+    stream.set_read_timeout(Some(Duration::from_secs(2))).ok();
+
+    let mut ws = match tungstenite::client(url, stream) {
+        Ok((ws, _)) => ws,
+        Err(_) => return false,
+    };
+
+    match ws.read() {
+        Ok(msg) => {
+            let result = msg.to_text().map(|t| t.starts_with("{")).unwrap_or(false);
+            let _ = ws.close(None);
+            result
+        }
+        Err(_) => false,
+    }
+}
+
+pub fn run_doctor(config_path: &str) -> anyhow::Result<()> {
+    use crate::ansi::*;
+
+    println!();
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    println!("  {}  OBS Hotkey Doctor{}", BOLD, RESET);
+    println!("  {}", heading("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
+    println!();
+
+    let mut failed = false;
+    let config_path = expand_home(config_path);
+    let path = std::path::Path::new(&config_path);
+    let config_exists = path.exists();
+    print_check("Config exists", config_exists, &config_path);
+    failed |= !config_exists;
+    if !config_exists {
+        println!("  hint: run `obs-hotkey setup` or create {}", config_path);
+    }
+
+    let cfg = match config_exists.then(|| load_config(path)).transpose() {
+        Ok(Some(cfg)) => {
+            print_check("Config parses", true, "ok");
+            cfg
+        }
+        Ok(None) => return Ok(()),
+        Err(e) => {
+            print_check("Config parses", false, &e.to_string());
+            failed |= true;
+            println!("  hint: fix the JSON/schema error before starting the daemon");
+            return Ok(());
+        }
+    };
+
+    let combo_validation = crate::validate_combo_actions(&cfg);
+    print_check("Combo actions", combo_validation.is_ok(), &combo_validation.as_ref().map(|_| "ok").unwrap_or_else(|e| e.to_string()));
+    failed |= combo_validation.is_err();
+
+    let chord_validation = crate::validate_configured_chords(&cfg);
+    print_check("Hotkey chords", chord_validation.is_ok(), &chord_validation.as_ref().map(|_| "ok").unwrap_or_else(|e| e.to_string()));
+    failed |= chord_validation.is_err();
+
+    let input_grp = in_input_group();
+    print_check("Input group", input_grp, if input_grp { "member" } else { "not a member" });
+    failed |= !input_grp;
+
+    let keyboards = find_keyboards_with_filter(&cfg.allowed_devices);
+    match keyboards {
+        Ok(paths) => {
+            print_check("Keyboard devices", !paths.is_empty(), &format!("{} found", paths.len()));
+            failed |= paths.is_empty();
+        }
+        Err(e) => {
+            print_check("Keyboard devices", false, &e.to_string());
+            failed |= true;
+        }
+    }
+
+    let ws_url = if cfg.obs_host.is_empty() {
+        "ws://localhost:4455".to_string()
+    } else {
+        cfg.obs_host.clone()
+    };
+    let obs_ok = probe_obs_websocket_url(&ws_url);
+    print_check("OBS WebSocket", obs_ok, if obs_ok { "reachable" } else { "unreachable" });
+    failed |= !obs_ok;
+
+    if obs_ok {
+        match OBSClient::new(ws_url).get_status(&cfg.mic_name) {
+            Ok(status) => {
+                print_check("OBS status", true, "queried");
+                println!(
+                    "  detail: recording={} streaming={} replay={} scene={}",
+                    status.record_active,
+                    status.stream_active,
+                    status.replay_active,
+                    status.current_scene.as_deref().unwrap_or("unknown")
+                );
+            }
+            Err(e) => {
+                print_check("OBS status", false, &e.to_string());
+                failed |= true;
+            }
+        }
+    }
+
+    print_check("Notify config", !cfg.notify.command.is_empty(), "ok");
+    failed |= cfg.notify.command.is_empty();
+    print_check("HTTP config", !cfg.http.enabled || crate::config::http_config_is_safe(&cfg.http), "ok");
+    failed |= cfg.http.enabled && !crate::config::http_config_is_safe(&cfg.http);
+
+    println!();
+    if failed {
+        anyhow::bail!("doctor found one or more problems")
+    }
+    println!("  {} All checks passed", ok(""));
+    Ok(())
 }
 
 #[cfg(test)]
