@@ -13,7 +13,6 @@ mod obs;
 mod service;
 
 use config::{config_path, ActionItem};
-use http_api;
 use input::{find_keyboards_with_filter, spawn_keyboard_reader};
 
 /// Main event loop poll interval (ms).
