@@ -1,4 +1,4 @@
-use crate::config::{HttpConfig, NotifyConfig};
+use crate::config::{AppConfig, HttpConfig, NotifyConfig};
 use crate::notify;
 use crate::{run_action_by_name, ActionContext};
 use serde_json::json;
@@ -7,7 +7,7 @@ use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::thread;
 
-pub fn spawn(cfg: HttpConfig, ctx: ActionContext, notify_cfg: NotifyConfig) {
+pub fn spawn(cfg: HttpConfig, app_cfg: AppConfig, ctx: ActionContext, notify_cfg: NotifyConfig) {
     if !cfg.enabled {
         return;
     }
@@ -24,7 +24,7 @@ pub fn spawn(cfg: HttpConfig, ctx: ActionContext, notify_cfg: NotifyConfig) {
     thread::spawn(move || {
         log::info!("HTTP listener started on {}", bind);
         for stream in listener.incoming().flatten() {
-            if let Err(e) = handle_connection(stream, &cfg, &ctx, &notify_cfg) {
+            if let Err(e) = handle_connection(stream, &cfg, &app_cfg, &ctx, &notify_cfg) {
                 log::warn!("HTTP request failed: {}", e);
             }
         }
@@ -34,6 +34,7 @@ pub fn spawn(cfg: HttpConfig, ctx: ActionContext, notify_cfg: NotifyConfig) {
 fn handle_connection(
     mut stream: std::net::TcpStream,
     cfg: &HttpConfig,
+    app_cfg: &AppConfig,
     ctx: &ActionContext,
     notify_cfg: &NotifyConfig,
 ) -> anyhow::Result<()> {
@@ -54,7 +55,7 @@ fn handle_connection(
         return Ok(());
     }
 
-    let response = route_request(parsed, cfg, ctx, notify_cfg);
+    let response = route_request(parsed, cfg, app_cfg, ctx, notify_cfg);
     write_response(&mut stream, response.status, response.body)
 }
 
