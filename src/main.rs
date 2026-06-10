@@ -1084,6 +1084,66 @@ mod tests {
     }
 
     #[test]
+    fn test_action_labels_include_macro() {
+        let mut cfg = config::default_config();
+        cfg.macros.push(config::MacroConfig {
+            name: "countdown_record".to_string(),
+            actions: vec![
+                ActionItem::Detailed {
+                    action: "switch_scene".to_string(),
+                    scene: Some("Intro".to_string()),
+                },
+                ActionItem::Bare("start_recording".to_string()),
+            ],
+            action_delays_ms: vec![10000, 0],
+        });
+        let actions = vec![ActionItem::Bare("countdown_record".to_string())];
+        assert_eq!(
+            action_labels_with_cfg(&cfg, &actions),
+            "macro:Switch Scene (Intro) + Start Recording"
+        );
+    }
+
+    #[test]
+    fn test_validate_combo_actions_accepts_macro_reference() {
+        let mut cfg = config::default_config();
+        cfg.macros.push(config::MacroConfig {
+            name: "countdown_record".to_string(),
+            actions: vec![ActionItem::Bare("start_recording".to_string())],
+            action_delays_ms: Vec::new(),
+        });
+        cfg.hotkey_combos.push(config::HotkeyCombo {
+            name: "record_countdown".to_string(),
+            key: Some("f1".to_string()),
+            keys: Vec::new(),
+            actions: vec![ActionItem::Bare("countdown_record".to_string())],
+            action_delays_ms: Vec::new(),
+            release_actions: Vec::new(),
+            release_action_delays_ms: Vec::new(),
+        });
+
+        let result = validate_combo_actions(&cfg);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_combo_actions_rejects_unknown_macro_reference() {
+        let mut cfg = config::default_config();
+        cfg.hotkey_combos.push(config::HotkeyCombo {
+            name: "bad_macro".to_string(),
+            key: Some("f1".to_string()),
+            keys: Vec::new(),
+            actions: vec![ActionItem::Bare("missing_macro".to_string())],
+            action_delays_ms: Vec::new(),
+            release_actions: Vec::new(),
+            release_action_delays_ms: Vec::new(),
+        });
+
+        let result = validate_combo_actions(&cfg);
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_run_steps_executes_combo_actions() {
         let count = Arc::new(AtomicUsize::new(0));
         let first = Arc::new({
@@ -1111,6 +1171,20 @@ mod tests {
         ]);
 
         assert_eq!(count.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn test_run_macro_by_name_rejects_unknown_macro() {
+        let cfg = config::default_config();
+        let ctx = ActionContext {
+            client: obs::OBSClient::new("ws://localhost:4455".to_string()),
+            screenshot_source: String::new(),
+            screenshot_dir: String::new(),
+            mic_name: String::new(),
+            mic_volume: 1.0,
+        };
+        let result = run_macro_by_name("missing", &ctx, &cfg);
+        assert!(result.is_err());
     }
 
     #[test]
