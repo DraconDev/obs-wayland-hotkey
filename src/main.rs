@@ -8,10 +8,12 @@ mod ansi;
 mod banner;
 mod config;
 mod input;
+mod notify;
 mod obs;
 mod service;
 
 use config::{config_path, ActionItem};
+use http_api;
 use input::{find_keyboards_with_filter, spawn_keyboard_reader};
 
 /// Main event loop poll interval (ms).
@@ -49,6 +51,8 @@ enum Commands {
     },
     #[command(about = "Show service status, config state, and OBS connectivity")]
     Status,
+    #[command(about = "Run a startup diagnostic checklist for a live show")]
+    Doctor,
     #[command(
         about = "Trigger a single OBS action once, without running the daemon. Useful for scripts and systemd timers."
     )]
@@ -62,6 +66,7 @@ enum Commands {
     },
 }
 
+#[derive(Clone)]
 struct ActionContext {
     client: obs::OBSClient,
     screenshot_source: String,
@@ -132,7 +137,7 @@ fn action_labels(actions: &[ActionItem]) -> String {
 
 /// Build a closure that runs the given action, capturing the parameter it
 /// needs. Returns None if the action is unknown.
-fn build_action_runner(
+pub(crate) fn build_action_runner(
     action: &str,
     scene: Option<&str>,
     ctx: &ActionContext,
@@ -235,7 +240,7 @@ fn build_steps(
     }
 }
 
-fn validate_combo_actions(cfg: &config::AppConfig) -> anyhow::Result<()> {
+pub(crate) fn validate_combo_actions(cfg: &config::AppConfig) -> anyhow::Result<()> {
     let mut combo_names = HashSet::new();
 
     for combo in &cfg.hotkey_combos {

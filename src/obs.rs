@@ -444,11 +444,10 @@ impl OBSClient {
             Err(e) => errors.push(format!("GetRecordStatus: {}", e)),
         }
         match self.request("GetReplayBufferStatus", None) {
-            Ok(data) => parse_output_status(
-                &data,
-                &mut status.replay_active,
-                &mut None::<String>,
-            ),
+            Ok(data) => {
+                let mut replay_timecode = None;
+                parse_output_status(&data, &mut status.replay_active, &mut replay_timecode);
+            }
             Err(e) => errors.push(format!("GetReplayBufferStatus: {}", e)),
         }
         match self.request("GetCurrentProgramScene", None) {
@@ -576,6 +575,28 @@ impl OBSClient {
             self.studio_mode_enabled.load(Ordering::SeqCst)
         );
     }
+}
+
+fn new_request_id(request_type: &str) -> String {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    format!("{}_{}", request_type, nanos)
+}
+
+fn parse_output_status(data: &serde_json::Value, active: &mut bool, timecode: &mut Option<String>) {
+    let Some(response) = data.get("d").and_then(|d| d.get("responseData")) else {
+        return;
+    };
+    *active = response
+        .get("outputActive")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    *timecode = response
+        .get("outputTimecode")
+        .and_then(|v| v.as_str())
+        .map(ToString::to_string);
 }
 
 #[derive(Debug, Deserialize)]
