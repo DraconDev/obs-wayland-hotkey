@@ -709,4 +709,61 @@ mod tests {
 
         assert_eq!(count.load(Ordering::SeqCst), 2);
     }
+
+    #[test]
+    fn test_validate_combo_actions_accepts_default_config() {
+        let cfg = config::default_config();
+        assert!(validate_combo_actions(&cfg).is_ok());
+    }
+
+    #[test]
+    fn test_validate_combo_actions_rejects_unknown_action() {
+        let mut cfg = config::default_config();
+        cfg.hotkey_combos.push(config::HotkeyCombo {
+            name: "bad".to_string(),
+            key: Some("f1".to_string()),
+            keys: Vec::new(),
+            actions: vec!["not_real".to_string()],
+        });
+
+        let result = validate_combo_actions(&cfg);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_combo_actions_rejects_duplicate_names() {
+        let mut cfg = config::default_config();
+        cfg.hotkey_combos.push(config::HotkeyCombo {
+            name: "dup".to_string(),
+            key: Some("f1".to_string()),
+            keys: Vec::new(),
+            actions: vec!["toggle_recording".to_string()],
+        });
+        cfg.hotkey_combos.push(config::HotkeyCombo {
+            name: "dup".to_string(),
+            key: Some("f2".to_string()),
+            keys: Vec::new(),
+            actions: vec!["toggle_streaming".to_string()],
+        });
+
+        let result = validate_combo_actions(&cfg);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_combo_actions_rejects_mic_volume_without_mic_name() {
+        let mut cfg = config::default_config();
+        cfg.hotkey_combos.push(config::HotkeyCombo {
+            name: "record_and_mic".to_string(),
+            key: Some("ctrl + f1".to_string()),
+            keys: Vec::new(),
+            actions: vec!["toggle_recording".to_string(), "set_mic_volume".to_string()],
+        });
+
+        let result = validate_combo_actions(&cfg);
+
+        assert!(result.is_err());
+    }
 }
