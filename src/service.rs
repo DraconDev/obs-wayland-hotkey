@@ -720,19 +720,18 @@ pub fn run_doctor(config_path: &str) -> anyhow::Result<()> {
     print_check("Config exists", config_exists, &config_path);
     failed |= !config_exists;
     if !config_exists {
-        println!("  hint: run `obs-hotkey setup` or create {}", config_path);
+        anyhow::bail!("config file does not exist: {}", config_path);
     }
 
-    let cfg = match config_exists.then(|| load_config(path)).transpose() {
-        Ok(Some(cfg)) => {
+    let cfg = match load_config(path) {
+        Ok(cfg) => {
             print_check("Config parses", true, "ok");
             cfg
         }
-        Ok(None) => return Ok(()),
         Err(e) => {
             print_check("Config parses", false, &e.to_string());
             println!("  hint: fix the JSON/schema error before starting the daemon");
-            return Ok(());
+            anyhow::bail!("config failed to parse: {}", e);
         }
     };
 
