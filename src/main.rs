@@ -441,7 +441,14 @@ pub(crate) fn run_action_by_name(
     action_name: &str,
     scene: Option<&str>,
     ctx: &ActionContext,
+    cfg: &config::AppConfig,
 ) -> anyhow::Result<()> {
+    if cfg.macros.iter().any(|m| m.name == action_name) {
+        if scene.is_some() {
+            anyhow::bail!("macros do not accept --scene");
+        }
+        return run_macro_by_name(action_name, ctx, cfg);
+    }
     if !is_known_action(action_name) {
         anyhow::bail!(
             "unknown action '{}'. Run `obs-hotkey --help` or see the README for the list of supported actions.",
@@ -498,7 +505,7 @@ fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<Ac
             }
         };
 
-        let Some(runner) = build_action_runner(action, None, ctx) else {
+        let Some(runner) = build_action_runner(action, None, ctx, cfg) else {
             log::warn!("Unknown action '{}' for {}", action, action_label(action));
             continue;
         };
@@ -535,6 +542,7 @@ fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<Ac
             &combo.actions,
             &combo.action_delays_ms,
             ctx,
+            cfg,
             &combo.name,
             "actions",
         ) else {
@@ -544,6 +552,7 @@ fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<Ac
             &combo.release_actions,
             &combo.release_action_delays_ms,
             ctx,
+            cfg,
             &combo.name,
             "release_actions",
         )
@@ -553,7 +562,7 @@ fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<Ac
             id: format!("combo:{}", combo.name),
             key_name: key_spec,
             chord,
-            label: action_labels(&combo.actions),
+            label: action_labels_with_cfg(cfg, &combo.actions),
             steps,
             release_steps,
         });
