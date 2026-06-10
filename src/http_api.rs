@@ -143,11 +143,22 @@ fn route_request(
                 body: json!({"ok": false, "error": e.to_string()}),
             },
         },
+        ("POST", "/macros") => match parse_macro_request(&request.body) {
+            Ok(macro_name) => run_http_macro(macro_name, ctx, notify_cfg),
+            Err(e) => HttpResponse {
+                status: 400,
+                body: json!({"ok": false, "error": e.to_string()}),
+            },
+        },
         ("POST", path) if path.starts_with("/actions/") => {
             let action = path.trim_start_matches("/actions/").to_string();
             let scene = query_param(&request.path, "scene")
                 .or_else(|| parse_scene_from_body(&request.body).ok().flatten());
             run_http_action(action, scene, ctx, notify_cfg)
+        }
+        ("POST", path) if path.starts_with("/macros/") => {
+            let macro_name = path.trim_start_matches("/macros/").to_string();
+            run_http_macro(macro_name, ctx, notify_cfg)
         }
         _ => HttpResponse {
             status: 404,
@@ -171,6 +182,18 @@ fn parse_action_request(body: &str) -> anyhow::Result<(String, Option<String>)> 
         .and_then(|v| v.as_str())
         .map(ToString::to_string);
     Ok((action, scene))
+}
+
+fn parse_macro_request(body: &str) -> anyhow::Result<String> {
+    if body.trim().is_empty() {
+        anyhow::bail!("empty request body");
+    }
+    let value: serde_json::Value = serde_json::from_str(body)?;
+    value
+        .get("macro")
+        .and_then(|v| v.as_str())
+        .map(ToString::to_string)
+        .ok_or_else(|| anyhow::anyhow!("missing macro"))
 }
 
 fn parse_scene_from_body(body: &str) -> anyhow::Result<Option<String>> {
@@ -221,7 +244,7 @@ fn run_http_action(
     ctx: &ActionContext,
     notify_cfg: &NotifyConfig,
 ) -> HttpResponse {
-    match run_action_by_name(&action, scene.as_deref(), ctx) {
+    match run_action_by_name(&action, scene.as_deref(), ctx, &ctx.cfg) {
         Ok(()) => {
             notify::send_notification(notify_cfg, &format!("HTTP action {} triggered", action));
             HttpResponse {
