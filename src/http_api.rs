@@ -243,10 +243,11 @@ fn percent_decode(input: &str) -> String {
 fn run_http_action(
     action: String,
     scene: Option<String>,
+    app_cfg: &AppConfig,
     ctx: &ActionContext,
     notify_cfg: &NotifyConfig,
 ) -> HttpResponse {
-    match run_action_by_name(&action, scene.as_deref(), ctx, &ctx.cfg) {
+    match run_action_by_name(&action, scene.as_deref(), ctx, app_cfg) {
         Ok(()) => {
             notify::send_notification(notify_cfg, &format!("HTTP action {} triggered", action));
             HttpResponse {
