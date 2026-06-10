@@ -699,7 +699,6 @@ pub fn run_doctor(config_path: &str) -> anyhow::Result<()> {
         Ok(None) => return Ok(()),
         Err(e) => {
             print_check("Config parses", false, &e.to_string());
-            failed |= true;
             println!("  hint: fix the JSON/schema error before starting the daemon");
             return Ok(());
         }

@@ -569,6 +569,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
                             {
                                 let steps = binding.steps.clone();
                                 let label = binding.label.clone();
+                                let log_label = label.clone();
                                 let notify_cfg = cfg.notify.clone();
                                 std::thread::spawn(move || {
                                     notify::send_notification(
@@ -577,7 +578,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
                                     );
                                     run_steps(steps);
                                 });
-                                log::info!("Triggered hotkey: {}", label);
+                                log::info!("Triggered hotkey: {}", log_label);
                             }
                         }
                     }
@@ -608,6 +609,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
                         });
                         for (id, steps, label) in to_release {
                             let notify_cfg = cfg.notify.clone();
+                            let log_label = label.clone();
                             std::thread::spawn(move || {
                                 notify::send_notification(
                                     &notify_cfg,
@@ -615,7 +617,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
                                 );
                                 run_steps(steps);
                             });
-                            log::info!("Released hotkey ({}): {}", id, label);
+                            log::info!("Released hotkey ({}): {}", id, log_label);
                         }
                     }
                     _ => {}

@@ -1,6 +1,5 @@
 use crate::config::{HttpConfig, NotifyConfig};
 use crate::notify;
-use crate::obs::OBSClient;
 use crate::{run_action_by_name, ActionContext};
 use serde_json::json;
 use std::collections::HashMap;
