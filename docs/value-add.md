@@ -6,7 +6,7 @@ The highest-value add is **not** another way to press a hotkey. obs-hotkey alrea
 
 1. more useful named OBS actions,
 2. a safe custom OBS request escape hatch,
-3. feedback-friendly status JSON,
+3. feedback-friendly status JSON, now implemented for `GET /status`,
 4. macro integration recipes for the reusable macros that are now implemented,
 5. discovery helpers for scenes/inputs/sources.
 
@@ -76,39 +76,11 @@ Content-Type: application/json
 
 ### 3. Feedback-friendly status JSON
 
-**Highest value.**
+**Implemented.**
 
-Companion is not just about actions. It is about feedbacks: button colors, variables, recording status, scene active/preview state, source visibility, audio meters, disk space, and media status.
+`GET /status` now returns a feedback-friendly envelope for controllers and scripts while retaining the legacy `status` object for compatibility. The new `obs` field exposes stable nested objects for recording, streaming, replay buffer, current scene, and the configured input when `mic_name` is set.
 
-obs-hotkey should make `GET /status` useful as a feedback source:
-
-```json
-{
-  "ok": true,
-  "recording": {
-    "active": true,
-    "paused": false,
-    "timecode": "00:12:34"
-  },
-  "streaming": {
-    "active": false
-  },
-  "replay": {
-    "active": false
-  },
-  "scene": {
-    "current": "Gaming",
-    "preview": null
-  },
-  "inputs": [
-    {
-      "name": "Mic",
-      "muted": false,
-      "volume": 0.8
-    }
-  ]
-}
-```
+The response stays `200 OK` when OBS is unreachable; `obs.reachable` becomes `false` and `obs.error` explains the OBS WebSocket failure.
 
 **Why this is value-add:** it makes obs-hotkey a better bridge for Companion, Touch Portal, Home Assistant, and MIDI/Stream Deck tools.
 
