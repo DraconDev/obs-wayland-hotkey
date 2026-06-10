@@ -619,7 +619,7 @@ If OBS is offline or rejects a request, `status` prints a single-line failure su
 A pre-show checklist for a live broadcast. It is **read-only** — it never mutates OBS state and never records audio/video. It checks:
 
 1. Config exists and parses.
-2. All combos and chords are valid.
+2. All combos, macros, and chords are valid.
 3. The current user is in the `input` group (so the daemon can read `/dev/input/event*`).
 4. At least one keyboard is detected (after the `allowed_devices` filter).
 5. OBS WebSocket is reachable on the configured port.
