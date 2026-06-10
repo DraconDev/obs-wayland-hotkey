@@ -5,7 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.58] - 2026-06-10
+## [1.0.59] - 2026-06-10
+
+### Added
+- **Feedback-friendly HTTP status JSON.** `GET /status` now returns a stable `obs` envelope for controllers and scripts (`recording`, `streaming`, `replay_buffer`, `current_scene`, and configured `input`) while retaining the legacy raw `status` object for compatibility. OBS-unreachable responses remain `200 OK` with `obs.reachable = false` and an error message.
+
+### Changed
+- **Product direction refined through use.** The README and docs now distinguish implemented bridge features from remaining future work: feedback-friendly status is done; custom OBS request support, a practical action library, macro integration recipes, and discovery helpers remain the strongest next candidates.
+
 
 ### Changed
 - **Product positioning clarified.** The README now leads with an explicit "What obs-hotkey is for" section and a "OBS Native Hotkeys vs obs-hotkey" comparison table. The tool's value on X11 is the multi-action-per-gesture features (action combos, delayed actions, push-to-release, switch_scene with parameter) and the single-config-file workflow. The tool's value on Wayland is global hotkey capture (which OBS itself cannot do). Simple single-key hotkeys such as `Scroll Lock → toggle recording` are explicitly noted as redundant with OBS native hotkeys on X11. No code or config changes — the feature set is unchanged, only the documentation is more honest about where obs-hotkey adds value.
