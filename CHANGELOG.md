@@ -29,15 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Existing single-action hotkeys remain backward-compatible and can also use chord syntax.
 
 ### Added (Tier 1 Observability)
+- `obs-hotkey doctor` subcommand that runs a startup diagnostic checklist (config, combos, chords, macros, input group, keyboards, OBS WebSocket, notify, http).
 - Reusable named macros that can be invoked from hotkey combos, `obs-hotkey action <name>`, and the HTTP listener.
 - Richer `obs-hotkey status` output: it now also queries OBS for recording / streaming / replay buffer status, current program scene, and mic mute + volume.
 - Desktop notification on every action trigger (configurable command, defaults to `notify-send`).
 - `obs-hotkey action <name>` now also fires the configured desktop notification.
-- Optional localhost-only HTTP listener (`http` config block) exposing `GET /health`, `GET /status`, `POST /actions`, and `POST /actions/<name>` for Companion / Touch Portal / Home Assistant / MIDI-controller bridges.
+- Optional localhost-only HTTP listener (`http` config block) exposing `GET /health`, `GET /status`, `POST /actions`, `POST /actions/<name>`, `POST /macros`, and `POST /macros/<name>` for Companion / Touch Portal / Home Assistant / MIDI-controller bridges.
 - HTTP listener supports an optional `token`; non-loopback binds require a token; `127.0.0.1` binds are accepted without a token for local automation.
 - New `docs/tier1-observability.md` describing the Tier 1 design, behavior, and safety boundaries.
 - New `docs/competitors-and-extensions.md` comparing obs-hotkey with OBS WebSocket CLIs, Companion / Touch Portal / Stream Deck integrations, MIDI-to-OBS tools, Advanced Scene Switcher, and Wayland/X11 hotkey daemons; it turns the research into a must-add / consider / non-goal extension plan.
 - New `docs/value-add.md` distilling the research into a practical recommendation: the biggest next win is custom OBS request + feedback-friendly status JSON, followed by a practical action library, reusable macros, discovery helpers, and integration recipes.
+- New `docs/macros.md` describing reusable macro configuration, execution semantics, HTTP invocation, and safety boundaries.
 
 ### Changed (Tier 1 Observability)
 - `obs-hotkey status` now reports the live OBS state when reachable, and prints a single-line failure summary when OBS is offline.

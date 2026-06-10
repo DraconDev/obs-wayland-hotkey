@@ -396,6 +396,8 @@ The most useful macro patterns are deterministic start/stop workflows:
 
 Prefer `start_recording` / `stop_recording` and `start_streaming` / `stop_streaming` inside macros when you want deterministic behavior. The older `toggle_recording` and `toggle_streaming` actions remain available for simple toggles.
 
+The focused macro design is in [`docs/macros.md`](docs/macros.md).
+
 ### Push-to-Release Actions (Push-to-Record / Push-to-Talk)
 
 `hotkey_combos` can declare an optional `release_actions` list. The actions in `actions` run on press; the actions in `release_actions` run when the chord is released. This is the professional pattern for transient controls:
