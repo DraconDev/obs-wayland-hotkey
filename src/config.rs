@@ -244,12 +244,7 @@ fn validate_config(cfg: &AppConfig) -> anyhow::Result<()> {
                 combo.name
             );
         }
-        if combo
-            .release_actions
-            .iter()
-            .any(requires_mic_name)
-            && cfg.mic_name.trim().is_empty()
-        {
+        if combo.release_actions.iter().any(requires_mic_name) && cfg.mic_name.trim().is_empty() {
             anyhow::bail!(
                 "hotkey_combo '{}' uses set_mic_volume or toggle_mute_mic in release_actions but mic_name is empty",
                 combo.name
@@ -482,7 +477,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBrdGVIc2N4SUV6VzV2S1dya083UFROYW54SXl4U1JPKzg0cFhQcWVqWWtVCjdxOExMcTcvWTZPeElxUDFqVzdtc0lRQ05namJiQzZmcGNPYWdQKzMzZmMKLT4gWDI1NTE5IFQ4S1czaTYvM2xqREJ3K202dDJ1c1prc01uOWxsUmJhcHpqVjRhNWZ3UkkKY08zSURmdWF5dk1sMnptRnZoR1gyaVZBVFMreDB3SW5FaDR1RzkwNVB4awotPiBYMjU1MTkgWFRRYXpqSnhhKy9IZHJsYXZwaS9JTFVmbHo3QVdNNjVEaVErTXRaUlQzQQpEUTVObmJKbGljVk55Q000Q3dhSWsxWTNmSVh2L2RUeVZvalRXeXRWckhrCi0+IFgyNTUxOSBlbERRVjRpQTE1MWdzdlJEeitERTBENkwxb0ZXdVdlN0dEOXRzZVNtYlMwCnpidjFKWEpaY3Qrb3JZM0NPZzhualRLZUtmVlVUTjZaa3Fud2JzZHRheDQKLT4gWDI1NTE5IEsvRDZsYUM5VGFIcEdkaXR2eEk1aGRrR0JaSmVyd0RkNEwxL1lwZmY4MkkKclllNW1UVk9zYXR5bTRBTUFnZWFKcTIrVHY1WWJxTFdFemNzRWJrN3Y0WQotPiAoV2BsK2EtZ3JlYXNlICtiaTJ+NyxfIDhiU3JjIGYKeDBTYXVxaDB1b2pDakgxTlRmdkZ0cVRxdXJHbURCMTYweHpIREdZSmdEbytiYlVzY3FjbC9yYk9FMjBncXdyQwpCbFh5TE9OdllyMWhSWlprMGRQdlpBRTAzM3h3dGNXQW13ZmhSSVpMCi0tLSBQbG5hOVNKai9nemJhUmhJNkU2MTJJdzVvOHgzWHlnTmgwSGFES0U2Z2xZCvYmtXulnrrkpnKj85H1Sm1q2QNSOuOXqvdpvuRQ8QFFk7kTkltkF64hn6X7WOejGEbeNvZ3dmRUhA==]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA1b2pvODViTUhmN0hXSUZJOHpsZWw4U3lVQTNGcmpCSGpRaFR1YUE3NlVjCklQejJ0YktGZFRKK3g2YzNvMDJPbDFtbDQ0NWNPVktBQnFiMllqR1R1cUUKLT4gWDI1NTE5IGphbkRaZTRCQVJLYmVXUDArZEdSM1hqalE4RXZPV2hqbklzdUVwZmY5MjgKMUdYUno2aXVhMXJSZE5oY0JRRjVaYnJ5OGhBVzk5NFJENVBtQ2RuTUFCbwotPiBYMjU1MTkgbmdETW9aRXBrNzk2Qm9Ia0Vjcndndlg5cmhLZUd0b3hvVU5XbzVkRWRucwpmUkkyaElZbVBWZS9KaVlWRmkvRjZEbm9rejVZclJ1UkxacTJsNldUbnh3Ci0+IFgyNTUxOSBHOUI0aXZVenpGbkF2Uy9GUWIrNnJtMkZhOVk3V2J3NXcwblhjY3BsK1NJCnBkNTc0d01NckVjQWxOTGRPVnl6YXFEbW04UWJiSitGQnlPbjZVMVBDaTQKLT4gWDI1NTE5IE9iMzFwc01GWWlmVWVhNnY5eDdYZzJvck9JVU4zcjNOWEpsQ1lYV0N6aDgKb2hSeGR5K1laaVNBSUlaMXRXb1N2eWJJN0c1bE9aRjJzKytOQStURUVaUQotPiBEZ1l4eidDZy1ncmVhc2UgK3BEbCJZIFlDIGd1Ty9ccHsKcHlERmlNRFlOalhwUTRBNDNWV1dweXVJVmcKLS0tIGpBMmRBUkh3RW5KeGlwTjFBTzhJMXlrV1RVWU5QamJob05HWU04bmxRc00KoooxiQUqmr1F9uFZvelOB2+878PHEFw1K5qvGz9NF5FbESzDV/eMsgqwULrMaXeGjMj240OlDP9t]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -494,7 +489,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBNMDhucUpIbWZkU3hWQ3pmTDd2NHRadXV6cFdsRk1vcGZhbXQyMjduR2lRCmRIdFlhdmpScUFlREFhRENnL1pqbCtzOFp0dndwRXp0Lzk2N29uU2U4dU0KLT4gWDI1NTE5IEFnV1QvU0lVc1RHU1RXTlZseldsYzFjaDQvdzBvaDRKN0FIaEgyUEVIMW8KNTdUc1ZzOTdJWE9VRlZQaS9Wc1V2eFhKNGlETXpnV3UxRy9oQ0V4N2wwUQotPiBYMjU1MTkgYk80WHI3Z28vRmZJV3FHREZzakZVRXJVb1pPbGpDOXB1OVVueFRUNDJXOApmRG9XS2xWTmVKa2lnWmU1Q2FtaW1vK0VFczZldFN2TnZpdUgzVmxNVHVVCi0+IFgyNTUxOSBpNEVvTzdJdEc2ZDlNTkk0S2dpVytnWFRVeldHNDlVUkxnWEVjckI2NUJNCkE3c3lyNG00ZU9LZndYaWhSeTRFVTJYdHRxcjMrV3h3UUdHZVZoRFFqYmcKLT4gWDI1NTE5IG1iMzA0RDlPUHFJU2JwSEs0a0lOZXlVVWtEOENIb2lzcmlyUkdGWkI1ekEKbW9LNXZTWS9xYW1mZkpaYnhUWUEzN1VQclFWK3lTQlN4VkZESXU2ZGFibwotPiBmLWdyZWFzZSBZXCYuSCYKNFUyTDI0b1V6MUZQSzRuV25wNEFKSGpuRzM1UE9KYnFlZEhscXRqbm0wOCswUTF5S1hKK3dLbDhWVGs1RHlmUQpLV0UwZW1MZVNZaDVVOUIwWjkyS3pqOHhSWFpxTmpzZzgvS1JMbDhkZHVSUDVSRmsvQzdheEgrbysrSVkyQ3kwCld6TUcKLS0tIHRNS1BxSWtIaTJ2ZlNQUldKb3ZHL1N1a1JiNXJsbEszZzdQZ1BnM3A2OU0KMvhaKrQuxbptU/5UuXopm0uj13SpWZySII26uprkWQTAEAz2pJUK+Wxr/DwKz+sqoHy1sB6dQF+NTkjQ]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBnbzl0bjl6dkFoOWZDc1pDS1g2cXpsQXh2NzRpS2FKd1hoUUdjTDBGUURZCmRzd2gzaGhPOUtpdTRVcU80eVkycmp0eVBZUXJJMVVYN1ROSHZFcGNwRUEKLT4gWDI1NTE5IEJhYVdQd2I4NXl4ajdxcExJSytNK3NoZ3g0V25PcWtyKzd4NXIyYWoxbHcKTkxiVDNrdVhlVkM0THRvTkRwcWdVN0NXbjgxOWhxWThwQWNwcXhiRG5YbwotPiBYMjU1MTkgYmdsRURINnM5ZlBSb1JEZTlFdXhvZmFnaHM0SndWRmtxRVFTbmFnbW93YwpFMXE0NCtjeDhTT0dwRlN4NEEzNnQ2cXllaEQ3UWhVR1A5cnEyeVNIOGZRCi0+IFgyNTUxOSBlUGJVU1BVSDZKY2tjNHkzUlBQNlM0RGtTaGd6UEVmT25OSlVzanpvWmx3CmNKYk5qNHJPQWVpcDRsV3NYK2xTOE93ZExlSVd2bEFuZWV6d2EzMmluUWsKLT4gWDI1NTE5IG5vNDFSYzl6ZVExcXN4dlBWM0NwQTFBeW4veEJRdkZyZTQrUk5RdFFRamcKU3Z3ME82OUNGNmxrRXh6R1U3cVd6dGxnN05pS0NPVllEK0o3T01VME5lWQotPiBgYWQtZ3JlYXNlIFc6CnE3b01LRG96bXBtei9pYi8vUm9DZWZFQkltZTA2L1RYaG5tWTV3QWczYkcxZlFldVd3aWdjV0djU0V0YkxicmsKUXE3ajhpWEFZWk9QYVB0VVVscHBpc1Rndm9DQS9oTVpYcjJWaHZSWAotLS0gWDVYbU5SelhmT2Z2ZlcwNkpYSDNrRUFhYzBBMGRHbXljaCtPbVVNQjUxWQphIcYuSlWAyovF9Z2KxsjSvb6HvBUeJtJUK+vh/WyNFGgHQYn3IMRn2UwER4wRAIrTJyMd7wVBTN0BszM=]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test2");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -543,14 +538,17 @@ mod tests {
         let path = temp.join("hotkeys_release.json");
         fs::write(
             &path,
-            r#"{"obs_host":"ws://localhost:4455","hotkeys":{"toggle_recording":"","toggle_pause":"","toggle_streaming":"","screenshot":"","toggle_mute_mic":"","toggle_studio_mode":"","toggle_replay_buffer":"","save_replay":""},"screenshot_source":"","screenshot_dir":"","mic_name":"","hotkey_combos":[{"name":"push_to_talk","key":"ctrl + space","actions":["toggle_mute_mic"],"release_actions":["toggle_mute_mic"]}]}"#,
+            r#"{"obs_host":"ws://localhost:4455","hotkeys":{"toggle_recording":"","toggle_pause":"","toggle_streaming":"","screenshot":"","toggle_mute_mic":"","toggle_studio_mode":"","toggle_replay_buffer":"","save_replay":""},"screenshot_source":"","screenshot_dir":"","mic_name":"Mic","hotkey_combos":[{"name":"push_to_talk","key":"ctrl + space","actions":["toggle_mute_mic"],"release_actions":["toggle_mute_mic"]}]}"#,
         )
         .unwrap();
         let cfg = load_config(&path).unwrap();
         assert_eq!(cfg.hotkey_combos.len(), 1);
         assert_eq!(cfg.hotkey_combos[0].actions.len(), 1);
         assert_eq!(cfg.hotkey_combos[0].release_actions.len(), 1);
-        assert_eq!(cfg.hotkey_combos[0].release_actions[0].name(), "toggle_mute_mic");
+        assert_eq!(
+            cfg.hotkey_combos[0].release_actions[0].name(),
+            "toggle_mute_mic"
+        );
         fs::remove_file(&path).ok();
     }
 
@@ -580,7 +578,10 @@ mod tests {
         )
         .unwrap();
         let cfg = load_config(&path).unwrap();
-        assert_eq!(cfg.allowed_devices, vec!["AT Translated Set 2 keyboard", "Stream Deck XL"]);
+        assert_eq!(
+            cfg.allowed_devices,
+            vec!["AT Translated Set 2 keyboard", "Stream Deck XL"]
+        );
         fs::remove_file(&path).ok();
     }
 
@@ -593,7 +594,8 @@ mod tests {
 
     #[test]
     fn test_action_item_detailed() {
-        let item: ActionItem = serde_json::from_str("{\"action\":\"switch_scene\",\"scene\":\"Gaming\"}").unwrap();
+        let item: ActionItem =
+            serde_json::from_str("{\"action\":\"switch_scene\",\"scene\":\"Gaming\"}").unwrap();
         assert_eq!(item.name(), "switch_scene");
         assert_eq!(item.scene(), Some("Gaming"));
     }

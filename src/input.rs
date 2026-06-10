@@ -162,12 +162,9 @@ pub fn find_keyboards_with_filter(allowlist: &[String]) -> anyhow::Result<Vec<Pa
     Ok(paths)
 }
 
+#[allow(dead_code)]
 pub fn find_keyboards() -> anyhow::Result<Vec<PathBuf>> {
-    #[allow(dead_code)]
-    fn inner() -> anyhow::Result<Vec<PathBuf>> {
-        find_keyboards_with_filter(&[])
-    }
-    inner()
+    find_keyboards_with_filter(&[])
 }
 
 pub struct KeyEvent {
@@ -227,11 +224,7 @@ fn run_keyboard_reader(path: PathBuf, close_rx: Receiver<()>, tx: Sender<KeyEven
         }
     };
     let name = device.name().unwrap_or("?").to_string();
-    log::info!(
-        "keyboard thread started: {} at {}",
-        name,
-        path.display()
-    );
+    log::info!("keyboard thread started: {} at {}", name, path.display());
 
     // Use recv_timeout so the loop periodically checks close_rx.
     // This avoids blocking indefinitely in fetch_events().

@@ -251,8 +251,7 @@ fn validate_combo_actions(cfg: &config::AppConfig) -> anyhow::Result<()> {
                     combo.name
                 );
             }
-            if item.name() == "switch_scene"
-                && item.scene().map(str::trim).unwrap_or("").is_empty()
+            if item.name() == "switch_scene" && item.scene().map(str::trim).unwrap_or("").is_empty()
             {
                 anyhow::bail!(
                     "hotkey_combo '{}' uses switch_scene without a scene name",
@@ -511,9 +510,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
                         // active set.
                         let mut to_release: Vec<(String, Vec<ComboStep>, String)> = Vec::new();
                         active_bindings.retain(|binding_id| {
-                            let binding = match action_bindings
-                                .iter()
-                                .find(|b| b.id == *binding_id)
+                            let binding = match action_bindings.iter().find(|b| b.id == *binding_id)
                             {
                                 Some(b) => b,
                                 None => return false,
@@ -640,7 +637,11 @@ fn main() {
         Some(Commands::Status) => {
             service::run_status(&config_path_for_status);
         }
-        Some(Commands::Action { name, scene, config }) => {
+        Some(Commands::Action {
+            name,
+            scene,
+            config,
+        }) => {
             let action_cfg = config
                 .clone()
                 .map(|p| p.to_string_lossy().to_string())
@@ -1067,12 +1068,7 @@ mod tests {
 
     #[test]
     fn test_cli_action_subcommand() {
-        let cli = Cli::try_parse_from([
-            "obs-hotkey",
-            "action",
-            "toggle_recording",
-        ])
-        .unwrap();
+        let cli = Cli::try_parse_from(["obs-hotkey", "action", "toggle_recording"]).unwrap();
         match cli.command {
             Some(Commands::Action { name, scene, .. }) => {
                 assert_eq!(name, "toggle_recording");
@@ -1084,14 +1080,9 @@ mod tests {
 
     #[test]
     fn test_cli_action_subcommand_with_scene() {
-        let cli = Cli::try_parse_from([
-            "obs-hotkey",
-            "action",
-            "switch_scene",
-            "--scene",
-            "Gaming",
-        ])
-        .unwrap();
+        let cli =
+            Cli::try_parse_from(["obs-hotkey", "action", "switch_scene", "--scene", "Gaming"])
+                .unwrap();
         match cli.command {
             Some(Commands::Action { name, scene, .. }) => {
                 assert_eq!(name, "switch_scene");
