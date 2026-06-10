@@ -49,4 +49,4 @@
 - [x] Publish to crates.io — done, v1.0.24
 - [ ] Integration tests — would need a mock OBS WebSocket server
 - [ ] Keyboard device hot-plug support — currently only enumerates at startup
-- [ ] Thread panic catching in keyboard readers — wrap in `panic::catch_unwind`
+- [x] Thread panic catching in keyboard readers — wrap in `panic::catch_unwind`

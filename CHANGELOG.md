@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `set_mic_volume` action with `mic_volume` config for setting OBS input volume as part of a combo.
 - Recommended combo workflows and non-goals in the README.
 - Config validation for duplicate combo names, unknown combo actions, and missing `mic_name` when a combo uses `set_mic_volume`.
+- `switch_scene` action with a per-combo `scene` parameter for fast scene switching.
+- `release_actions` and `release_action_delays_ms` on `hotkey_combos` for push-to-record / push-to-talk semantics.
+- `allowed_devices` config field for restricting hotkey capture to specific /dev/input devices in multi-keyboard setups.
+- `obs-hotkey action <name>` one-shot CLI subcommand for triggering a single OBS action from scripts and systemd timers.
+- Keyboard reader threads wrapped in `catch_unwind` so a panic in one device cannot kill the daemon.
+- Parameterized action items: `actions` entries may now be either a bare action name or an object `{"action": "switch_scene", "scene": "Gaming"}` for actions that need arguments.
+- A `Professional Workflows` section in the README covering stream-deck scene switching, push-to-mute, live recording with volume preset, countdown recording, and multi-keyboard shows.
+- A `Roadmap & Non-Goals` section in the README that states explicitly what obs-hotkey is and is not for.
 
 ### Changed
 - Existing single-action hotkeys remain backward-compatible and can also use chord syntax.

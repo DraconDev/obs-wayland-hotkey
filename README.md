@@ -114,10 +114,11 @@ This writes the systemd user service and enables it to start on login.
 
 ```
 obs-hotkey              # Show quickstart guide (interactive setup help)
-obs-hotkey daemon      # Run the hotkey daemon
+obs-hotkey daemon       # Run the hotkey daemon
 obs-hotkey setup        # Install systemd user service
 obs-hotkey teardown     # Remove service and binaries
 obs-hotkey status       # Check service, config, and OBS connectivity
+obs-hotkey action NAME  # Trigger a single OBS action once (no daemon)
 ```
 
 ### Global flags
@@ -392,6 +393,133 @@ ExecStart=%h/.cargo/bin/obs-hotkey action toggle_recording
 | `toggle_studio_mode` | `SetStudioModeEnabled` | Toggles studio mode |
 | `toggle_replay_buffer` | `ToggleReplayBuffer` | Requires replay buffer enabled |
 | `save_replay` | `SaveReplayBuffer` | Saves current replay buffer |
+| `switch_scene` | `SetCurrentProgramScene` | Requires a `scene` parameter in the action object form |
+
+---
+
+## Professional Workflows
+
+The following configurations cover the workflows a professional streamer, broadcast operator, or live-events engineer is most likely to want.
+
+### Stream Deck / Function-Key Scene Switching
+
+Map `F13`–`F18` to the scenes you actually use. Because the keys are out of the way, this works on a laptop or a minimal keyboard.
+
+```json
+{
+  "hotkey_combos": [
+    {"name": "scene_gaming",   "key": "f13", "actions": [{"action": "switch_scene", "scene": "Gaming"}]},
+    {"name": "scene_brb",      "key": "f14", "actions": [{"action": "switch_scene", "scene": "BRB"}]},
+    {"name": "scene_chatting", "key": "f15", "actions": [{"action": "switch_scene", "scene": "Just Chatting"}]},
+    {"name": "scene_starting", "key": "f16", "actions": [{"action": "switch_scene", "scene": "Starting Soon"}]},
+    {"name": "scene_ending",   "key": "f17", "actions": [{"action": "switch_scene", "scene": "Stream Ending"}]}
+  ]
+}
+```
+
+### Push-to-Mute Mic
+
+```json
+{
+  "hotkey_combos": [
+    {
+      "name": "push_to_mute",
+      "key": "ctrl + space",
+      "actions": ["toggle_mute_mic"],
+      "release_actions": ["toggle_mute_mic"]
+    }
+  ]
+}
+```
+
+Combine with `set_mic_volume` to enforce a known level every time you release:
+
+```json
+{
+  "hotkey_combos": [
+    {
+      "name": "push_to_talk_with_level",
+      "key": "ctrl + space",
+      "actions": ["toggle_mute_mic"],
+      "release_actions": ["toggle_mute_mic", "set_mic_volume"],
+      "release_action_delays_ms": [0, 200]
+    }
+  ]
+}
+```
+
+### Live Recording with Volume Preset + Replay + Screenshot
+
+```json
+{
+  "hotkey_combos": [
+    {
+      "name": "go_live_record",
+      "key": "ctrl + shift + r",
+      "actions": ["set_mic_volume", "toggle_recording", "toggle_streaming", "save_replay"],
+      "action_delays_ms": [0, 0, 0, 5000]
+    }
+  ]
+}
+```
+
+This sets the mic volume, starts recording, starts streaming, and 5 seconds later saves a replay buffer. Adjust the delays to match your actual scene-transition timing.
+
+### Countdown Recording Start
+
+```json
+{
+  "hotkey_combos": [
+    {
+      "name": "record_in_10",
+      "key": "ctrl + alt + r",
+      "actions": ["toggle_recording"],
+      "action_delays_ms": [10000]
+    }
+  ]
+}
+```
+
+A 10-second countdown before recording actually starts. Use this to give yourself a verbal “starting in 3, 2, 1” runway without having to time it manually.
+
+### Multi-Keyboard Show
+
+When your machine has the laptop keyboard, a dock keyboard, a Stream Deck, a guest USB keyboard, and a drawing tablet:
+
+```json
+{
+  "allowed_devices": ["AT Translated Set 2 keyboard", "Elgato Stream Deck XL"]
+}
+```
+
+Only those two devices will be able to trigger hotkeys. The guest's USB keyboard and the drawing tablet's keys are ignored.
+
+---
+
+## Roadmap & Non-Goals
+
+What obs-hotkey already does well for a professional operator:
+
+- Reliable OBS WebSocket v5 connection with auto-reconnect, op-code checking, and DNS-aware connect timeouts.
+- 50 ms debounce + chord tracking so evdev autorepeat never double-fires an action.
+- Non-blocking actions: every OBS request runs on a background thread, so the event loop stays responsive even during a slow request.
+- Per-action delays up to 10 minutes for countdown workflows.
+- Push-to-release semantics for transient controls.
+- Device allowlist for multi-keyboard setups.
+- One-shot CLI for script and timer integration.
+- Panic-safe reader threads so a single bad device cannot take down the daemon.
+- Clear, fail-fast config validation.
+
+What is intentionally out of scope:
+
+- **Atomic state machine for OBS**: this daemon does not query the live recording/streaming state on startup, so toggles are best-effort. If you need deterministic start/stop, the right tool is an OBS plugin that subscribes to events and tracks state.
+- **Scene transitions, animations, source visibility toggles**: these need richer OBS WebSocket event handling and are not a good fit for a lightweight chord-driven daemon.
+- **Media control / studio mode choreography**: use OBS's native hotkeys or an OBS plugin.
+- **Native Stream Deck protocol**: the daemon accepts the Stream Deck's keyboard-emulation mode and treat it as a normal keyboard. A native HID integration would add significant complexity for a small win.
+- **OBS WebSocket authentication**: this daemon explicitly rejects authenticated OBS WebSocket connections. Set OBS's WebSocket to no-auth, or front it with an auth-aware proxy.
+- **TLS (`wss://`)**: not implemented. Rejected at startup with a clear message.
+- **Mouse buttons, gamepads, MIDI**: keyboard-only by design. Use a tool like `input-remapper` if you need to remap other input devices to keyboard keys.
+- **Multi-OBS orchestration**: this daemon talks to a single OBS instance. A multi-instance setup needs a small supervisor.
 
 ---
 
