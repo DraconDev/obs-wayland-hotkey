@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Write;
+use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 
 const DEFAULT_WS_URL: &str = "ws://localhost:4455";
@@ -14,6 +15,14 @@ pub const MAX_ACTION_DELAY_MS: u64 = 600_000;
 
 fn default_mic_volume() -> f64 {
     1.0
+}
+
+fn default_notify_command() -> Vec<String> {
+    vec!["notify-send".to_string(), "obs-hotkey".to_string(), "{message}".to_string()]
+}
+
+fn default_http_bind() -> String {
+    "127.0.0.1:7999".to_string()
 }
 
 /// A single OBS action inside a combo. A bare string (e.g. `"toggle_recording"`)
@@ -52,6 +61,28 @@ impl ActionItem {
             ActionItem::Detailed { scene, .. } => scene.as_deref(),
         }
     }
+}
+
+/// Notification command used by the daemon when an action is triggered.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub struct NotifyConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default = "default_notify_command")]
+    pub command: Vec<String>,
+}
+
+/// Localhost HTTP API configuration for Companion/Touch Portal integrations.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub struct HttpConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default = "default_http_bind")]
+    pub bind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -124,6 +155,10 @@ pub struct AppConfig {
     pub allowed_devices: Vec<String>,
     #[serde(default, rename = "hotkey_combos")]
     pub hotkey_combos: Vec<HotkeyCombo>,
+    #[serde(default, rename = "notify")]
+    pub notify: NotifyConfig,
+    #[serde(default, rename = "http")]
+    pub http: HttpConfig,
 }
 
 pub fn default_config() -> AppConfig {
@@ -145,6 +180,15 @@ pub fn default_config() -> AppConfig {
         mic_volume: 1.0,
         allowed_devices: Vec::new(),
         hotkey_combos: Vec::new(),
+        notify: NotifyConfig {
+            enabled: false,
+            command: default_notify_command(),
+        },
+        http: HttpConfig {
+            enabled: false,
+            bind: default_http_bind(),
+            token: None,
+        },
     }
 }
 
@@ -210,6 +254,9 @@ fn validate_config(cfg: &AppConfig) -> anyhow::Result<()> {
         anyhow::bail!("mic_volume must be a finite non-negative number");
     }
 
+    validate_notify_config(&cfg.notify)?;
+    validate_http_config(&cfg.http)?;
+
     for combo in &cfg.hotkey_combos {
         if combo.name.trim().is_empty() {
             anyhow::bail!("hotkey_combos entries require a non-empty name");
@@ -255,7 +302,36 @@ fn validate_config(cfg: &AppConfig) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn validate_action_list(
+fn validate_notify_config(notify: &NotifyConfig) -> anyhow::Result<()> {
+    if notify.command.is_empty() {
+        anyhow::bail!("notify.command must contain at least one command element");
+    }
+    Ok(())
+}
+
+fn validate_http_config(http: &HttpConfig) -> anyhow::Result<()> {
+    if http.bind.parse::<SocketAddr>().is_err() {
+        anyhow::bail!(
+            "http.bind '{}' is not a valid address:port value",
+            http.bind
+        );
+    }
+    if http.enabled && !is_loopback_bind(&http.bind) && http.token.is_none() {
+        anyhow::bail!(
+            "http.token is required when http.bind is not loopback: {}",
+            http.bind
+        );
+    }
+    Ok(())
+}
+
+fn is_loopback_bind(bind: &str) -> bool {
+    bind.parse::<SocketAddr>()
+        .map(|addr| addr.ip().is_loopback())
+        .unwrap_or(false)
+}
+
+fn validate_action_list((
     combo_name: &str,
     field: &str,
     items: &[ActionItem],
@@ -324,6 +400,10 @@ mod tests {
         assert_eq!(cfg.hotkeys.toggle_pause, "pause");
         assert_eq!(cfg.mic_volume, 1.0);
         assert!(cfg.hotkey_combos.is_empty());
+        assert!(!cfg.notify.enabled);
+        assert!(!cfg.http.enabled);
+        assert_eq!(cfg.http.bind, "127.0.0.1:7999");
+        assert!(cfg.http.token.is_none());
     }
 
     #[test]
@@ -477,7 +557,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA1b2pvODViTUhmN0hXSUZJOHpsZWw4U3lVQTNGcmpCSGpRaFR1YUE3NlVjCklQejJ0YktGZFRKK3g2YzNvMDJPbDFtbDQ0NWNPVktBQnFiMllqR1R1cUUKLT4gWDI1NTE5IGphbkRaZTRCQVJLYmVXUDArZEdSM1hqalE4RXZPV2hqbklzdUVwZmY5MjgKMUdYUno2aXVhMXJSZE5oY0JRRjVaYnJ5OGhBVzk5NFJENVBtQ2RuTUFCbwotPiBYMjU1MTkgbmdETW9aRXBrNzk2Qm9Ia0Vjcndndlg5cmhLZUd0b3hvVU5XbzVkRWRucwpmUkkyaElZbVBWZS9KaVlWRmkvRjZEbm9rejVZclJ1UkxacTJsNldUbnh3Ci0+IFgyNTUxOSBHOUI0aXZVenpGbkF2Uy9GUWIrNnJtMkZhOVk3V2J3NXcwblhjY3BsK1NJCnBkNTc0d01NckVjQWxOTGRPVnl6YXFEbW04UWJiSitGQnlPbjZVMVBDaTQKLT4gWDI1NTE5IE9iMzFwc01GWWlmVWVhNnY5eDdYZzJvck9JVU4zcjNOWEpsQ1lYV0N6aDgKb2hSeGR5K1laaVNBSUlaMXRXb1N2eWJJN0c1bE9aRjJzKytOQStURUVaUQotPiBEZ1l4eidDZy1ncmVhc2UgK3BEbCJZIFlDIGd1Ty9ccHsKcHlERmlNRFlOalhwUTRBNDNWV1dweXVJVmcKLS0tIGpBMmRBUkh3RW5KeGlwTjFBTzhJMXlrV1RVWU5QamJob05HWU04bmxRc00KoooxiQUqmr1F9uFZvelOB2+878PHEFw1K5qvGz9NF5FbESzDV/eMsgqwULrMaXeGjMj240OlDP9t]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA0TjBocGR4UjR1UCtGaUhEMkUzc0lCRE1qNlFuRU5QQTg2R3hVUWpPRW1rCmd6UUttSklJbUxVTUpZLzl3c1ZibjEzZWJreTd2cmNwbG15ZTI0ZllKakUKLT4gWDI1NTE5IGJSQjBoN214dzkyTFhtRE5DWDc2NDhKV254QXVGT21VSzQwbDBwakM0QkkKeEtJRzVIMzY0dWFPUTVZWURsYkY3WTNnNVdiTVVNMlhYUXZnZDNXMHhSWQotPiBYMjU1MTkgQksvcE13TkxmSEZwNndlTVowNzBSVzFOWXZpV1FvSFJseWYvejhUU1lUSQp3c3hWY0J1T1UxcTh3YVNDYno1VC92dVZoZ3lCaDBMbk9YWVVWUzNKajQwCi0+IFgyNTUxOSAxMzh2Smc4V2pxNDBkbHJkREdBTHFnL1dQSTI2bGVSMUxRMmFXcUlMY2tjCm91WDZDS1pDQzlQZzNsd0ovdmprcEhuNjJZUWh1bDkzeXgwNEtCYTgwQTgKLT4gLkVzbFskLWdyZWFzZSBeIW9tQGsKTUo5bUFORW9QNXpha1JtK1RuallGK3cKLS0tIDRuM0x5OEhNNkRJU1FaQmcybzZQVGE0Rjh3WWVvZ0l6cFd0bHdoa2hmN3MKw9NuBm1KTOu7YSlrMhrsaUd4jYQa8PfJf7eRrDGJynuHJcnYwuNlKXlBvDm8LoLL6RERybHr47oK]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -489,7 +569,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBnbzl0bjl6dkFoOWZDc1pDS1g2cXpsQXh2NzRpS2FKd1hoUUdjTDBGUURZCmRzd2gzaGhPOUtpdTRVcU80eVkycmp0eVBZUXJJMVVYN1ROSHZFcGNwRUEKLT4gWDI1NTE5IEJhYVdQd2I4NXl4ajdxcExJSytNK3NoZ3g0V25PcWtyKzd4NXIyYWoxbHcKTkxiVDNrdVhlVkM0THRvTkRwcWdVN0NXbjgxOWhxWThwQWNwcXhiRG5YbwotPiBYMjU1MTkgYmdsRURINnM5ZlBSb1JEZTlFdXhvZmFnaHM0SndWRmtxRVFTbmFnbW93YwpFMXE0NCtjeDhTT0dwRlN4NEEzNnQ2cXllaEQ3UWhVR1A5cnEyeVNIOGZRCi0+IFgyNTUxOSBlUGJVU1BVSDZKY2tjNHkzUlBQNlM0RGtTaGd6UEVmT25OSlVzanpvWmx3CmNKYk5qNHJPQWVpcDRsV3NYK2xTOE93ZExlSVd2bEFuZWV6d2EzMmluUWsKLT4gWDI1NTE5IG5vNDFSYzl6ZVExcXN4dlBWM0NwQTFBeW4veEJRdkZyZTQrUk5RdFFRamcKU3Z3ME82OUNGNmxrRXh6R1U3cVd6dGxnN05pS0NPVllEK0o3T01VME5lWQotPiBgYWQtZ3JlYXNlIFc6CnE3b01LRG96bXBtei9pYi8vUm9DZWZFQkltZTA2L1RYaG5tWTV3QWczYkcxZlFldVd3aWdjV0djU0V0YkxicmsKUXE3ajhpWEFZWk9QYVB0VVVscHBpc1Rndm9DQS9oTVpYcjJWaHZSWAotLS0gWDVYbU5SelhmT2Z2ZlcwNkpYSDNrRUFhYzBBMGRHbXljaCtPbVVNQjUxWQphIcYuSlWAyovF9Z2KxsjSvb6HvBUeJtJUK+vh/WyNFGgHQYn3IMRn2UwER4wRAIrTJyMd7wVBTN0BszM=]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB3TDNxa1ZCVU11U1Axak5CbGhCZUpCTzRyNC9oYXNSNllDQng0Nk5UNUVFCjR3WG1NODRNaTU0TkhWNjh5NCsrd3k3QjFrSzc1cmQ5YmZpL1JTcWtFUk0KLT4gWDI1NTE5IDM3bGJwalVqaFRvbU8zUG5HZ09WRWhqTzV0dFZ1RncwNDA2cFpQN3pWVzgKcWlMd2NJcGdnT1UydWxKYUcyOHhVSVV6cldBWmtpMEhBTHZXcXBqWk02NAotPiBYMjU1MTkgUDdOTE10MXJJM0Q3bjg0OWIrS3NVZHowakJSajN3Z0hZME16bXducWJ4WQowU1ZZbzIxMTU0Y0Uva0ZYa0g4NXNrVy81eWlVQ1ZWTit5VThteElieU1RCi0+IFgyNTUxOSBWZlZUVFN1QS80M3JvOGZYK1pXOGdQa3BEajVMZk9WdUJkMlUwcGlvUVdzCjRsM0pMMExVMGxvc2pnaUUrVDFsNWNyN3JHczVPZllRVVVqVEs4T0hvOUUKLT4gTHMjPjhbOEgtZ3JlYXNlIFA0SH1cdmkgYUw8TyReX2ggc0UKMzhnV0tQOTdLN3B2YTNPT21CRE04cVM5K0YrUVp2VjhXZVFQMTB2QVNic2o3V0U0WlhVTDlhOEJrUjNJRlEKLS0tIFlWeUN3VGdvV2dUWDhiWGN5bnZFSnZ1VUlHdHZ1T0ZXUGQ0UWZiTGFBZW8KBFPh96jqTuYHnheXPS59X8abgbNvsX/JUE0BkSEGrrP5/Sv557xoDcgbLVZdsAubHkQuz0ko8TX6kFd6]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test2");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -582,6 +662,52 @@ mod tests {
             cfg.allowed_devices,
             vec!["AT Translated Set 2 keyboard", "Stream Deck XL"]
         );
+        fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn test_load_config_with_notify_and_http() {
+        let temp = std::env::temp_dir();
+        let path = temp.join("hotkeys_tier1.json");
+        fs::write(
+            &path,
+            r#"{"obs_host":"ws://localhost:4455","hotkeys":{"toggle_recording":"f1","toggle_pause":"","toggle_streaming":"","screenshot":"","toggle_mute_mic":"","toggle_studio_mode":"","toggle_replay_buffer":"","save_replay":""},"screenshot_source":"","screenshot_dir":"","mic_name":"","notify":{"enabled":true,"command":["notify-send","obs-hotkey","{message}"]},"http":{"enabled":true,"bind":"127.0.0.1:7999","token":"secret"}}"#,
+        )
+        .unwrap();
+        let cfg = load_config(&path).unwrap();
+        assert!(cfg.notify.enabled);
+        assert_eq!(cfg.notify.command[0], "notify-send");
+        assert!(cfg.http.enabled);
+        assert_eq!(cfg.http.bind, "127.0.0.1:7999");
+        assert_eq!(cfg.http.token.as_deref(), Some("secret"));
+        fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn test_load_config_rejects_non_loopback_http_without_token() {
+        let temp = std::env::temp_dir();
+        let path = temp.join("hotkeys_http_bad.json");
+        fs::write(
+            &path,
+            r#"{"obs_host":"ws://localhost:4455","hotkeys":{"toggle_recording":"f1","toggle_pause":"","toggle_streaming":"","screenshot":"","toggle_mute_mic":"","toggle_studio_mode":"","toggle_replay_buffer":"","save_replay":""},"screenshot_source":"","screenshot_dir":"","mic_name":"","http":{"enabled":true,"bind":"0.0.0.0:7999"}}"#,
+        )
+        .unwrap();
+        let result = load_config(&path);
+        assert!(result.is_err());
+        fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn test_load_config_rejects_empty_notify_command() {
+        let temp = std::env::temp_dir();
+        let path = temp.join("hotkeys_notify_bad.json");
+        fs::write(
+            &path,
+            r#"{"obs_host":"ws://localhost:4455","hotkeys":{"toggle_recording":"f1","toggle_pause":"","toggle_streaming":"","screenshot":"","toggle_mute_mic":"","toggle_studio_mode":"","toggle_replay_buffer":"","save_replay":""},"screenshot_source":"","screenshot_dir":"","mic_name":"","notify":{"enabled":true,"command":[]}}"#,
+        )
+        .unwrap();
+        let result = load_config(&path);
+        assert!(result.is_err());
         fs::remove_file(&path).ok();
     }
 

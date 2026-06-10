@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// Timeout for TCP connect attempts to OBS WebSocket.
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
@@ -36,6 +36,19 @@ const _: () = {
 
 struct Conn {
     ws: tungstenite::WebSocket<TcpStream>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ObsStatus {
+    pub stream_active: bool,
+    pub stream_timecode: Option<String>,
+    pub record_active: bool,
+    pub record_paused: bool,
+    pub record_timecode: Option<String>,
+    pub replay_active: bool,
+    pub current_scene: Option<String>,
+    pub input_muted: Option<bool>,
+    pub input_volume_mul: Option<f64>,
 }
 
 impl OBSClient {
@@ -143,7 +156,8 @@ impl OBSClient {
     }
 
     pub fn send_request(&self, request_type: &str) -> anyhow::Result<()> {
-        self.send_request_with_data(request_type, None)
+        let _ = self.request(request_type, None)?;
+        Ok(())
     }
 
     pub fn send_request_with_data(
@@ -151,14 +165,16 @@ impl OBSClient {
         request_type: &str,
         request_data: Option<serde_json::Value>,
     ) -> anyhow::Result<()> {
-        let request_id = format!(
-            "{}_{}",
-            request_type,
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-        );
+        let _ = self.request(request_type, request_data)?;
+        Ok(())
+    }
+
+    pub fn request(
+        &self,
+        request_type: &str,
+        request_data: Option<serde_json::Value>,
+    ) -> anyhow::Result<serde_json::Value> {
+        let request_id = new_request_id(request_type);
         let req = RequestMessage {
             op: 6,
             d: RequestData {
@@ -207,7 +223,7 @@ impl OBSClient {
                 anyhow::bail!("request {} failed: {:?}", request_type, status);
             }
         }
-        Ok(())
+        Ok(resp)
     }
 
     fn read_response_guarded(
@@ -401,6 +417,84 @@ impl OBSClient {
         } else {
             log::info!("Switched to scene '{}'", scene_name);
         }
+    }
+
+    pub fn get_status(&self, mic_name: &str) -> anyhow::Result<ObsStatus> {
+        let mut status = ObsStatus::default();
+        let mut errors = Vec::new();
+
+        match self.request("GetStreamStatus", None) {
+            Ok(data) => parse_output_status(&data, &mut status.stream_active, &mut status.stream_timecode),
+            Err(e) => errors.push(format!("GetStreamStatus: {}", e)),
+        }
+        match self.request("GetRecordStatus", None) {
+            Ok(data) => {
+                parse_output_status(
+                    &data,
+                    &mut status.record_active,
+                    &mut status.record_timecode,
+                );
+                status.record_paused = data
+                    .get("d")
+                    .and_then(|d| d.get("responseData"))
+                    .and_then(|d| d.get("outputPaused"))
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+            }
+            Err(e) => errors.push(format!("GetRecordStatus: {}", e)),
+        }
+        match self.request("GetReplayBufferStatus", None) {
+            Ok(data) => parse_output_status(
+                &data,
+                &mut status.replay_active,
+                &mut None::<String>,
+            ),
+            Err(e) => errors.push(format!("GetReplayBufferStatus: {}", e)),
+        }
+        match self.request("GetCurrentProgramScene", None) {
+            Ok(data) => {
+                status.current_scene = data
+                    .get("d")
+                    .and_then(|d| d.get("responseData"))
+                    .and_then(|d| d.get("currentProgramSceneName"))
+                    .and_then(|v| v.as_str())
+                    .map(ToString::to_string);
+            }
+            Err(e) => errors.push(format!("GetCurrentProgramScene: {}", e)),
+        }
+        if !mic_name.trim().is_empty() {
+            match self.request(
+                "GetInputMute",
+                Some(serde_json::json!({ "inputName": mic_name })),
+            ) {
+                Ok(data) => {
+                    status.input_muted = data
+                        .get("d")
+                        .and_then(|d| d.get("responseData"))
+                        .and_then(|d| d.get("inputMuted"))
+                        .and_then(|v| v.as_bool());
+                }
+                Err(e) => errors.push(format!("GetInputMute: {}", e)),
+            }
+            match self.request(
+                "GetInputVolume",
+                Some(serde_json::json!({ "inputName": mic_name })),
+            ) {
+                Ok(data) => {
+                    status.input_volume_mul = data
+                        .get("d")
+                        .and_then(|d| d.get("responseData"))
+                        .and_then(|d| d.get("inputVolumeMul"))
+                        .and_then(|v| v.as_f64());
+                }
+                Err(e) => errors.push(format!("GetInputVolume: {}", e)),
+            }
+        }
+
+        if errors.len() >= 4 {
+            anyhow::bail!("OBS status requests failed: {}", errors.join(", "));
+        }
+        Ok(status)
     }
 
     #[allow(dead_code)]
