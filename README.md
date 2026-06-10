@@ -261,7 +261,7 @@ Avoid combining stateful toggles that can fight each other or depend on OBS stat
 | `toggle_streaming` | `ToggleStream` | Start/stop streaming |
 | `screenshot` | `SaveSourceScreenshot` | Saves PNG to `screenshot_dir` |
 | `toggle_mute_mic` | `ToggleInputMute` | Requires `mic_name` in config |
-| `set_mic_volume` | `SetInputVolume` | Requires `mic_name` and `mic_volume` |
+| `set_mic_volume` | `SetInputVolume` | Requires `mic_name`; `mic_volume` defaults to `1.0` if omitted |
 | `toggle_studio_mode` | `SetStudioModeEnabled` | Toggles studio mode |
 | `toggle_replay_buffer` | `ToggleReplayBuffer` | Requires replay buffer enabled |
 | `save_replay` | `SaveReplayBuffer` | Saves current replay buffer |

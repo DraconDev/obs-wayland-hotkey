@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Key chord support for hotkeys, including generic modifiers such as `ctrl`, `shift`, `alt`, `super`, and `meta`.
 - `hotkey_combos` config entries for triggering multiple OBS actions from one key chord.
 - `set_mic_volume` action with `mic_volume` config for setting OBS input volume as part of a combo.
+- Recommended combo workflows and non-goals in the README.
+- Config validation for duplicate combo names, unknown combo actions, and missing `mic_name` when a combo uses `set_mic_volume`.
 
 ### Changed
 - Existing single-action hotkeys remain backward-compatible and can also use chord syntax.
