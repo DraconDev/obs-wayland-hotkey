@@ -1,5 +1,6 @@
 use crate::config::{AppConfig, HttpConfig, NotifyConfig};
 use crate::notify;
+use crate::obs::ObsStatus;
 use crate::{run_action_by_name, ActionContext};
 use serde_json::json;
 use std::collections::HashMap;
@@ -129,14 +130,8 @@ fn route_request(
             body: json!({"ok": true, "service": "obs-hotkey"}),
         },
         ("GET", "/status") => match ctx.client.get_status(&ctx.mic_name) {
-            Ok(status) => HttpResponse {
-                status: 200,
-                body: json!({"ok": true, "status": status}),
-            },
-            Err(e) => HttpResponse {
-                status: 200,
-                body: json!({"ok": true, "status": {"unavailable": true}, "error": e.to_string()}),
-            },
+            Ok(status) => obs_status_response(status, &ctx.mic_name),
+            Err(e) => obs_status_unavailable_response(&e.to_string(), &ctx.mic_name),
         },
         ("POST", "/actions") => match parse_action_request(&request.body) {
             Ok((action, scene)) => run_http_action(action, scene, app_cfg, ctx, notify_cfg),
@@ -238,6 +233,82 @@ fn percent_decode(input: &str) -> String {
         i += 1;
     }
     String::from_utf8_lossy(&output).to_string()
+}
+
+fn obs_status_response(status: ObsStatus, mic_name: &str) -> HttpResponse {
+    HttpResponse {
+        status: 200,
+        body: json!({
+            "ok": true,
+            "service": "obs-hotkey",
+            "obs": {
+                "reachable": true,
+                "recording": {
+                    "active": status.record_active,
+                    "paused": status.record_paused,
+                    "timecode": status.record_timecode
+                },
+                "streaming": {
+                    "active": status.stream_active,
+                    "timecode": status.stream_timecode
+                },
+                "replay_buffer": {
+                    "active": status.replay_active
+                },
+                "current_scene": status.current_scene,
+                "input": input_status_json(mic_name, status.input_muted, status.input_volume_mul)
+            },
+            "status": status
+        }),
+    }
+}
+
+fn obs_status_unavailable_response(error: &str, mic_name: &str) -> HttpResponse {
+    HttpResponse {
+        status: 200,
+        body: json!({
+            "ok": true,
+            "service": "obs-hotkey",
+            "obs": {
+                "reachable": false,
+                "error": error,
+                "recording": {
+                    "active": false,
+                    "paused": false,
+                    "timecode": null
+                },
+                "streaming": {
+                    "active": false,
+                    "timecode": null
+                },
+                "replay_buffer": {
+                    "active": false
+                },
+                "current_scene": null,
+                "input": input_status_json(mic_name, None, None)
+            },
+            "status": {
+                "unavailable": true,
+                "error": error
+            }
+        }),
+    }
+}
+
+fn input_status_json(
+    mic_name: &str,
+    muted: Option<bool>,
+    volume_mul: Option<f64>,
+) -> serde_json::Value {
+    if mic_name.trim().is_empty() {
+        serde_json::Value::Null
+    } else {
+        json!({
+            "name": mic_name,
+            "muted": muted,
+            "volume_mul": volume_mul
+        })
+    }
 }
 
 fn run_http_action(
