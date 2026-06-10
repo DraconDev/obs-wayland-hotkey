@@ -200,8 +200,8 @@ These are not good value-adds for obs-hotkey:
 
 If we want the biggest bang for the buck, build in this order:
 
-1. **Custom OBS request + status JSON**
-   - This unlocks the most value with the least scope creep.
+1. **Custom OBS request support**
+   - This unlocks the most value with the least scope creep after the status JSON work.
 2. **Expand the named action library**
    - Focus on the common actions people actually use in Companion and CLIs.
 3. **Document macro integration recipes**
@@ -217,6 +217,6 @@ The real value-add is to make obs-hotkey the **lightweight local bridge** betwee
 
 If I had to pick one thing to build first, I would pick:
 
-> **custom OBS request + feedback-friendly status JSON**
+> **custom OBS request support + a practical named action library**
 
 That gives the biggest practical lift while staying closest to obs-hotkey's existing strengths.

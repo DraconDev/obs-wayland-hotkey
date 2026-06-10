@@ -722,7 +722,7 @@ A full design document — including the OBS WebSocket requests, the failure mod
 
 ## Similar Programs & Extension Plan
 
-A research pass comparing obs-hotkey to OBS WebSocket CLIs, Companion / Touch Portal / Stream Deck integrations, MIDI-to-OBS tools, Advanced Scene Switcher, and Wayland/X11 hotkey daemons is in [`docs/competitors-and-extensions.md`](docs/competitors-and-extensions.md). The short version: obs-hotkey should not become a full OBS automation plugin or native Stream Deck app; it should extend the safe local bridge path with more named OBS actions, custom request support, feedback-friendly status JSON, macro integration recipes, and discovery helpers.
+A research pass comparing obs-hotkey to OBS WebSocket CLIs, Companion / Touch Portal / Stream Deck integrations, MIDI-to-OBS tools, Advanced Scene Switcher, and Wayland/X11 hotkey daemons is in [`docs/competitors-and-extensions.md`](docs/competitors-and-extensions.md). The short version: obs-hotkey should not become a full OBS automation plugin or native Stream Deck app; it should extend the safe local bridge path with more named OBS actions, custom request support, feedback-friendly status JSON, macro integration recipes, and discovery helpers. Feedback-friendly status JSON is implemented; custom request support and discovery helpers remain the strongest next candidates.
 
 The distilled value-add recommendation is in [`docs/value-add.md`](docs/value-add.md): feedback-friendly status JSON is now implemented; the biggest remaining win is **custom OBS request support**, followed by a practical action library, macro integration recipes, discovery helpers, and integration examples.
 
