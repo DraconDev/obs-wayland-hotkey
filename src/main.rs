@@ -171,11 +171,20 @@ pub(crate) fn build_action_runner(
     action: &str,
     scene: Option<&str>,
     ctx: &ActionContext,
+    cfg: &config::AppConfig,
 ) -> Option<Arc<dyn Fn() + Send + Sync>> {
     match action {
         "toggle_recording" => Some(Arc::new({
             let c = ctx.client.clone();
             move || c.toggle_recording()
+        })),
+        "start_recording" => Some(Arc::new({
+            let c = ctx.client.clone();
+            move || c.start_recording()
+        })),
+        "stop_recording" => Some(Arc::new({
+            let c = ctx.client.clone();
+            move || c.stop_recording()
         })),
         "toggle_pause" => Some(Arc::new({
             let c = ctx.client.clone();
@@ -184,6 +193,14 @@ pub(crate) fn build_action_runner(
         "toggle_streaming" => Some(Arc::new({
             let c = ctx.client.clone();
             move || c.toggle_streaming()
+        })),
+        "start_streaming" => Some(Arc::new({
+            let c = ctx.client.clone();
+            move || c.start_streaming()
+        })),
+        "stop_streaming" => Some(Arc::new({
+            let c = ctx.client.clone();
+            move || c.stop_streaming()
         })),
         "screenshot" => Some(Arc::new({
             let c = ctx.client.clone();
@@ -210,6 +227,14 @@ pub(crate) fn build_action_runner(
             let c = ctx.client.clone();
             move || c.toggle_replay_buffer()
         })),
+        "start_replay_buffer" => Some(Arc::new({
+            let c = ctx.client.clone();
+            move || c.start_replay_buffer()
+        })),
+        "stop_replay_buffer" => Some(Arc::new({
+            let c = ctx.client.clone();
+            move || c.stop_replay_buffer()
+        })),
         "save_replay" => Some(Arc::new({
             let c = ctx.client.clone();
             move || c.save_replay()
@@ -219,6 +244,16 @@ pub(crate) fn build_action_runner(
             Some(Arc::new({
                 let c = ctx.client.clone();
                 move || c.set_current_scene(&scene_name)
+            }))
+        }
+        _ if cfg.macros.iter().any(|m| m.name == action) => {
+            let macro_name = action.to_string();
+            let ctx = ctx.clone();
+            let cfg = cfg.clone();
+            Some(Arc::new(move || {
+                if let Err(e) = run_macro_by_name(&macro_name, &ctx, &cfg) {
+                    log::warn!("Macro '{}' failed: {}", macro_name, e);
+                }
             }))
         }
         _ => None,
