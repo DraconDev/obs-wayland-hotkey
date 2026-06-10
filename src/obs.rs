@@ -389,6 +389,20 @@ impl OBSClient {
         }
     }
 
+    pub fn set_current_scene(&self, scene_name: &str) {
+        if scene_name.is_empty() {
+            log::info!("Scene name not provided, skipping scene switch");
+            return;
+        }
+        log::info!("Switching to scene '{}'...", scene_name);
+        let data = serde_json::json!({ "sceneName": scene_name });
+        if let Err(e) = self.send_request_with_data("SetCurrentProgramScene", Some(data)) {
+            log::warn!("Error switching scene: {}", e);
+        } else {
+            log::info!("Switched to scene '{}'", scene_name);
+        }
+    }
+
     #[allow(dead_code)]
     pub fn close(&self) {
         let mut guard = self.conn.lock().unwrap();

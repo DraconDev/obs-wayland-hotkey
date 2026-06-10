@@ -16,6 +16,44 @@ fn default_mic_volume() -> f64 {
     1.0
 }
 
+/// A single OBS action inside a combo. A bare string (e.g. `"toggle_recording"`)
+/// is shorthand for a parameterized action with no extra arguments. The
+/// object form (e.g. `{"action": "switch_scene", "scene": "Gaming"}`) lets
+/// the action carry parameters.
+///
+/// Currently supported parameter keys:
+/// - `scene`: the OBS scene name used by `switch_scene`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum ActionItem {
+    /// Bare action name, e.g. `"toggle_recording"`. Backward-compatible form.
+    Bare(String),
+    /// Parameterized action, e.g. `{"action": "switch_scene", "scene": "Gaming"}`.
+    Detailed {
+        action: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        scene: Option<String>,
+    },
+}
+
+impl ActionItem {
+    /// Returns the action name regardless of representation.
+    pub fn name(&self) -> &str {
+        match self {
+            ActionItem::Bare(name) => name,
+            ActionItem::Detailed { action, .. } => action,
+        }
+    }
+
+    /// Returns the optional scene name for `switch_scene` actions.
+    pub fn scene(&self) -> Option<&str> {
+        match self {
+            ActionItem::Bare(_) => None,
+            ActionItem::Detailed { scene, .. } => scene.as_deref(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct HotkeyCombo {
@@ -24,12 +62,20 @@ pub struct HotkeyCombo {
     pub key: Option<String>,
     #[serde(default)]
     pub keys: Vec<String>,
-    pub actions: Vec<String>,
+    pub actions: Vec<ActionItem>,
     /// Optional per-action delays in milliseconds. When non-empty, the length
     /// must match `actions`. Each delay is how long to wait *before* running
     /// that action. A value of `0` (or an empty list) means "run immediately".
     #[serde(default, rename = "action_delays_ms")]
     pub action_delays_ms: Vec<u64>,
+    /// Optional actions to run when the chord is released. Same shape as
+    /// `actions`. Enables push-to-record / push-to-talk style workflows:
+    /// `actions: ["toggle_recording"]`, `release_actions: ["toggle_recording"]`.
+    #[serde(default, rename = "release_actions")]
+    pub release_actions: Vec<ActionItem>,
+    /// Optional per-action delays in milliseconds for `release_actions`.
+    #[serde(default, rename = "release_action_delays_ms")]
+    pub release_action_delays_ms: Vec<u64>,
 }
 
 impl HotkeyCombo {
@@ -68,6 +114,14 @@ pub struct AppConfig {
     pub mic_name: String,
     #[serde(default = "default_mic_volume", rename = "mic_volume")]
     pub mic_volume: f64,
+    /// Optional allowlist of evdev device names to monitor. When empty, all
+    /// detected keyboards are used. Useful in setups with multiple keyboards
+    /// (laptop, dock, stream deck, guest USB, drawing tablet, macro pad)
+    /// where you only want a specific keyboard to trigger broadcast hotkeys.
+    /// Device names are the kernel-assigned strings reported by evdev, e.g.
+    /// `"AT Translated Set 2 keyboard"` or `"Stream Deck XL"`.
+    #[serde(default, rename = "allowed_devices")]
+    pub allowed_devices: Vec<String>,
     #[serde(default, rename = "hotkey_combos")]
     pub hotkey_combos: Vec<HotkeyCombo>,
 }
@@ -89,6 +143,7 @@ pub fn default_config() -> AppConfig {
         screenshot_dir: "~/Pictures".to_string(),
         mic_name: String::new(),
         mic_volume: 1.0,
+        allowed_devices: Vec::new(),
         hotkey_combos: Vec::new(),
     }
 }
@@ -375,7 +430,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBUYkFPMnVmSmNIRVJWd2JFNW5McXZ4ZjhCRmpNKzBkOTNvcWZvL2ovNUFzClV2MVI3Vkk4ZndiWHhXTFgyZVJTd3h0NDBQZWtZdjZiWDV1YkhEcUEvRGMKLT4gWDI1NTE5IFAxV3h1R1IzR3ZvL2F3UDVpbzlsVjFCUnd0TnpaZHk0OUdBVzBIdkUxQ1UKbG5vUG9HNjdkSlNidUNObUU1VEdNa2pBd0Q3UUs4Ympvc3lZWDVSTFlMOAotPiBYMjU1MTkgNmgwdnV1YWRjZ0hvSVdjS3B5VDRJUWRMaUFOQWFLeUhpVmtncHBzQ0RIdwpvMS9JM3dDYmhpdFA3QmJLenJwL1l4ZXJQM01TdUZSUFl5OE1RRTdaam5RCi0+IFgyNTUxOSBCa2VLOGJtRXBiUDJBUGJEcU5GQzBKZUJsdzB3VS9vZFJyQW1NV1ZiY2tJCkY1RThobkNIN0UwZlAyN1dwMjM1cUk4amVETUkvQ2hhMFd0NVVlQnorK1EKLT4gWDI1NTE5IEYrMmRveVpZNXlKMHdla0U5bkt0dXRYcHUySzU4RjZ6VHNTejRnVEJZa2cKVnJxWWFxWkhlRXZBRUE5WTFxdzYrc25hclRSVHRvcTVGNHlqalBpZE5kbwotPiAnI2dLQC1ncmVhc2UgSXEhIH4qcCAhIGFTe2VmXwpwNjZITUwzMjBwS3RNUGtVaVdDVUhsbVNicXZjMk8vRjNIZ2JXaWRqeXBFUzZCcHcrWHA5MEZYWnNvZS9TRVVaCi81dzBsR2RLajQ1Y0dQb29NYWhQNW9KWUxCam01dDA1b0ZTaTh4UzFmbFdaREdpNGNsN2FmdmF5ZWpYN2ZucwotLS0gQTZmRWZJS2taV093a1lEUkdjRmxGcE5UNFpqUG9EVUkyTFAvUjBlZlY3YwoJrd0JO+bYBbVXR5QoGnPhBN0nVSRLz8svCcwx6pF8lzPsinFZdP6DSGWjDDy19onomw8n/mbHZ58=]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBFSkN6L09TSDhQUzJDYlVxTUV4aXBtampQNnphMjdLUkxHemxmWEJ4ZzNjCkNXcXZvblV5L1RaT2NqaHVISGlOOGJieHIwV2hyYm1LUzhNa1ZPMkVMcUkKLT4gWDI1NTE5IFhJb2RINExsazdkd0RKNWFWZ2xIZkdybEdxTG15d29OSXd0MzQvUTFUR00KWk8vRkhmL2lPUUtyeUFEWmNZN3IxaUJOd1I3ZlNWVGdyUGNjSlVYcGZnSQotPiBYMjU1MTkgRGpWOWdZcnRsTExkcmFpNGg1WHlWVTN1RjVaTjA4L1BEdHNEN1d6VGtISQoxWjRMbXpHRTN0S2xDS1pYSllsaTBIRmZydXVadERNc1VVd1ExTDBZRTJzCi0+IFgyNTUxOSBUVWhFZFV5bXUwbVc4bGM2VmJaVDVVWHJMd1lLUnI2V2U1ekdVUU9YOHpvCmtWS2IzYzFxa2FjNTIxNHRiaUMxZEdYRExYRnF3VldYajQwVzYrU1hwR1UKLT4gWDI1NTE5IEpiNUhnOXY4T0ZXU2tLV1F0ZFpxZitra2x4NzBJNjBERE5MdWh4VUpqaTQKRkkvSFl6Y0RxUW5wWjhZZUsrbUJDQXY1Y0N6RWY2S2dweXp6bG9PSjZzNAotPiBLLWdyZWFzZSB+SDQgTD19PFpEIQpYbENkNUkyQVpVY2UvVmZJWWVKdklVQjZTbmlsYzdOdzI5RTVXMzBpT1dWUm9uVTVzZ1p2ZDZyb2o5a0NHdDhnClQ5RDMwaVQxZG1OK0xjRW8velQxUnlIVnhDck9zTSt1dDhDR0hCZFpja2V3MVFCaTFBc241a2dBenBNbnY5WFIKCi0tLSBVbHFHTXJwUk5kQU9xWnRpaUdnUXhMLzJWQVZNalp6NUlNM09pNTBSMytRCkqsRakEBGuXUqXyuvZDIKgX/TAaL7TNybjDaVadbVi5TJNor16ZZ3Lvo4SmTJ3hMM9/p/9NGqw1kQ==]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -387,7 +442,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBuUlZobWplRjNRc3lMaHczMG5qTmJlelg4Y1ZOVDUybTFlblBaRXFITkNzCmsvalJhT2JDcFdadVZOTFlMaTJXRHd2Q0tCYUVRa1BrdU00d0lmbUVneXcKLT4gWDI1NTE5IHB3NExyeng3YTZkZnNCdjJsbTBLVS9tZ3REUE56Nmh2ZUloRWNjQ2tJaEkKYnVKMGpBZmwwY0xld2lZTVVpTDhRVGR3UGw3UTZnMEZKNGFGeXV3WjFadwotPiBYMjU1MTkgUzZ6T1hyN2VvYmxuMlFrcS9rSy9Rd0hSSWVVRzFPMWdoaXBYUS83NUxqYwpiTzhsa0d5bDB4THZnQ0w4WkdlRzErL3JVcVcvNVJLK1k4ZXlQcGFCUXhNCi0+IFgyNTUxOSAzZDJHT2pPYlBQZ2tTdEl5dWlIMTMrMGVjMEgwUXRWNWtwdDdmODg3V0IwCm5jNnBXbzN2WG5vdnpydGxVSUhXczhtVkdjRXhrbjhxeFdIOHdsdmRlRkUKLT4gWDI1NTE5IHp1c2d1WjV2bzRxV1ZOcHFZdFJTVkVSTXVPMmxMYnZZRDVtSTNzaWNwQmsKSjlUZ3BZQzJJYW9kWkF4WDM2WTRNOW90UlpYcjN2SGxlOWdPYXBaTWpZYwotPiBJWHUtZ3JlYXNlIHZdTV9KOCBzdXIweSA6dGdNNgp3VFkyN00zVFkrQ2paNWxXUmIvaWhsZ0lTenk3YWhrOE9Fd0k0OU9wYnNXY0l4S1BRRkVpMG1Ma210dFkzRkpqCmYxREkvemtiSGZ4QWUvdmo3UGdqWWJGTFpOcTZwL0Y1WGJHaHFYdksyQ1FvTWxiYy9ONUpodkNCbGcKLS0tIDMwQ0daM2tta1c4VUJ0UmRsQVk1U1M1cjh0d2pGNlYvQUZGQ0NISWwwUVkKPEOz2E5gb+fmIfYDjZCQuQxZ7KoTG8/ebCFcjiTGeoOP+M3rVqhvZI6HBo5Lhpm1UJDktqd/zSQ3Zzfx]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBEVVdOWjhxTnVFVWZNaXl3UVoyckk0QU9oV2piS2drSWJOUENEYTNLU3pvCnkrYitTSDNqL1oxWGVQeDl2SHhHMFcxVWVRSTRyU1BzTFlQSzlSRzljaHcKLT4gWDI1NTE5IGNNWkFMNHdIQW16Q1dadnJ3WUlyS0NBUElsTGkzb1Y2MXYxTnkzaHpwQjAKRXVyLytMQS9yRmdSbTNSQUF0SmVGRTRpMzM2cmtKZEk5RHBWdEl3SlVRTQotPiBYMjU1MTkgRjNUc2tKWWJhUVVDT2hjeklERUVPVUZVaHFyYnN3N0xNSGZ4cjNVb0gzYwpnb2h2TWYzNFA1cm9jdGVZWGZXQ0pwRGRHcXE2a3BUZHYvY0tseGdwM0pnCi0+IFgyNTUxOSBZSkFJSFh1Wk1RMFpoSWxPZ1I2RDlUMitLUXVKWWMxbVlnbnhYa2xOWEhnCko0L3VzdjNTdUhhNzg1dHdBaUR4RFMyMUNKTHhydmI0SHlRTlR5eHAwMk0KLT4gWDI1NTE5IG9GWGZ2ekpYTkFrRVBBQnkvZXY4Q3F1SllMZFZ3eW1rZHY4YmtSTU01akkKVEFpaHNhL2JxcU5PNWo1THd1SnlieHpad1FFMEljSEEwMVlPZFR0ano1SQotPiBscC1ncmVhc2UgNWY9JVIgVSxwNz0hRSUKdUJoL0VzUWdUZ3VlR3M2UzVseVBNQ2NVTWtKVGFBeGFHdkNYYkVpcEI3di9jbjZURVhVaHA1cwotLS0gRTBEN1paU1hPRnAwZlNqRExJNVVTQ2xIOFYvTmZXblBjQmlJclkzWVppYwr2ubK9nWMS70G85x2C8OSMVy7XmyFARfQ+ZeGB6T2J+p/cyj5IKdKiEShNNrBze3UoT8De/LfDBogQykM=]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test2");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
