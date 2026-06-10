@@ -581,6 +581,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
 
     let cfg = config::load_config(&config_path)?;
     validate_combo_actions(&cfg)?;
+    config::validate_macros(&cfg)?;
     log::info!("Loaded config from: {}", config_path.display());
 
     let ws_url = if cfg.obs_host.is_empty() {
