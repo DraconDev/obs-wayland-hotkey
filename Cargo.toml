@@ -10,6 +10,18 @@ documentation = "https://github.com/DraconDev/obs-wayland-hotkey#readme"
 keywords = ["obs-studio", "hotkey", "wayland", "evdev", "streaming"]
 categories = ["command-line-utilities", "multimedia::encoding", "os::linux-apis"]
 readme = "README.md"
+include = [
+    "src/**/*",
+    "docs/**/*",
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yml",
+    "Cargo.toml",
+    "Cargo.lock",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+]
 
 [[bin]]
 name = "obs-hotkey"
