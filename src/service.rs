@@ -720,6 +720,7 @@ pub fn run_doctor(config_path: &str) -> anyhow::Result<()> {
     print_check("Config exists", config_exists, &config_path);
     failed |= !config_exists;
     if !config_exists {
+        println!("  hint: run `obs-hotkey setup` or create {}", config_path);
         anyhow::bail!("config file does not exist: {}", config_path);
     }
 
