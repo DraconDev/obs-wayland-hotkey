@@ -136,7 +136,7 @@ fn route_request(
                 body: json!({"ok": true, "status": {"unavailable": true}, "error": e.to_string()}),
             },
         },
-        ("POST", path) if path == "/actions" => match parse_action_request(&request.body) {
+        ("POST", "/actions") => match parse_action_request(&request.body) {
             Ok((action, scene)) => run_http_action(action, scene, ctx, notify_cfg),
             Err(e) => HttpResponse {
                 status: 400,

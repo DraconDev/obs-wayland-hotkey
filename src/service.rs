@@ -451,8 +451,8 @@ pub fn run_teardown(purge: bool) {
     println!();
 }
 
-/// Probe OBS WebSocket by doing a full handshake + identify cycle.
-/// Returns true if the handshake and identify succeed.
+/// Probe OBS WebSocket on the default port (kept for backward compat).
+#[allow(dead_code)]
 fn probe_obs_websocket(port: u16) -> bool {
     let url = format!("ws://127.0.0.1:{}", port);
     let stream = match TcpStream::connect_timeout(
