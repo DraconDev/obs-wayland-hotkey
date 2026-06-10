@@ -220,35 +220,102 @@ fn validate_config(cfg: &AppConfig) -> anyhow::Result<()> {
         if combo.key.is_none() && combo.keys.is_empty() {
             anyhow::bail!("hotkey_combo '{}' must set key or keys", combo.name);
         }
-        if combo.actions.is_empty() {
+        if combo.actions.is_empty() && combo.release_actions.is_empty() {
             anyhow::bail!(
-                "hotkey_combo '{}' must include at least one action",
+                "hotkey_combo '{}' must include at least one action or release_action",
                 combo.name
             );
         }
-        if !combo.action_delays_ms.is_empty() {
-            if combo.action_delays_ms.len() != combo.actions.len() {
-                anyhow::bail!(
-                    "hotkey_combo '{}' action_delays_ms length ({}) must match actions length ({})",
-                    combo.name,
-                    combo.action_delays_ms.len(),
-                    combo.actions.len()
-                );
-            }
-            for &delay in &combo.action_delays_ms {
-                if delay > MAX_ACTION_DELAY_MS {
-                    anyhow::bail!(
-                        "hotkey_combo '{}' action delay {} ms exceeds maximum {} ms",
-                        combo.name,
-                        delay,
-                        MAX_ACTION_DELAY_MS
-                    );
-                }
-            }
+        validate_action_list(
+            &combo.name,
+            "actions",
+            &combo.actions,
+            &combo.action_delays_ms,
+        )?;
+        validate_action_list(
+            &combo.name,
+            "release_actions",
+            &combo.release_actions,
+            &combo.release_action_delays_ms,
+        )?;
+        if combo.actions.iter().any(requires_mic_name) && cfg.mic_name.trim().is_empty() {
+            anyhow::bail!(
+                "hotkey_combo '{}' uses set_mic_volume or toggle_mute_mic but mic_name is empty",
+                combo.name
+            );
+        }
+        if combo
+            .release_actions
+            .iter()
+            .any(requires_mic_name)
+            && cfg.mic_name.trim().is_empty()
+        {
+            anyhow::bail!(
+                "hotkey_combo '{}' uses set_mic_volume or toggle_mute_mic in release_actions but mic_name is empty",
+                combo.name
+            );
         }
     }
 
     Ok(())
+}
+
+fn validate_action_list(
+    combo_name: &str,
+    field: &str,
+    items: &[ActionItem],
+    delays: &[u64],
+) -> anyhow::Result<()> {
+    if items.is_empty() {
+        return Ok(());
+    }
+    if !delays.is_empty() && delays.len() != items.len() {
+        anyhow::bail!(
+            "hotkey_combo '{}' {}_delays_ms length ({}) must match {} length ({})",
+            combo_name,
+            field,
+            delays.len(),
+            field,
+            items.len()
+        );
+    }
+    for (index, item) in items.iter().enumerate() {
+        let action = item.name();
+        if !is_known_action(action) {
+            anyhow::bail!(
+                "unknown action '{}' in hotkey_combo '{}' {} (index {})",
+                action,
+                combo_name,
+                field,
+                index
+            );
+        }
+        if action == "switch_scene" && item.scene().map(str::trim).unwrap_or("").is_empty() {
+            anyhow::bail!(
+                "hotkey_combo '{}' {} (index {}) uses switch_scene without a scene name",
+                combo_name,
+                field,
+                index
+            );
+        }
+        if let Some(delay) = delays.get(index) {
+            if *delay > MAX_ACTION_DELAY_MS {
+                anyhow::bail!(
+                    "hotkey_combo '{}' {} delay {} ms exceeds maximum {} ms",
+                    combo_name,
+                    field,
+                    delay,
+                    MAX_ACTION_DELAY_MS
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Returns true if the action requires a non-empty `mic_name` in the config.
+fn requires_mic_name(item: &ActionItem) -> bool {
+    matches!(item.name(), "set_mic_volume" | "toggle_mute_mic")
 }
 
 pub fn ensure_config(dir_path: &Path, file_path: &Path) -> anyhow::Result<()> {
@@ -430,7 +497,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBFSkN6L09TSDhQUzJDYlVxTUV4aXBtampQNnphMjdLUkxHemxmWEJ4ZzNjCkNXcXZvblV5L1RaT2NqaHVISGlOOGJieHIwV2hyYm1LUzhNa1ZPMkVMcUkKLT4gWDI1NTE5IFhJb2RINExsazdkd0RKNWFWZ2xIZkdybEdxTG15d29OSXd0MzQvUTFUR00KWk8vRkhmL2lPUUtyeUFEWmNZN3IxaUJOd1I3ZlNWVGdyUGNjSlVYcGZnSQotPiBYMjU1MTkgRGpWOWdZcnRsTExkcmFpNGg1WHlWVTN1RjVaTjA4L1BEdHNEN1d6VGtISQoxWjRMbXpHRTN0S2xDS1pYSllsaTBIRmZydXVadERNc1VVd1ExTDBZRTJzCi0+IFgyNTUxOSBUVWhFZFV5bXUwbVc4bGM2VmJaVDVVWHJMd1lLUnI2V2U1ekdVUU9YOHpvCmtWS2IzYzFxa2FjNTIxNHRiaUMxZEdYRExYRnF3VldYajQwVzYrU1hwR1UKLT4gWDI1NTE5IEpiNUhnOXY4T0ZXU2tLV1F0ZFpxZitra2x4NzBJNjBERE5MdWh4VUpqaTQKRkkvSFl6Y0RxUW5wWjhZZUsrbUJDQXY1Y0N6RWY2S2dweXp6bG9PSjZzNAotPiBLLWdyZWFzZSB+SDQgTD19PFpEIQpYbENkNUkyQVpVY2UvVmZJWWVKdklVQjZTbmlsYzdOdzI5RTVXMzBpT1dWUm9uVTVzZ1p2ZDZyb2o5a0NHdDhnClQ5RDMwaVQxZG1OK0xjRW8velQxUnlIVnhDck9zTSt1dDhDR0hCZFpja2V3MVFCaTFBc241a2dBenBNbnY5WFIKCi0tLSBVbHFHTXJwUk5kQU9xWnRpaUdnUXhMLzJWQVZNalp6NUlNM09pNTBSMytRCkqsRakEBGuXUqXyuvZDIKgX/TAaL7TNybjDaVadbVi5TJNor16ZZ3Lvo4SmTJ3hMM9/p/9NGqw1kQ==]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBJcHhWV3RBQWJhT0NUWTdGVlRTMURheFh2cEhKeHZialhpNkZaSkF2Z1NVCjdOQmpSbGkvTVRMcXpsa09mMy9zVHM4SzJ5d0lqVGJneVpQMWJMUlBHL0EKLT4gWDI1NTE5IDhnMkVNSVVkZnZVekIxZmJ1MlQ0WmJ6K2I3cGEwQlBwYTdYWEtibHRMaVkKNnZSK1VGUG5KdnZJUWlvN2tMTG1FZVhSODNuRWVPQzB0VTYrQnZhQk12YwotPiBYMjU1MTkgV2wvdzVGVllMOWM3QVBBR09BbFhEVVQyTUZaK2VGaDJNUk4veTJRQktndwo2bk1OenJqNEhwNHRNUFNjY0xuK3h0ejBlSDVJbERqeTQ1WU1obFlMTlVvCi0+IFgyNTUxOSBSQ1BvMmlTZlcrZ0lMNUNBMWNWaFJBaFcva2lFV3N6VHp4TnJVMVQ0ZEFjClMxZTBGVUpHRU1ocVpHMjZFYjlNeklFZjlJb2RnWFoyQzBFQ0szc3lYTmsKLT4gWDI1NTE5IElsSVF1dlZxTWlSS3luVlRJL0c2bEY5KzhzOXltczZzelM3djNoRm1keWsKNkVtbGx6WVczelQ3VGhmMFd4dFd1SFJRZTBJSXVoTitMekQyYnhnb2VjOAotPiB3S2k2L2ItZ3JlYXNlIDMoaFJjeVokIHwKRzFZbFA4WXdPL3prNCtXMDdXMUkwemwzRjNCYUxFeFlxU2J0RWF0TjRiOVQvaTM1MjJwTTRyTzg1N1hNenlOMQpCeFRuOGZJcnFFQ2RGODhXbDFLd3VIWVFHVTVYMWlnVGUvOXM4SlpndHIreUZMMUJJcU1kQlEKLS0tIHFzMjdiZVZIdG5ackVONEk5ZjhXNHN3ZmxvU3l6SythNWlmRitNOFJsRjQK3OlBOGer/4+Gi+fEUyjReqLPofNO9c41vcqmVwGZUyKy+dBun0qxDc/LhaNRSlaFs9Uz4ZfWFAJn]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -442,7 +509,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBEVVdOWjhxTnVFVWZNaXl3UVoyckk0QU9oV2piS2drSWJOUENEYTNLU3pvCnkrYitTSDNqL1oxWGVQeDl2SHhHMFcxVWVRSTRyU1BzTFlQSzlSRzljaHcKLT4gWDI1NTE5IGNNWkFMNHdIQW16Q1dadnJ3WUlyS0NBUElsTGkzb1Y2MXYxTnkzaHpwQjAKRXVyLytMQS9yRmdSbTNSQUF0SmVGRTRpMzM2cmtKZEk5RHBWdEl3SlVRTQotPiBYMjU1MTkgRjNUc2tKWWJhUVVDT2hjeklERUVPVUZVaHFyYnN3N0xNSGZ4cjNVb0gzYwpnb2h2TWYzNFA1cm9jdGVZWGZXQ0pwRGRHcXE2a3BUZHYvY0tseGdwM0pnCi0+IFgyNTUxOSBZSkFJSFh1Wk1RMFpoSWxPZ1I2RDlUMitLUXVKWWMxbVlnbnhYa2xOWEhnCko0L3VzdjNTdUhhNzg1dHdBaUR4RFMyMUNKTHhydmI0SHlRTlR5eHAwMk0KLT4gWDI1NTE5IG9GWGZ2ekpYTkFrRVBBQnkvZXY4Q3F1SllMZFZ3eW1rZHY4YmtSTU01akkKVEFpaHNhL2JxcU5PNWo1THd1SnlieHpad1FFMEljSEEwMVlPZFR0ano1SQotPiBscC1ncmVhc2UgNWY9JVIgVSxwNz0hRSUKdUJoL0VzUWdUZ3VlR3M2UzVseVBNQ2NVTWtKVGFBeGFHdkNYYkVpcEI3di9jbjZURVhVaHA1cwotLS0gRTBEN1paU1hPRnAwZlNqRExJNVVTQ2xIOFYvTmZXblBjQmlJclkzWVppYwr2ubK9nWMS70G85x2C8OSMVy7XmyFARfQ+ZeGB6T2J+p/cyj5IKdKiEShNNrBze3UoT8De/LfDBogQykM=]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBZUnF0ejhoQ1B6cjc2TGxDUXZJcUhKOGVMRERZTGdwUUU2cS9Lam1waDNVCitZOTZSemQzbE5uNzViM3hKdkhlTExjeVNqNDNUQUlaSGFsUGs5elNja3MKLT4gWDI1NTE5IDgwSjhBMEljWkRRRUlqMDhWNGZzd0ZpYUZybDk0L1RSdDZpUjMxdE9TZ0UKQVkvanE5UmV4ZDh5YzZVODlJZGVLWnBBM3htMTZPa0VSYytvekM1WVZGUQotPiBYMjU1MTkgMGoraVVJc2tScFIvQUQwUFNPZ0ZXbis3LzZpYjI4K0VGdnZ0NUoyQUhDcwpIdEI3bDZ2RW12OGxyZkFKanh1OUlGbVliZmZVS3EyQVk0U3JINXVzZFE0Ci0+IFgyNTUxOSBHSUVNRjFKT01WSmtLQUVKUDRibm9JeXNNYmFwZzFEdlBmZlNKVGpaLzFnCnNaQ0JKZWlPM1k1RVNSaituYTBCdFBGaVRYbkFicnNlT3ZVM3pEZkt5aHcKLT4gWDI1NTE5IFUxZDZ3bVdRUEs3Z2hyb05uZExyWlA4WmtLVHVTaTZNV3NHb1JWU3pPZ00KdWxMQ3NjdERlN1ErNFBZSUZSQnBUQmZsaXJ6Zkdnb0VCUFVwQmNCWTZzZwotPiAsL2lRSihtLWdyZWFzZSBFUSAkIHVAIE06CmRDNFZseFRIci9SVDlva1VVZGwxaHJ6L211ZlFuQWYzYjdQNUhJNzlmVDFMRTZqcVd6eUNtSDNuCi0tLSBqdWMzTWJ1NUZOdkdHS3MxbkZFcmdqQTNnbWRFMjE1MTVPZy90dW5LL29JCjpImythmd411EkiTBq5+vQo7bHOagNe6H2C3+HA32sMrXaWB/ZqcfLf5bmhQfFm/6m7y4UZ+cisrkDlAg==]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test2");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
