@@ -810,8 +810,26 @@ mod tests {
 
     #[test]
     fn test_action_labels_join_combo() {
-        let actions = vec!["toggle_recording".to_string(), "set_mic_volume".to_string()];
+        let actions = vec![
+            ActionItem::Bare("toggle_recording".to_string()),
+            ActionItem::Bare("set_mic_volume".to_string()),
+        ];
         assert_eq!(action_labels(&actions), "Toggle Recording + Set Mic Volume");
+    }
+
+    #[test]
+    fn test_action_labels_include_scene_param() {
+        let actions = vec![
+            ActionItem::Bare("toggle_recording".to_string()),
+            ActionItem::Detailed {
+                action: "switch_scene".to_string(),
+                scene: Some("Gaming".to_string()),
+            },
+        ];
+        assert_eq!(
+            action_labels(&actions),
+            "Toggle Recording + Switch Scene (Gaming)"
+        );
     }
 
     #[test]
@@ -823,6 +841,7 @@ mod tests {
             chord,
             label: "Toggle Recording + Set Mic Volume".to_string(),
             steps: Vec::new(),
+            release_steps: Vec::new(),
         }];
 
         let banner_bindings = build_banner_bindings(&bindings);
