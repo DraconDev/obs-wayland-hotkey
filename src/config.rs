@@ -124,6 +124,19 @@ impl HotkeyCombo {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub struct MacroConfig {
+    pub name: String,
+    pub actions: Vec<ActionItem>,
+    /// Optional per-action delays in milliseconds. When non-empty, the length
+    /// must match `actions`. Each delay is how long to wait *before* running
+    /// that action. This is useful for countdown workflows such as
+    /// "switch to intro scene, wait 10 seconds, start recording".
+    #[serde(default, rename = "action_delays_ms")]
+    pub action_delays_ms: Vec<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct HotkeyConfig {
     pub toggle_recording: String,
     pub toggle_pause: String,
@@ -159,6 +172,8 @@ pub struct AppConfig {
     pub allowed_devices: Vec<String>,
     #[serde(default, rename = "hotkey_combos")]
     pub hotkey_combos: Vec<HotkeyCombo>,
+    #[serde(default, rename = "macros")]
+    pub macros: Vec<MacroConfig>,
     #[serde(default = "default_notify_config", rename = "notify")]
     pub notify: NotifyConfig,
     #[serde(default = "default_http_config", rename = "http")]
@@ -199,6 +214,7 @@ pub fn default_config() -> AppConfig {
         mic_volume: 1.0,
         allowed_devices: Vec::new(),
         hotkey_combos: Vec::new(),
+        macros: Vec::new(),
         notify: NotifyConfig {
             enabled: false,
             command: default_notify_command(),
@@ -275,6 +291,7 @@ fn validate_config(cfg: &AppConfig) -> anyhow::Result<()> {
 
     validate_notify_config(&cfg.notify)?;
     validate_http_config(&cfg.http)?;
+    validate_macros(cfg)?;
 
     for combo in &cfg.hotkey_combos {
         if combo.name.trim().is_empty() {
@@ -353,6 +370,108 @@ fn is_loopback_bind(bind: &str) -> bool {
     bind.parse::<SocketAddr>()
         .map(|addr| addr.ip().is_loopback())
         .unwrap_or(false)
+}
+
+fn validate_macros(cfg: &AppConfig) -> anyhow::Result<()> {
+    let mut macro_names = HashSet::new();
+    for macro_config in &cfg.macros {
+        if macro_config.name.trim().is_empty() {
+            anyhow::bail!("macros entries require a non-empty name");
+        }
+        if !macro_names.insert(macro_config.name.as_str()) {
+            anyhow::bail!("duplicate macro name '{}'", macro_config.name);
+        }
+        if macro_config.actions.is_empty() {
+            anyhow::bail!("macro '{}' must include at least one action", macro_config.name);
+        }
+        validate_action_list(
+            &macro_config.name,
+            "actions",
+            &macro_config.actions,
+            &macro_config.action_delays_ms,
+        )?;
+        if macro_config
+            .actions
+            .iter()
+            .any(|item| matches!(item.name(), "set_mic_volume" | "toggle_mute_mic"))
+            && cfg.mic_name.trim().is_empty()
+        {
+            anyhow::bail!(
+                "macro '{}' uses set_mic_volume or toggle_mute_mic but mic_name is empty",
+                macro_config.name
+            );
+        }
+    }
+
+    for macro_config in &cfg.macros {
+        validate_macro_references(cfg, &macro_config.name, &mut Vec::new())?;
+    }
+    Ok(())
+}
+
+fn validate_macro_references(
+    cfg: &AppConfig,
+    macro_name: &str,
+    stack: &mut Vec<String>,
+) -> anyhow::Result<()> {
+    if stack.iter().any(|name| name == macro_name) {
+        let mut cycle = stack.clone();
+        cycle.push(macro_name.to_string());
+        anyhow::bail!("macro cycle detected: {}", cycle.join(" -> "));
+    }
+    stack.push(macro_name.to_string());
+    let macro_config = cfg
+        .macros
+        .iter()
+        .find(|m| m.name == macro_name)
+        .ok_or_else(|| anyhow::anyhow!("macro '{}' not found", macro_name))?;
+
+    for item in &macro_config.actions {
+        let action = item.name();
+        if is_known_action_name(action) {
+            validate_action_item(macro_name, item)?;
+        } else if cfg
+            .macros
+            .iter()
+            .any(|m| m.name == action)
+        {
+            validate_macro_references(cfg, action, stack)?;
+        } else {
+            anyhow::bail!("unknown action or macro '{}' in macro '{}'", action, macro_name);
+        }
+    }
+
+    stack.pop();
+    Ok(())
+}
+
+fn validate_action_item(owner: &str, item: &ActionItem) -> anyhow::Result<()> {
+    if item.name() == "switch_scene" && item.scene().map(str::trim).unwrap_or("").is_empty() {
+        anyhow::bail!("{} uses switch_scene without a scene name", owner);
+    }
+    Ok(())
+}
+
+fn is_known_action_name(action: &str) -> bool {
+    matches!(
+        action,
+        "toggle_recording"
+            | "toggle_pause"
+            | "toggle_streaming"
+            | "screenshot"
+            | "toggle_mute_mic"
+            | "set_mic_volume"
+            | "toggle_studio_mode"
+            | "toggle_replay_buffer"
+            | "save_replay"
+            | "switch_scene"
+            | "start_recording"
+            | "stop_recording"
+            | "start_streaming"
+            | "stop_streaming"
+            | "start_replay_buffer"
+            | "stop_replay_buffer"
+    )
 }
 
 fn validate_action_list(
@@ -581,7 +700,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBuN0hJZ3NUaDdjL1ZWakt0VTQwZVpFdlB0KzFhVGtVdWEzZ2drRnRkaVgwCitrMmJNTk5CMFcxRWkwc0lhUEpMamU1WW1uV3lTc2J0cU4rM013ZEVSdG8KLT4gWDI1NTE5IFlxU2w3cStVdk51eHBkV0NDRTdaOWVqVm9qMTJYWmNFdGRGVzJiTEZYRW8KVVlHK0ZOd0xkUWVuOWRYWjhOaEUvdGhoYVY5S1l3UDF0S1Y0UWRkU251TQotPiBYMjU1MTkgVzJ4SW9oZVhZWjl2WXM0QytXZGZURHBEQUx6MzJ1Z1Q4QysrSTBINEh3Zwo2RHdwTFFFaTRKeit2NU93ejIyZ1RFaCs0LzNMR092VUpSQk52T0drVlU0Ci0+IFgyNTUxOSA5dTIzOXBIZmZWWDhra1AyRzIzNVlqcDZEL2NGbjVZV0gvNWFORnY0bUVNCmJBOXora0tmbVc5Y2FZMlJyKzJseHRRS2tZTnZmNXhOYmNJZ2NhZHQvZFUKLT4gTi1ncmVhc2UgY29zICpzOX5nMGogPVVVQTBsIDcKbEY4QkR6d2hEZTN4ckJ1STJQNUpwNDRPL0NYZkdFYU1uaE05WUxBSzJKY1BTcUN4TEZzUkx6SUdVVURBTWNNegpVa3Ura3ExY0txVmlkZWgrWWJXNVdxUDZhRkt5dWVCYkRVRzQ4cER3Y1pPU2tzRy9hZGtrMmFXVHc0djdpWlVVClBrWkMKLS0tIGsreGIyOTFxcUtBZHlOc1IycnFybFQ4YlVDdXBHaUt0WDJmSGQvdkZLbFUKKVhS5+sCU2nZBm9HpmVDqs5oio1HnhVVciRXOkpXiTi6+dl1YgN4t5MSEII6RJ8qk9+G/MjbQqU/]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA2Wndwc3RTakZIUkZ5bUNPditvWTd4REhuTktlODY5QjZReHYzWklJSkFRCjBvcHJpcklZdlFXN3E2VWNjK0tRVlN4bTFCYTlzTXNMay93c1BoOGpTMHcKLT4gWDI1NTE5IFZtaENpSEVFbjZwb20xU2NaUkFPcFI2OHBWejlORld0ZDBCeEJqbzd4MjAKUlNXOHdibUJqbDJWTUx0Q01MeHFmTDBaTGRCRlZGK1YyZGEyQ3RJNTVnbwotPiBYMjU1MTkgNmNMUzVqaWRjelE2ODR5djEydGRjdVJ5Y2lIZjlwZS9ldk5waXhMUklTcwowRkt0bXJCVEdXK3VsMTRPSnFOSHhTbVNETDIwTFg1U3RWZndvdHI2SU1JCi0+IFgyNTUxOSBsbG9KUWdQWm5HVU96WXB6akVTY05SK215RXVESStPMkhZYUF5Nm01N2gwCnE4YmVpQ1dRRUNSSDRLUDNHYktLZ21HQW1URllhT2hQdzhEM0VrWWh3bzQKLT4gWDI1NTE5IEhMeTNrNlJxOFhBV1duRkZZWG90RExHMUJMdFRPMm5yblBMOU1LdHRyQ3MKL0Fkd1BiU2xLTi9vNXNNSlpwZmxSdmR5UEVlcTlRay81R2tBN21Cd2FtVQotPiBsVVhUMi1ncmVhc2UgSFFWIE0jbF5IKCB+e04xCnFybVNmd1dYN2FOajNjV0J1VG5YVEk4SzdhZVRpK3MzNnoyU2tVcVdidWhMNll1YzhZZHNaaTlNZ2gzYkpaOU4KUmZSM3RHbUpDbHh5NXdMaEZrMHh1RGhaWm9xeVZLQ3k5TlpwUXp3NW5aU2hPRXhmKzhsU0tmYXkKLS0tIFk2UmJvS0RHOFUxck1wSkpXUnBmcHM2N2hyeFhtMmI2ZDlzeWJMZ0h3MjgKV6zFRDp4+ecZCNp2E3yocPkWWD3AQolYw02p+yTmdgxv7gZqbVdaJpXFSSEuQCeLLH6cfr/eGX5g]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -593,7 +712,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBrSEZNWDBPNC9BS2ZLRHJZeHg1Nm0vSmVtRnpBVk9LNTAwUVZ0cUhDWHpRCkRrSU1iL1RkelE4ZnEvemJxSE9ITlRhSUFIbjh3b3VpdnZGengrK0ZsY0UKLT4gWDI1NTE5IDRFSkN5RkdaSjJWSkd5REU1d0p6ZnpXalc2MEYrT3paSWdzVTcxbkcxaWsKTzFlaTdySUVMOGY4Z1lvVlJNbVJmaldNSnpaaU55cGFzOE5oMG01RHhtRQotPiBYMjU1MTkgT2RYcU1aenlMMjQyQmN3aTJCa3JRMEZ0WHZMZmZtM3ZYRGladjI1L3FYdwpYYkorajMxeHd5OENNYmV2eUM5VVZwMmMvMWZzM3FxbXFpTDJxeUVVcFJvCi0+IFgyNTUxOSBjWEpNZGwwc0dsbTIzTkhDNWZXU2MzbVgyK2xMdXFaK0EzMndjL2pxeUNVCnFnM3ZCd1ZJMWJFUXIvZjVpdzQ5WTZIb055UzBJUVBaeDJBazBnbVlYODAKLT4gJ19gRi1ncmVhc2UKOW8xS1FCVXhVSHdjWTByMHRiQTc3dHE5NWxUS2c4ZVp1b3cwYTFIWUxqM25TdwotLS0gcVUraC9zV2dvd0ZsYjNQbDQzY0VKcCtqOTVDeHA1RWhHemJLMDdNcmtHNAppl8osLWjjJn+/5p7K6TdMD4/Or1j5su3vlxa6aBbLTgjIFnpdwTJi7iJ7bPpWlORn142zoXCYvjyG2/A=]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA0WWRubzZZYjhuYUpsVTJrUkd1WXVLUFJNaVBGZXJyWWtlOTFERnUyaGtJClovMW5wMTAwZjdhcm9hQUFPcXNwWXhxVmFOcDJtbksvbzZVd240Mm1wb1kKLT4gWDI1NTE5IG5NRFk1OG1CNXlNbHZ6RTRTV3F6UVM3RjBMODFTUUl4MHVUN2RyMytUamcKakU3eTM2eHBUYmVvQ1dLZjJEN0ExVXBFZGhhUm5pdXQvbDNrbTd3R3hHUQotPiBYMjU1MTkgbnZxOUh0aG1JdjhWek9IQ0tXTjY4cU0rTFAyZjkrOTlrbEN6eVcrMWozSQpnbVRPc0x5Y2t4V3EwVVpqVjAvd2sva1lQTEVyR05BY0s4SFA0bmF5dDVjCi0+IFgyNTUxOSA2dUJYYnZ3djBpeWFzcFJ4ZzZySUFmVlM1N2RmTjRPanN6Mm9XdkR3QWtjCmwrMmpBcWJwbUtUZGJEanFwTDVZNjV2WVhYNkpwTndwZDVJMjNRejdURlUKLT4gWDI1NTE5IFByTFJnL3RuM2pGb3lGQVNrZmVBUTVXL1J5VVpLWk5oelJhN1h3YlJjVTQKT0syb1ArZ3hqSmFKclM1SE8zWHRCTk9Ua0REYlBPaHJZQUN6ZngwWUFuVQotPiB1LlhTOkBfLWdyZWFzZSBNOT95OSxaIEpwTwpCdy9LZlgvTVBTS1V0KzJGM3M5aE9IcDNJUQotLS0gVklhNlNQMXhTMThvdExxOVJDdzhmUjRXUVAvVFRwcm5naDlnV3RUT1VwTQrjnd4j6pM6I/XjV+LxehUf551e6v30zWiLzoHF2zWAKhWmoi2F9En8Zwk/p0mG8VHAIKRZwOamhy1epEA=]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test2");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
