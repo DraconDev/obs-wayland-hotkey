@@ -149,6 +149,7 @@ fn action_item_label_with_cfg(cfg: &config::AppConfig, item: &ActionItem) -> Str
     }
 }
 
+#[allow(dead_code)]
 fn action_labels(actions: &[ActionItem]) -> String {
     actions
         .iter()
@@ -466,7 +467,7 @@ pub(crate) fn run_action_by_name(
         );
     }
 
-    let runner = build_action_runner(action_name, scene, ctx)
+    let runner = build_action_runner(action_name, scene, ctx, cfg)
         .ok_or_else(|| anyhow::anyhow!("action '{}' has no runner", action_name))?;
     runner();
     Ok(())
