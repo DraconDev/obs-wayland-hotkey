@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - HTTP listener supports an optional `token`; non-loopback binds require a token; `127.0.0.1` binds are accepted without a token for local automation.
 - New `docs/tier1-observability.md` describing the Tier 1 design, behavior, and safety boundaries.
 - New `docs/competitors-and-extensions.md` comparing obs-hotkey with OBS WebSocket CLIs, Companion / Touch Portal / Stream Deck integrations, MIDI-to-OBS tools, Advanced Scene Switcher, and Wayland/X11 hotkey daemons; it turns the research into a must-add / consider / non-goal extension plan.
-- New `docs/value-add.md` distilling the research into a practical recommendation: the biggest next win is custom OBS request + feedback-friendly status JSON, followed by a practical action library, reusable macros, discovery helpers, and integration recipes.
+- New `docs/value-add.md` distilling the research into a practical recommendation: the biggest next win is custom OBS request + feedback-friendly status JSON, followed by a practical action library, macro integration recipes, discovery helpers, and integration examples.
 - New `docs/macros.md` describing reusable macro configuration, execution semantics, HTTP invocation, and safety boundaries.
 
 ### Changed (Tier 1 Observability)

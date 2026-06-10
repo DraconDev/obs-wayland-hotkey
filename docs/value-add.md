@@ -7,7 +7,7 @@ The highest-value add is **not** another way to press a hotkey. obs-hotkey alrea
 1. more useful named OBS actions,
 2. a safe custom OBS request escape hatch,
 3. feedback-friendly status JSON,
-4. reusable macros,
+4. macro integration recipes for the reusable macros that are now implemented,
 5. discovery helpers for scenes/inputs/sources.
 
 That combination makes obs-hotkey more useful for professional operators and gives Companion, Touch Portal, Home Assistant, MIDI bridges, and shell scripts a stable target without turning obs-hotkey into a full OBS plugin, web UI, or generic hotkey daemon.
