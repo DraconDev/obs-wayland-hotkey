@@ -297,7 +297,11 @@ fn run_macro_by_name_inner(
 
     stack.push(macro_name.to_string());
     for (index, item) in macro_config.actions.iter().enumerate() {
-        let delay_ms = macro_config.action_delays_ms.get(index).copied().unwrap_or(0);
+        let delay_ms = macro_config
+            .action_delays_ms
+            .get(index)
+            .copied()
+            .unwrap_or(0);
         if delay_ms > config::MAX_ACTION_DELAY_MS {
             anyhow::bail!(
                 "macro '{}' action delay {} ms exceeds maximum {} ms",
@@ -313,8 +317,9 @@ fn run_macro_by_name_inner(
         if cfg.macros.iter().any(|m| m.name == action) {
             run_macro_by_name_inner(action, ctx, cfg, stack)?;
         } else {
-            let runner = build_action_runner(action, item.scene(), ctx, cfg)
-                .ok_or_else(|| anyhow::anyhow!("unknown action '{}' in macro '{}'", action, macro_name))?;
+            let runner = build_action_runner(action, item.scene(), ctx, cfg).ok_or_else(|| {
+                anyhow::anyhow!("unknown action '{}' in macro '{}'", action, macro_name)
+            })?;
             runner();
         }
     }
@@ -384,6 +389,7 @@ pub(crate) fn validate_combo_actions(cfg: &config::AppConfig) -> anyhow::Result<
                     combo.name
                 );
             }
+        }
 
         let needs_mic = combo
             .actions
@@ -617,7 +623,12 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         mic_volume: cfg.mic_volume,
     };
 
-    http_api::spawn(cfg.http.clone(), cfg.clone(), ctx.clone(), cfg.notify.clone());
+    http_api::spawn(
+        cfg.http.clone(),
+        cfg.clone(),
+        ctx.clone(),
+        cfg.notify.clone(),
+    );
 
     let action_bindings = build_action_bindings(&cfg, &ctx);
     let banner_bindings = build_banner_bindings(&action_bindings);
@@ -920,7 +931,8 @@ fn run_one_shot_action(
         if action_name == "switch_scene" && scene.map(str::trim).unwrap_or("").is_empty() {
             anyhow::bail!("switch_scene requires a scene name");
         }
-        if matches!(action_name, "set_mic_volume" | "toggle_mute_mic") && ctx.mic_name.trim().is_empty()
+        if matches!(action_name, "set_mic_volume" | "toggle_mute_mic")
+            && ctx.mic_name.trim().is_empty()
         {
             anyhow::bail!(
                 "{} requires 'mic_name' to be set in the config",

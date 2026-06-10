@@ -383,7 +383,10 @@ pub(crate) fn validate_macros(cfg: &AppConfig) -> anyhow::Result<()> {
             anyhow::bail!("duplicate macro name '{}'", macro_config.name);
         }
         if macro_config.actions.is_empty() {
-            anyhow::bail!("macro '{}' must include at least one action", macro_config.name);
+            anyhow::bail!(
+                "macro '{}' must include at least one action",
+                macro_config.name
+            );
         }
         validate_action_list(
             &macro_config.name,
@@ -431,14 +434,14 @@ fn validate_macro_references(
         let action = item.name();
         if is_known_action_name(action) {
             validate_action_item(macro_name, item)?;
-        } else if cfg
-            .macros
-            .iter()
-            .any(|m| m.name == action)
-        {
+        } else if cfg.macros.iter().any(|m| m.name == action) {
             validate_macro_references(cfg, action, stack)?;
         } else {
-            anyhow::bail!("unknown action or macro '{}' in macro '{}'", action, macro_name);
+            anyhow::bail!(
+                "unknown action or macro '{}' in macro '{}'",
+                action,
+                macro_name
+            );
         }
     }
 
@@ -799,7 +802,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBkNS9WY0hqaE52VHZDbnMxbXBmQW5rRmZRNFVwLzEvd2grSVkzM0czSWs4CmlDanhCanEydkVORWpGQ3VwU2tYallUVE8vMGg0QzhpVkNpdHNnb2dsSGMKLT4gWDI1NTE5IFBkVktlcDlpaGhWaFdGSXVnL2R6emV0d3UyWmRhbStORUVVOGRhemUvWG8KY04wMW5aTzYzVzloSkk2R2Frb25iaDlCNWwxKzc1NmFUNnNocThJY2tjZwotPiBYMjU1MTkgVEpHbFV2SHJSeiszNVFPMU1ncHl4azdBZGY0c0lCNEw2czhqRmFWZndTcwpOUENOd3FqNU00VEpBdTFEMjRyNkgwRVc3L3YzZVp5YUo4ZnFWeDZFVzVjCi0+IFgyNTUxOSAxZ1RRSUF5R2hCbUNMbWpkMU1wN0VwWTNJeGpENkNoeSt5RkhRZ0FPT2x3Ck9mQldTd0hXQWphR2VGY0lQcEdsSmFMWGdIL3h6TnNWMWhsb1BmSVNVTncKLT4gWDI1NTE5IE9lRW1mcEhKUktEWU9xMFREQmZycm40K3dJVFdkMFFMZUVneE1LM0VIblUKYlJxaUhKU0d5bUtxQlFTa2EvcGRjNjJaMFFFYmJlS3BoZ0lobVRLbk9JNAotPiBxZiQyLWdyZWFzZSAubWRWUCB4R1xsNCAvayE0K2JNClFIK2tIV0k2VDRpZmlvRTMyZ0xlbzlOemtPNytKOW1IVE8vTk82R0k3TW9BR21LVXJXV3lsZk5Ua01MWi9LMWwKekNDcURVRFBmcEFVM3FsQ0RqRW5jTUtHOXdrNwotLS0gYnVSdjJYQUtUcVlqb2xLOW94TS9lVVR2OElsVVhnNElxMkNzb0tnMXpLZwoDcw0wnopQ4fPbOLdZdSJxxb9lb6ZAPFp8wEj01CuRn06rBQlrDxBi/XRxeFNZM6oGUEjM0R1HK9M=]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBiSDZ4aVMrVUVXdkY3aUI2eCtzZkhEYmR2UmY0TVlsUzVlR2JNaTZNeWtzCjFHN2hGUGZabG0yMXQzOXBJNnlFY0RDQnN4b0hMOURTR3MxQmhSVGxFbVUKLT4gWDI1NTE5IGJ5L2hEZTl0cjlMRTd4V1ZSR3RRZGJUL2FEaE13bytXc3pBekU1RFZjaEkKd2d1dmxqQzZXMTZRUzFDRVNNd0ZJbk5CVmZxV09uSUpSaUZxNFdmTjdoOAotPiBYMjU1MTkgWTFZMEwreUlBaXViSFFmTldZR1I3WDJwNU82bEpkSEc0SkJDbERaQmlIUQpUS3JPWncxV29uWW9oWXoxZ1FlVXBZK3V3QTBaV2dsVTdsWlhFbXZwcUlBCi0+IFgyNTUxOSA3QUpWRm5RejRnV3dYclV2b2NGRmJZVzBwdXpUeG5paStVKzZsYmQ2ZkRVCjVseXg1MnQwMC80em12MnFTMTNrMlk1WXRSMzJwSVkvR1Y3bzVsZTZrUkEKLT4gWDI1NTE5IHFEY2Y5blpER1RML2ZPS0pKdVlJQ2pIZTlNTkdFbmtNYmU0U2tYZXdYMVkKQmdnWkxZQnpQU2JtWllpZXVzZk1EK21aS0dFNEdEWitJemRxSjRPUFNqUQotPiB9QGtuMlstZ3JlYXNlIDJQMkoqKEN7Ck9kcCt3YzJhSEtYdQotLS0gN3ViTFdtTHB0NmV3RDZaSXhrRTdtSE9BYUh1aXdEYVArQjAwRzdPRC9tOArjVGOO273qPd5RtJAVFyIB7rlC7JcpCpNBWFw1Z9AZPosMrf7uwTED28WGdRIeYbb6ipSZm06wo9Q=]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -811,7 +814,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBKK2VJMnpYc2pTR3Z3ZUZxZmN1ZlhqWVVlbGxnQVRaT3YvU29yMnhEKzNrCmljczVrYnJVWTRRaVdjVDZackp2YkVMZ0RWYTVkNThITlpyS1QwMndiSEEKLT4gWDI1NTE5IGJsV1J4czZSek5MSDVsOVdnOTZPL3p2TUFyZFQzTElva2QrK2Jtek90V0EKSlJwU3U4VG4weDcyRkdTQ0NlbmpxQ2F4bWo4T01hR09GTi9MOGV5U0E0bwotPiBYMjU1MTkgdUwxQ21SSTJYdVRxQ2dFUmJDOUE3UFdXRFpYZlluQlV0dGhpbHVadm9HYwpRUFFUNDRuZ0NHbFZDOUJvS21xN2pvNXBQL2kxZXY3ejlhK2RVVUtVWFRFCi0+IFgyNTUxOSBneXFHN21TL29XbTRVR2dPelk3SElka2J0MzVxUTlLc1AyVThCSjI5azBzCnpmRnVWMmkxMUhiU25SZ3F4R3M2ZHp1RXR4UGJLSHB5eEJGQ0xQVXdKZkEKLT4gWDI1NTE5IENwTEFSL3dHdnBlSjZ1SE5udlF4QWlMd1FydktkSjNhYy9tLzl0L0hmQUUKMXhMWDhpNThrODcvZnVGU0xkeXBYeXFDRGhkaE1XQkV6RGRRSFA0N2hEWQotPiBHNDFMQisuRy1ncmVhc2UgbX0mbApLM2l0THlRSEg2SlE5Y0hUTWFhd3JtSFpsVUVMMnZVazRTbGVMSUgrM0FjZUVYVFFnRmdVSmFrWkhMbDhQZwotLS0ga2YzM3MwODcreU8xQlZmaEpxbzJ6aHN3QUxOTEgreittSTBtcUpRVVd2cwrypf49eqqB58pxdl+zOzaYN9T7F+pa3JcNV2XhNYelMpdzMwVhxbnFFMEvHtioK75Ut8MdEaPxW2dFyxE=]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBTSExqdklES1VMVE10MVNMNjhuVGMwOUJNQXd3M3lMb1k2Tjl0MEcwS1gwCm5lSUE3R3NlQ1RLdWNmTXBaVVk1MTdJNm1PV0NmVkNNdFUvNGR0TERsL1kKLT4gWDI1NTE5IFdVZWdTeVhlMkU2K0ZuUk9STGpYSTdkUldnK1lvTmVNYWlyYjdHdGR6blUKZnA4OGdtTXF5dU80QVQ0R2JKakNnQ2J5SW5nRHd3b1p6RytjTkFXa1ovawotPiBYMjU1MTkgRndyeDMzK3RkaFhFV2x0YW1sdmtNeE4wUDFKQ2QwamxFNlhiazlLUE5WcwpCditQcW1iWHAvMzA4OGt2Yld5UjZZNkFUUFVTWGhWTEt4NS9RL2FUbzI0Ci0+IFgyNTUxOSBnUjRIU2hJV2p5RjZCVXl6Z2NSVUxxS0hDVEo0WFJMTWNtbzZydzY5QVN3Ckt5b1BrTXpXVlVNTC9MbTN6cWsvMmNSVVVNZGF2OEQxR3FURDE3MTdpaFUKLT4gWDI1NTE5IHlYZUN0RExWNlVrempzMWszRFptMWNaZ2pUbExlQWJRZUM0N3Vqekc0aDAKRlg2R1hncUd6QjgxLytaQmNvOVJtcjJUb3AzTDBYeG5ydHFqL29jOVdSYwotPiAjcS1ncmVhc2UgJiMrcVdDIFBCTyRjCjlScVBHTW1oCi0tLSByaGh2UkM5TVYvQW5DMW1Tczd0N0RKL0xGV0MrMHJGTEsyN3JONERKSDRFCgFf5ALWC9kjRIgjQk8BaUIBIvBFvE5bYVEvDi4/JTJOVd+h9jx4u1SQycp/gEEz9oMfehQVJPp0vLLx6A==]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test2");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
