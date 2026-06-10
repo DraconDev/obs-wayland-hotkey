@@ -744,6 +744,14 @@ pub fn run_doctor(config_path: &str) -> anyhow::Result<()> {
     print_check("Combo actions", combo_validation.is_ok(), &combo_detail);
     failed |= combo_validation.is_err();
 
+    let macro_validation = crate::config::validate_macros(&cfg);
+    let macro_detail: String = match macro_validation.as_ref() {
+        Ok(_) => "ok".to_string(),
+        Err(e) => e.to_string(),
+    };
+    print_check("Macros", macro_validation.is_ok(), &macro_detail);
+    failed |= macro_validation.is_err();
+
     let chord_validation = crate::validate_configured_chords(&cfg);
     let chord_detail: String = match chord_validation.as_ref() {
         Ok(_) => "ok".to_string(),
