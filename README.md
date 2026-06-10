@@ -226,6 +226,26 @@ Left/right-specific names are also supported, for example `left ctrl` or `right 
 }
 ```
 
+Action combos are best thought of as one gesture that triggers an ordered OBS request sequence. They are not atomic transactions: if one OBS request fails, obs-hotkey logs the failure and continues with the remaining actions.
+
+#### Recommended Combos
+
+These are the safest high-value workflows for this tool:
+
+- **Record + set mic volume**: `toggle_recording` + `set_mic_volume` for a consistent recording preset.
+- **Stream + set mic volume**: `toggle_streaming` + `set_mic_volume` when going live.
+- **Replay + screenshot**: `save_replay` + `screenshot` to capture a moment and save the replay buffer together.
+- **Mute + volume preset**: `toggle_mute_mic` + `set_mic_volume` when you want to unmute at a known level.
+
+#### Combos to Avoid
+
+Avoid combining stateful toggles that can fight each other or depend on OBS state that obs-hotkey does not track:
+
+- `toggle_recording` + `toggle_pause` can pause/resume at awkward times.
+- `toggle_streaming` + `toggle_recording` is usable, but both are toggles, so the result depends on current OBS state.
+- Multiple `set_mic_volume` actions in one combo are redundant; use one `mic_volume` preset.
+- Studio mode, scene switching, and media controls are possible through OBS WebSocket, but they need more state tracking before they are good combo candidates for this lightweight daemon.
+
 ### Supported Keys
 
 - Function keys: `f1` – `f24`
