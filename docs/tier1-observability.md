@@ -77,7 +77,7 @@ With HTTP enabled:
   "http": {
     "enabled": true,
     "bind": "127.0.0.1:7999",
-    "[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBYNUxoOVFENGVHZW9JUXdOVmowRmtHY1BMdUl4QXoweVhoR2hpR1gvRHowCitiRDRHR1NmeUVWZFF6dHlHYlU2ZnBtczUxU0Q3TFNaWUxXb0huc0xVVjAKLT4gWDI1NTE5IG5lMU9vdWV3ZnI0K0RyZWREYkhjc2lIV1ZhWGJEMnAwcFhuS3JOVmtKMUEKWitGZjRKakI0MUlvMGVBT3VLem12eVVvbFJXc1JwME40VHlxMjlmYVFvZwotPiBYMjU1MTkgUlptVlZzUXZYdVZ3dy9ybVpDMmZNdU5kSk9mbnFBd0VPUWFjZWJiV3JoYwpqaW1tam00RlFwY1RnK0FOWXdxSWFGMXF6cEpFaFhONm96OHZZclpKS1lZCi0+IFgyNTUxOSBpaXIwS3lwTTR4OU8xVlczVGs3MUdkbFFQMmtvakIrbjhuYkdRdXpzaFd3CkdFK0svL0JlOE0yNm9KbFMwRnI0ekVlZ1NFemdNZXhjRkY2ZzQ4bzkzNDAKLT4gWDI1NTE5IHJyS0hGMDNvRFlhaWJlcjlNUUE1ODMwRGNSMkJrSmpQb3hDSVltMm9yMTgKZ2JOWTMvN1dZMEF3Nk16enU3MWNhNmpFRXEyc1doQlpBUkFkS05XMUVaMAotPiA+TmNvWm8tZ3JlYXNlIFIgdEEgPz54IDlNClZVOTR4WG02S3g3WHp1Mlpmb2lVZW8yanN0dzJrN0Q4ME43VkdnCi0tLSBYdU1zOCtxSnZWaEp6WGdXOUNnRHpwTHA4THhtOW1xVzJ3RkNYVkVpYzcwCvq1i4OLuhH8UxqTDL9NrE1LyRi7piGhJj3eRr+So239Rp2HxCuCOKs1WK+00N0W+pJtOjwoz+rUkytfbB+PRhusGCieqnMK1PMU]
+    "[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBWc1pweHRPWXhzZ3h1WWxXUTNXcnNnaEtqV1Fmc2N3NHYxZWxHTzdWeFJvCmh5UUhBaWtIOGZ2ektlbUtGTEppRzExQlQvU1F2b0ZTbXVVK0pzdW5LbkkKLT4gWDI1NTE5IFRmM1F0N00wWmhrY0tINDhQTGsyRVBmZ1p4ZzZBL0VhZXFWSm9LUllPVDQKQ0V0SGlGRzJCdE5GVHloSFNuSFlTTkd5WVNaQ2d5V3R4VGVXU3hKWWZrQQotPiBYMjU1MTkgdytsMjJ4U0dodTNBSktBWXQyQjhwcFdFSVZJR3dxWkZVNm4raHpCcDVDYwp3amxteTBrRVlLNE9RbldUTjBuekR1RGpXRklQM1J0OFNYL29VTHpuUnZvCi0+IFgyNTUxOSA1cXp5cG1HK09WZ0ZCbzNsY0RDeDRoMXVIUnJ0b0VBbHI5VWR0QWZBOVNZCmtJZlJzU3ZFbDVsaUF6ZDlrRWdaYjZsMzlXVW1PVGs1K0EyeEFsc21qOEEKLT4gWDI1NTE5IDRaRWU5Y2p4b1d6a055TU5WWUt2N3ovYU51L1RNemlFT1VMdmtQdWdlQjQKVERPc0VTUlNQbGl1bEFZZXY0eWZNSzgxRzB6Z1RFZlNUei9CSUh2RzBiQQotPiB8cTgtZ3JlYXNlIFBfMHIgWXwgM2tGNykgdAp5Mm82aDNWSkNkZVRTdFZSCi0tLSBpVW5oR0tuRDVra2oxR2poYzl0M1VvaitjTkFXdDZlMnExYjJOUC8zbVhVCmEhFvviZcvaCfexvgCWccSJ1x6Kv2oRsDtAHvBNmMI1iHnJGrY9Do46Ii1R+HFiXBGgAgVpO1l4eAI3i4Lq2O2hWU7QYFoLij7+]
   }
 }
 ```
@@ -86,7 +86,7 @@ Companion sends:
 
 ```http
 POST /actions/switch_scene
-Authorization: [DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSAyb2k3ekVIQThEVTdnRGsxbGh6OTQydGZVRFZkRFllV3dzVzBKU090NjFvCktFREVpTitiMFo4UnFDYms5cGRkbEMrTUFldmx4SWY4L2QwVmwyakQxLzAKLT4gWDI1NTE5IDViV1NKbTRBL3hxRTZOc2tDeEg5MEIvb3Vad3pqMXpGajlhQXplTzVUR0EKQlE2Qm1OWTZ6OUhoVTdhaFdlN3ArUEx0YlJKQ21WUHpPYm1xU3czeVIvdwotPiBYMjU1MTkgVXBaNDg1N3hxY2xTb1pLaDcwTjl5bGhDcnVDNG9UUDIwWDU0Nzh6ZFBDMApEejhUK1J1OWRqZ2JsTFQ2ZmJpbnlaYU5mY0FJN2pkbkZnYk8zd1B6S2dvCi0+IFgyNTUxOSBMWE5IaEFzY1NnQ3Y3WUl2b1lFNkRxTkZzT1YyYkM2dm9GbGpSekdLZlVvCllrTGhhdDUxYjhjcnR4cGliLzBXZll5Wk4zS3NxZUQ0Mk4zUE5PSVh2a1kKLT4gWDI1NTE5IHpqZGV6dmkydlc2NkJqVmVpRk5GUlkyMStpWW9zazcrL2FyN0EwVjhXeXcKeklvWWxTL0QyUUgwK3N3czNMbnhSazF5UkIwY0tSNTFjK1FJNDhtWnZ4OAotPiBuPUJQPlgtZ3JlYXNlIEVubiNfNTAgVkRJYG9MIGNveXUodCovClJtd05SZFdZUlQvWXk1bGNNVUV1VFgvWFBKL1BMUVQ5V0JCbG04am51WFQ0Z0hCOTV4bDAwOEFPRzd4TGRDUFUKcUYvOHNEYVAwNVJiclFnCi0tLSBxeWgwbFRyd0wxR2FEYS9UeG5VeWQxZ1FRZitCQ25qck9DUmxxMjN4Yi9RCgeXkQsZFq08rhDvgHLPtic8kiFElDUPf8e97AUjj7+oon01WoUbaN/0M62ppDb4BctBmmK3hrU2HoSXm+SA6hQ/jsG9XOgW]
+Authorization: [DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA2a1FHSkU1ZlloTUErUVJndElaWHkyM3ZMdThCY2VCNnliK3BMdFNXRFJrClJqdVZIbFFoSVF5bm52dXFkR0hQc1Y0cDBBMFhHbW9JRnZrRHlES01EcTAKLT4gWDI1NTE5IHpHY044TWJ0Q3NmaGJTSmJXM3NhUkxDRHJpcDVnQkV6MjRQK1liVnNaVlEKUjVCc3hZbmRSSEFTVGNoWDM0L01tY2F2b0VueXF0cXI1VjYybDliWTk5RQotPiBYMjU1MTkganUrbFdpVk9XbmwzaVBJd29EblgydDNiSDZSSC9hRlVmaU1aY3p3MHgwcwptZEFpODBuOVZtN3Z5SUk1N3Y0RGZIcEI1YXJVekhHNEd2eGZVeVhYSXRFCi0+IFgyNTUxOSA1Z1ZFd2Z0Y2pOcHJzV250RHB1a2gyTnVWdFEyZ3U4bnYvYnRlQSthQVVrCndlZExmWFBLTkNuN21Gbk9JUEZBZ3NvL3l0VDhOWHU0aDVGd2xDSExlMXcKLT4gWDI1NTE5IFowUi8rUmRXUUs1YXE5T2QwS1NHM2UwKy9jakl5blhvRFhpUFJaTTI0QlEKejA5REg3dTVhOUFtRlYyaHA0blN6Tnc5TXNad2JBZHkvLytKWVluUFl6UQotPiB4LWdyZWFzZSBnLUV6RyZrPAo3VjgKLS0tIHN5OGlZNkJhSHBaZ21mVVVNZGdPTTJad1EvV3VZNkNuK045WEQ1c0lOc0UKXNN9gThvSTgBaRAWYNX37POib+eBy3wlqD3DHbmM/uvf3t6osV8xkzDMOqmzpx6v7Sf19kMSgUSOKVZ2BNnDqQdFnVAvznQ=]
 Content-Type: application/json
 
 {"scene": "Gaming"}
@@ -148,7 +148,7 @@ No auth required. Returns:
 {
   "ok": true,
   "service": "obs-hotkey",
-  "version": "1.0.56"
+  "version": "1.0.57"
 }
 ```
 
@@ -203,6 +203,34 @@ or JSON body:
 
 Unsupported parameters are rejected with `400 Bad Request`.
 
+### `POST /macros`
+
+Auth required when a token is configured. Body:
+
+```json
+{"macro": "countdown_record"}
+```
+
+Response:
+
+```json
+{"ok": true, "message": "macro countdown_record triggered"}
+```
+
+or:
+
+```json
+{"ok": false, "error": "macro 'missing' not found"}
+```
+
+### `POST /macros/{name}`
+
+Auth required when a token is configured. Runs a named macro without a body.
+
+```http
+POST /macros/countdown_record
+```
+
 ## Failure modes
 
 ### OBS WebSocket unavailable
@@ -248,7 +276,7 @@ Tier 1 intentionally avoids broad network exposure.
 - HTTP listener defaults to `127.0.0.1:7999`.
 - Non-loopback bind requires a token.
 - Bearer tokens are compared with constant-time-ish string comparison where feasible; at minimum, never log tokens.
-- The HTTP API exposes only action triggers and status. It does not expose arbitrary WebSocket requests.
+- The HTTP API exposes only action triggers, macro triggers, and status. It does not expose arbitrary WebSocket requests.
 - The HTTP API does not bypass config validation. Unknown actions are rejected.
 - Notifications spawn a user-configured command. The default is `notify-send`; users who customize it accept that command execution responsibility.
 

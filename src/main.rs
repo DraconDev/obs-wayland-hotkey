@@ -893,7 +893,7 @@ fn main() {
     }
 }
 
-/// Run a single OBS action and exit. Does not start the event loop or watch
+/// Run a single OBS action or named macro and exit. Does not start the event loop or watch
 /// any keyboards. Useful for systemd timers, scripts, and one-off triggers.
 fn run_one_shot_action(
     config_path_str: &str,

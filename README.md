@@ -61,7 +61,7 @@ Use this table to decide whether you need obs-hotkey at all, and which features 
 | Multi-keyboard, exclude guest USB | ❌ global, catches everything | ✅ `allowed_devices` allowlist |
 | Trigger an action from a systemd timer or shell script | ❌ | ✅ `obs-hotkey action <name>` |
 
-The two obs-hotkey features with no OBS equivalent are **action combos** (multiple OBS calls per chord) and **delayed actions**. If you need either of those, obs-hotkey earns its keep even on X11. If you only need a single key to start recording, OBS native hotkeys are enough and obs-hotkey is mostly redundant on X11.
+The core obs-hotkey features with no OBS equivalent are **action combos** (multiple OBS calls per chord), **delayed actions**, and **reusable macros**. If you need any of those, obs-hotkey earns its keep even on X11. If you only need a single key to start recording, OBS native hotkeys are enough and obs-hotkey is mostly redundant on X11.
 
 ---
 
@@ -700,7 +700,7 @@ A full design document — including the OBS WebSocket requests, the failure mod
 
 A research pass comparing obs-hotkey to OBS WebSocket CLIs, Companion / Touch Portal / Stream Deck integrations, MIDI-to-OBS tools, Advanced Scene Switcher, and Wayland/X11 hotkey daemons is in [`docs/competitors-and-extensions.md`](docs/competitors-and-extensions.md). The short version: obs-hotkey should not become a full OBS automation plugin or native Stream Deck app; it should extend the safe local bridge path with more named OBS actions, custom request support, feedback-friendly status JSON, reusable macros, and discovery helpers.
 
-The distilled value-add recommendation is in [`docs/value-add.md`](docs/value-add.md): the biggest next win is **custom OBS request + feedback-friendly status JSON**, followed by a practical action library, reusable macros, discovery helpers, and integration recipes.
+The distilled value-add recommendation is in [`docs/value-add.md`](docs/value-add.md): the biggest next win is **custom OBS request + feedback-friendly status JSON**, followed by a practical action library, macro integration recipes, discovery helpers, and integration examples.
 
 ---
 

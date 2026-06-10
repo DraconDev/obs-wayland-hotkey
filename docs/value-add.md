@@ -120,29 +120,32 @@ obs-hotkey should make `GET /status` useful as a feedback source:
 
 ### 4. Reusable macros / named sequences
 
-**High value.**
+**Implemented.**
 
-obs-hotkey already supports action combos, but reusable macros would make the HTTP bridge much cleaner:
+obs-hotkey now supports named macros that can be invoked from hotkey combos, `obs-hotkey action <name>`, and the HTTP listener. This makes the HTTP bridge cleaner because a Companion button or Touch Portal action can call one macro instead of duplicating a long action list.
+
+The implemented shape is intentionally simple:
 
 ```json
 {
-  "macros": {
-    "start_gaming": [
-      {"action": "switch_scene", "scene": "Gaming"},
-      {"action": "set_input_volume", "input": "Mic", "volume": 0.8},
-      {"action": "start_recording"}
-    ]
-  }
+  "macros": [
+    {
+      "name": "start_gaming",
+      "actions": [
+        {"action": "switch_scene", "scene": "Gaming"},
+        {"action": "set_mic_volume"},
+        {"action": "start_recording"}
+      ]
+    }
+  ]
 }
 ```
 
-Then a Companion button or Touch Portal action can call one macro instead of duplicating a long action list.
+**Why this was value-add:** it reduces config duplication and makes obs-hotkey easier to use as a shared automation target.
 
-**Why this is value-add:** it reduces config duplication and makes obs-hotkey easier to use as a shared automation target.
+**Why obs-hotkey was the right place:** macros are still just action sequences. That is exactly the product's core.
 
-**Why obs-hotkey is the right place:** macros are still just action sequences. That is exactly the product's core.
-
-**Risk:** low. This is a straightforward extension of the existing combo model.
+**Remaining risk:** keep macros simple. Conditional macros are still not a good fit because they drift toward event-driven automation.
 
 ---
 
@@ -229,8 +232,8 @@ If we want the biggest bang for the buck, build in this order:
    - This unlocks the most value with the least scope creep.
 2. **Expand the named action library**
    - Focus on the common actions people actually use in Companion and CLIs.
-3. **Add reusable macros**
-   - This makes the HTTP bridge much more maintainable.
+3. **Document macro integration recipes**
+   - Companion, Touch Portal, Home Assistant, and MIDI bridge examples should now target the implemented macro endpoints.
 4. **Add discovery helpers**
    - This reduces config friction.
 5. **Write integration recipes**

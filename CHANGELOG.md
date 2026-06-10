@@ -5,10 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.57] - 2026-06-10
 
 ### Changed
 - **Product positioning clarified.** The README now leads with an explicit "What obs-hotkey is for" section and a "OBS Native Hotkeys vs obs-hotkey" comparison table. The tool's value on X11 is the multi-action-per-gesture features (action combos, delayed actions, push-to-release, switch_scene with parameter) and the single-config-file workflow. The tool's value on Wayland is global hotkey capture (which OBS itself cannot do). Simple single-key hotkeys such as `Scroll Lock → toggle recording` are explicitly noted as redundant with OBS native hotkeys on X11. No code or config changes — the feature set is unchanged, only the documentation is more honest about where obs-hotkey adds value.
+- **Macro documentation clarified.** Reusable macros are documented as implemented for hotkey, CLI, and HTTP invocation, and HTTP behavior now explicitly distinguishes action dispatch success from OBS WebSocket request failures.
 
 ### Added
 - Key chord support for hotkeys, including generic modifiers such as `ctrl`, `shift`, `alt`, `super`, and `meta`.
@@ -19,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `switch_scene` action with a per-combo `scene` parameter for fast scene switching.
 - `release_actions` and `release_action_delays_ms` on `hotkey_combos` for push-to-record / push-to-talk semantics.
 - `allowed_devices` config field for restricting hotkey capture to specific /dev/input devices in multi-keyboard setups.
-- `obs-hotkey action <name>` one-shot CLI subcommand for triggering a single OBS action from scripts and systemd timers.
+- `obs-hotkey action <name>` one-shot CLI subcommand for triggering a named OBS action or macro from scripts and systemd timers.
 - Keyboard reader threads wrapped in `catch_unwind` so a panic in one device cannot kill the daemon.
 - Parameterized action items: `actions` entries may now be either a bare action name or an object `{"action": "switch_scene", "scene": "Gaming"}` for actions that need arguments.
 - A `Professional Workflows` section in the README covering stream-deck scene switching, push-to-mute, live recording with volume preset, countdown recording, and multi-keyboard shows.

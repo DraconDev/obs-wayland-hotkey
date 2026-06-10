@@ -107,13 +107,16 @@ These are high-value, low-risk extensions grounded in what similar programs alre
    - Config example:
      ```json
      {
-       "macros": {
-         "pre_record": [
-           {"action": "switch_scene", "scene": "Intro"},
-           {"action": "set_input_volume", "input": "Mic", "volume": 0.8},
-           {"action": "start_recording"}
-         ]
-       }
+       "macros": [
+         {
+           "name": "pre_record",
+           "actions": [
+             {"action": "switch_scene", "scene": "Intro"},
+             {"action": "set_input_volume", "input": "Mic", "volume": 0.8},
+             {"action": "start_recording"}
+           ]
+         }
+       ]
      }
      ```
    - Justification: obs-hotkey now supports named macros. The next ergonomic win is showing operators how to wire them into Companion generic HTTP, Touch Portal, Home Assistant REST command, and MIDI/Touch Portal bridge patterns.
