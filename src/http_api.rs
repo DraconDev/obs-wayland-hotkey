@@ -427,4 +427,54 @@ mod tests {
     fn test_percent_decode() {
         assert_eq!(percent_decode("Gaming%20Scene"), "Gaming Scene");
     }
+
+    #[test]
+    fn test_obs_status_response_feedback_shape() {
+        let response = obs_status_response(
+            ObsStatus {
+                stream_active: false,
+                stream_timecode: None,
+                record_active: true,
+                record_paused: false,
+                record_timecode: Some("00:01:02".to_string()),
+                replay_active: true,
+                current_scene: Some("Live".to_string()),
+                input_muted: Some(true),
+                input_volume_mul: Some(0.75),
+            },
+            "Mic",
+        );
+
+        assert_eq!(response.status, 200);
+        assert_eq!(response.body["ok"], true);
+        assert_eq!(response.body["obs"]["reachable"], true);
+        assert_eq!(response.body["obs"]["recording"]["active"], true);
+        assert_eq!(response.body["obs"]["recording"]["timecode"], "00:01:02");
+        assert_eq!(response.body["obs"]["current_scene"], "Live");
+        assert_eq!(response.body["obs"]["input"]["name"], "Mic");
+        assert_eq!(response.body["obs"]["input"]["muted"], true);
+        assert_eq!(response.body["obs"]["input"]["volume_mul"], 0.75);
+    }
+
+    #[test]
+    fn test_obs_status_unavailable_response_feedback_shape() {
+        let response = obs_status_unavailable_response("not reachable", "Mic");
+
+        assert_eq!(response.status, 200);
+        assert_eq!(response.body["ok"], true);
+        assert_eq!(response.body["obs"]["reachable"], false);
+        assert_eq!(response.body["obs"]["error"], "not reachable");
+        assert_eq!(response.body["obs"]["recording"]["active"], false);
+        assert_eq!(response.body["status"]["unavailable"], true);
+        assert_eq!(response.body["status"]["error"], "not reachable");
+        assert_eq!(response.body["obs"]["input"]["name"], "Mic");
+    }
+
+    #[test]
+    fn test_input_status_json_null_when_mic_not_configured() {
+        assert_eq!(
+            input_status_json("", Some(true), Some(0.5)),
+            serde_json::Value::Null
+        );
+    }
 }

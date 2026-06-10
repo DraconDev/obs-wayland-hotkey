@@ -77,7 +77,7 @@ With HTTP enabled:
   "http": {
     "enabled": true,
     "bind": "127.0.0.1:7999",
-    "[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBianhCNDlIV2N2UlByMFY2WHd0djkrYUdoWGFiKzJieWwvbVFuS0NKbTNVCkFlZmlQNlBsS1FMY2Iyd2U3T1BUakMwZHNGUHg3SHVkdC9mMFRaUDFDQk0KLT4gWDI1NTE5IGoyOUUvb21tWUkyVnVzUDJMKy9OVnZvKzZ4L0pZVS92dXlJK3lGanBTUm8KS05Pcncxb2x6UnR2RWhIKzhvRFZuMC8rbVBqYUR0UVhlN0RHamI4TElPawotPiBYMjU1MTkgQlY5QWIwRWt5ZURKVStPdFZhSmZEV2x2eFBzV1lBeW0zNUpjV09DYW9CawpwVXhHSmxzeVdrS3Z2dzQ3dzhVbnZTV0Z5OWJmM0dGWlJtLzVoUXA1OStBCi0+IFgyNTUxOSB2a3E3K2h4L0ZXSFVPa3kySmlFb2lDZlFTZzdZYk1aeVp2WkswanFHMVdRClhtRzBhSElueWNQNVJqTDVHTG4yWEpyUkRkMmV1cDlUMGU4VVY0ZjkvRkEKLT4gWDI1NTE5IDVKRlBsTkdEdWdud0pNQWNJREx1T3ZHS0JFZE1yVnlObFFiVE4xanpDeVEKQ0pLUE8waFdudUlObGdHN3grL2ZsK0lxTDFVbE9FUlNINUJ3RkFrdzRvcwotPiBlQk9ObC1ncmVhc2UgL3IgI0o+bHQgbHxiKwo5WFdFSUxSRS9kWHdQeEd3Y291ZWNTYS9JeTR2WE4vMWVNdlhXZlV1ZUlnN1JEaThBNkxmaGNsVEpYN2h4MDZ2Cm5SNVl5TFEKLS0tIGE5UFpPV0YxS2lDRjg4L3FqVTJyaWtxZXh4azZvWnFMdllzTG9lZjN4MGcKh9M7aznN8IjP2bSVDx4TegcnkVfkD+e1Lefs3889vgjR8YCtxbfrzJNeQUH0tWpnvOonzkWwh1e6MK9fuqIQfKrrKxXRFN/yVvk=]
+    "[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBhcjZFSURneEg4aU5yMC80QlFad0tNWFhUb2Nvcjh6cXpzSnFqemZMTHdrCjJUcDZHcGl6TkVmdHZ1c3ROWHoyWk1HU0ZjZlcyeFdpMFVQN2grS2hEV2cKLT4gWDI1NTE5IEprQVVDNkdSZTlUcmhDcVdrZVYzTTdNbkZ2RDJWbWtQZkwwcWNZcUh3MzgKZHVkVUozTG1RUEFrZWd2S0liOXJKZVE4UXVLait5bk1LTFFmbGg2a0hiTQotPiBYMjU1MTkgWWxLK2h6cnkwclBOR3J1azJ6dkJqNTNNWkNVYWZPMVNDcjlJZ09WbzdtMApBRjFSb205OHF6RUJPMVA5MFFnUGp5enlNVlE0NUdkUndRdWZ0UlpVT1lnCi0+IFgyNTUxOSBQeW44bGs2aVZWYmY0TTRCb01vUGpoZCsyMlBWQ2JtMHdyanJDOGg2dUFVCkprcW5HcG1EODRCekowSkZmckxjblpFWTBRcnFGd05GVjNRTEY4enpRdUUKLT4gWDI1NTE5IE1vRkNkUVlKMkZiNTN0UVJuS2QvWG9TNitBWnh3Y3FHM3AzR3Y5bm9IbDQKMnJCT2hqa1NJc1krSmdkYi9QNFI4a2FlZXNoZjRid2NIOUdyQ09HMTNTawotPiB0RTJ9LWdyZWFzZSAkJHNeVXkgMzQKNnc3L3lSWUd5K05HUWFtQkhicExoVWJ5L0dYUENIeDd2YWdEbTY3dkpQZFBCMzAKLS0tIDRvMWdXUDJJdmt3V09OVktDK0QvcXBuZHkyTUNoTEltYVBqdGlsRE5ETUkK0IAjSJCCYz8tuvHg0kgqxS/MIfePGB5k3IcocTHqs4WEZ+pHXYmiw1LlIZTrwSnE3NzRJoQct0M0SXSLSxR1x6ee02S+8tmGoVo=]
   }
 }
 ```
@@ -86,7 +86,7 @@ Companion sends:
 
 ```http
 POST /actions/switch_scene
-Authorization: [DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBQazhmdUJMNXVZazM4V2FtMElGb2dTOTVoNjVOOVBSeU5ORmZDTW9CcFFFCmxCekhtcDF0dTB0ZXBzc01aMm0xaG12VDJ0NjFJZmc5akR2RGdVbjZ2UXcKLT4gWDI1NTE5IHA4bllHN2pXZXlkR1NoYW52Wk03bUZrWWdJMVFFZ0ozbnlXNHZWeXl2VUEKd0lybzVudmJETXVxcHF1eG11OURsS0pIdGJyeEtQNEVlQnlqSEJ6MkhMcwotPiBYMjU1MTkgVjNnOGF3ZEc5VmNyaHlFVHFXWWgwTWVkNTFMTHlUakVuK05qTDI3M21GawpnN09VSEd1Q2tpaVpqOVIvQncyL09vRk8vTkp0eGg2bDZuRDluenhaKzV3Ci0+IFgyNTUxOSBjU0RtUEM5a0h1SHJSdGdtOUtTY01UbmNOdHBsRE1MaFc4RHdrNG9YdHhvCnJkbUx5WElLMmNWSDFCNkpBS0dVaitmZE5JZS9OamY1VXRYV2dYVGwvWWcKLT4gWDI1NTE5IFFWYURWVUxpVGw0YVE4OFNROGgxRkp0Z1BRRmREMHJzdjkyTzFqSUdUelUKRUVRMEdNakRGZmViamNxYW1mUW11YnNOWndFMTgzbjgvSTFCN2QwY1BCOAotPiBTQlQtZ3JlYXNlICVmZ0QoY18gTCgzL0dzIE14UjAKeGFkaVVZMXovNWVPM3FzMlBkOWNMYXZmUEpGYzhRci9PY3REMUdTSVpDaWdlUU5qcHo5a29CWFQ0V2JzU3Q0ZApaS0VxNVk4VGdpTC92ZjFSUkpxMEk5cTJzQ0JQbzRzCi0tLSBjWmk5cG90UERvazNJbHQyb2JyNE02VEFBTFpzTzBReVlEakFvSWVaTkxzCgj6WkD2/8enMUbWpm/nkdFd0iljpEGNxF6zNUlVNE9a1n51+KThd/sPFLhLW0wTEKNxo1O4HLtvdJn+2rDcHyFH2fUP+pS1]
+Authorization: [DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB4U2RWTENyN3ljQ0dJWlFhUzFYaGNneUVOamQrcnpPWWJoZWxpT3hnWGtZCmJPdGxhb0ZFcGNzV0owK0JYdnlCT1N5KytWa1IwaWhIanVRd0pJMEZBWmMKLT4gWDI1NTE5IE1teGlxcE1YY3JFYmo0RmVVd1V0N1FvUlgzOUUyN0liMUhsYkptY0hxQzgKMFFHV1ZqMDlVQWcrbUs0ZngwUFVxNXJjejlaanhBUHpyT3FxdWpOWHJWawotPiBYMjU1MTkgakFHeWMvWjZWYmtEY3ZNWHgydmN3c0RyU1VIMEJpUVBCZzZwK3NqeGFSWQpFTEgrMEROeC9WL1lhL01iNXk1TUo5bUw5OFJaOGVLb3JjR3FlN2V0T0I4Ci0+IFgyNTUxOSBCczd6S3R4K2l4cjgybVF5NmFiUkp3RlpDT0g1Ry9CY1hQVDdpVS9yd1dZCjVYTUVOd3ZzYU51VUk4RWZYMHdHaXJOcDloWEhtU0oySXRZZER6TjdUU0kKLT4gWDI1NTE5IC9DUGYvMzV0VDBlcGpwRXRJMWs5UUdPcjFLYVloamJQWWFoTHNzbExtRjgKNzY2S1FVNzFyOThFNXV1SmtUdmM1Y3F6dk9kbSttdU9LTUNlbHNOL1JhRQotPiBSN0UndkBPTS1ncmVhc2UgOk9aXiBvV30jCkQ2dmJCdGk1MGQ1YnpUdGFVbnFhMzRXSkZSUHhyTlV0TXVEa2tMb1VhMGt2c09zQnhzODE0dmcyYUtIa1QwMDYKWHNJbHZiWm1EMjJvRE9YY2JJMTk1NloydUxUMWJCUDk5YXVmWUpyenA4eUg4Mi9va2tVb1B4Q1IKLS0tIGx6UTZBcS9SbnllTHRDQTBHeTRTbXhYUFBVUUEwL1hUaVBoWDFGOWtzcU0KMA59Eg9ZUySapib78R6ub5m65bRgZAgG4Xi+fwFNYJJAKLKSjGtCJhzotvIkjm4H3s4ZXNazQPmSAFRRSWipIi/qA9kGbhA=]
 Content-Type: application/json
 
 {"scene": "Gaming"}
@@ -148,13 +148,58 @@ No auth required. Returns:
 {
   "ok": true,
   "service": "obs-hotkey",
-  "version": "1.0.58"
+  "version": "1.0.59"
 }
 ```
 
 ### `GET /status`
 
-Auth required when a token is configured. Returns the same rich status data as `obs-hotkey status`, where available. If OBS is unreachable, OBS fields are marked unavailable and the response remains `200 OK` because the HTTP server itself is healthy.
+Auth required when a token is configured. Returns a feedback-friendly OBS status envelope for controllers and scripts. The legacy `status` field is retained for compatibility; the new `obs` field uses stable nested objects.
+
+When OBS is reachable:
+
+```json
+{
+  "ok": true,
+  "service": "obs-hotkey",
+  "obs": {
+    "reachable": true,
+    "recording": {"active": true, "paused": false, "timecode": "00:12:34"},
+    "streaming": {"active": false, "timecode": null},
+    "replay_buffer": {"active": true},
+    "current_scene": "Live",
+    "input": {"name": "Mic", "muted": false, "volume_mul": 1.0}
+  },
+  "status": {
+    "stream_active": false,
+    "stream_timecode": null,
+    "record_active": true,
+    "record_paused": false,
+    "record_timecode": "00:12:34",
+    "replay_active": true,
+    "current_scene": "Live",
+    "input_muted": false,
+    "input_volume_mul": 1.0
+  }
+}```
+
+When OBS is unreachable, the HTTP server remains healthy and returns `200 OK` with `obs.reachable = false`:
+
+```json
+{
+  "ok": true,
+  "service": "obs-hotkey",
+  "obs": {
+    "reachable": false,
+    "error": "GetStreamStatus: Connection refused (os error 111)",
+    "recording": {"active": false, "paused": false, "timecode": null},
+    "streaming": {"active": false, "timecode": null},
+    "replay_buffer": {"active": false},
+    "current_scene": null,
+    "input": {"name": "Mic", "muted": null, "volume_mul": null}
+  },
+  "status": {"unavailable": true, "error": "GetStreamStatus: Connection refused (os error 111)"}
+}```
 
 ### `POST /actions`
 
