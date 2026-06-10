@@ -281,6 +281,71 @@ pub(crate) fn validate_combo_actions(cfg: &config::AppConfig) -> anyhow::Result<
     Ok(())
 }
 
+pub(crate) fn validate_configured_chords(cfg: &config::AppConfig) -> anyhow::Result<()> {
+    let single_action_bindings = [
+        ("toggle_recording", cfg.hotkeys.toggle_recording.as_str()),
+        ("toggle_pause", cfg.hotkeys.toggle_pause.as_str()),
+        ("toggle_streaming", cfg.hotkeys.toggle_streaming.as_str()),
+        ("screenshot", cfg.hotkeys.screenshot.as_str()),
+        ("toggle_mute_mic", cfg.hotkeys.toggle_mute_mic.as_str()),
+        (
+            "toggle_studio_mode",
+            cfg.hotkeys.toggle_studio_mode.as_str(),
+        ),
+        (
+            "toggle_replay_buffer",
+            cfg.hotkeys.toggle_replay_buffer.as_str(),
+        ),
+        ("save_replay", cfg.hotkeys.save_replay.as_str()),
+    ];
+
+    for (action, key_name) in single_action_bindings {
+        if !key_name.trim().is_empty() {
+            input::KeyChord::parse(key_name)
+                .map_err(|e| anyhow::anyhow!("invalid hotkey for {}: {}", action, e))?;
+        }
+    }
+
+    for combo in &cfg.hotkey_combos {
+        let key_spec = combo.key_spec();
+        if !key_spec.trim().is_empty() {
+            input::KeyChord::parse(&key_spec)
+                .map_err(|e| anyhow::anyhow!("invalid hotkey for {}: {}", combo.name, e))?;
+        }
+    }
+
+    Ok(())
+}
+
+pub(crate) fn run_action_by_name(
+    action_name: &str,
+    scene: Option<&str>,
+    ctx: &ActionContext,
+) -> anyhow::Result<()> {
+    if !is_known_action(action_name) {
+        anyhow::bail!(
+            "unknown action '{}'. Run `obs-hotkey --help` or see the README for the list of supported actions.",
+            action_name
+        );
+    }
+    if action_name == "switch_scene" && scene.map(str::trim).unwrap_or("").is_empty() {
+        anyhow::bail!("switch_scene requires a scene name");
+    }
+    if matches!(action_name, "set_mic_volume" | "toggle_mute_mic")
+        && ctx.mic_name.trim().is_empty()
+    {
+        anyhow::bail!(
+            "{} requires 'mic_name' to be set in the config",
+            action_name
+        );
+    }
+
+    let runner = build_action_runner(action_name, scene, ctx)
+        .ok_or_else(|| anyhow::anyhow!("action '{}' has no runner", action_name))?;
+    runner();
+    Ok(())
+}
+
 fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<ActionBinding> {
     let mut bindings = Vec::new();
 
@@ -502,7 +567,14 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
                             {
                                 let steps = binding.steps.clone();
                                 let label = binding.label.clone();
-                                std::thread::spawn(move || run_steps(steps));
+                                let notify_cfg = cfg.notify.clone();
+                                std::thread::spawn(move || {
+                                    notify::send_notification(
+                                        &notify_cfg,
+                                        &format!("Triggered {}", label),
+                                    );
+                                    run_steps(steps);
+                                });
                                 log::info!("Triggered hotkey: {}", label);
                             }
                         }
@@ -533,7 +605,14 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
                             false
                         });
                         for (id, steps, label) in to_release {
-                            std::thread::spawn(move || run_steps(steps));
+                            let notify_cfg = cfg.notify.clone();
+                            std::thread::spawn(move || {
+                                notify::send_notification(
+                                    &notify_cfg,
+                                    &format!("Released {}", label),
+                                );
+                                run_steps(steps);
+                            });
                             log::info!("Released hotkey ({}): {}", id, label);
                         }
                     }
