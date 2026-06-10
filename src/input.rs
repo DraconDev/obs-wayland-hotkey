@@ -163,7 +163,11 @@ pub fn find_keyboards_with_filter(allowlist: &[String]) -> anyhow::Result<Vec<Pa
 }
 
 pub fn find_keyboards() -> anyhow::Result<Vec<PathBuf>> {
-    find_keyboards_with_filter(&[])
+    #[allow(dead_code)]
+    fn inner() -> anyhow::Result<Vec<PathBuf>> {
+        find_keyboards_with_filter(&[])
+    }
+    inner()
 }
 
 pub struct KeyEvent {
