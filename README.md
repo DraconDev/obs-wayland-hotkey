@@ -17,6 +17,7 @@
 - **Global Hotkeys** — works even when OBS is not focused
 - **Chord Hotkeys** — use combinations like `ctrl + shift + f1`
 - **Action Combos** — trigger multiple OBS actions from one key chord
+- **Delayed Actions** — schedule actions in a combo with per-step delays (e.g. start recording 3 seconds after a hotkey)
 - **Mic Volume Presets** — set input volume as part of a combo
 - **Auto-start on Login** — systemd user service integration
 - **Auto-reconnect** — automatically reconnects if OBS restarts
@@ -245,6 +246,40 @@ Avoid combining stateful toggles that can fight each other or depend on OBS stat
 - `toggle_streaming` + `toggle_recording` is usable, but both are toggles, so the result depends on current OBS state.
 - Multiple `set_mic_volume` actions in one combo are redundant; use one `mic_volume` preset.
 - Studio mode, scene switching, and media controls are possible through OBS WebSocket, but they need more state tracking before they are good combo candidates for this lightweight daemon.
+
+### Delayed Actions
+
+`hotkey_combos` can schedule each action with its own delay using the optional `action_delays_ms` field. The array length must match `actions`; each entry is the milliseconds to wait *before* running that action. A value of `0` runs immediately.
+
+```json
+{
+  "name": "start_recording_after_3s",
+  "key": "ctrl + f1",
+  "actions": ["toggle_recording", "set_mic_volume", "screenshot"],
+  "action_delays_ms": [0, 3000, 6000]
+}
+```
+
+In the example above, pressing `ctrl + f1` will:
+
+1. Toggle recording immediately.
+2. After 3 seconds, set the mic volume to the configured `mic_volume`.
+3. After another 3 seconds, save a screenshot.
+
+Delays only apply to the combo that triggered them. Other hotkeys remain responsive. The maximum delay per action is 10 minutes (600,000 ms); values above that are rejected at config load.
+
+If `action_delays_ms` is omitted, the combo runs all its actions immediately, like before. A combo with a single delayed step is the easiest way to get a “start record after a countdown” workflow:
+
+```json
+{
+  "name": "record_in_5",
+  "key": "ctrl + shift + r",
+  "actions": ["toggle_recording"],
+  "action_delays_ms": [5000]
+}
+```
+
+This is one gesture that gives you a 5-second countdown before recording actually starts.
 
 ### Supported Keys
 
