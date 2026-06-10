@@ -309,11 +309,7 @@ fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<Ac
             // If the combo declares per-action delays, use them. Otherwise
             // every step runs immediately. Validation already guarantees
             // the delays vec is either empty or exactly `actions.len()` long.
-            let delay_ms = combo
-                .action_delays_ms
-                .get(index)
-                .copied()
-                .unwrap_or(0);
+            let delay_ms = combo.action_delays_ms.get(index).copied().unwrap_or(0);
             steps.push(ComboStep {
                 action: action_fn,
                 delay: Duration::from_millis(delay_ms),
@@ -728,8 +724,14 @@ mod tests {
         }) as Arc<dyn Fn() + Send + Sync>;
 
         run_steps(vec![
-            ComboStep { action: first, delay: Duration::ZERO },
-            ComboStep { action: second, delay: Duration::ZERO },
+            ComboStep {
+                action: first,
+                delay: Duration::ZERO,
+            },
+            ComboStep {
+                action: second,
+                delay: Duration::ZERO,
+            },
         ]);
 
         assert_eq!(count.load(Ordering::SeqCst), 2);
@@ -745,9 +747,18 @@ mod tests {
         };
 
         let steps = vec![
-            ComboStep { action: make(0, order.clone()), delay: Duration::from_millis(0) },
-            ComboStep { action: make(1, order.clone()), delay: Duration::from_millis(80) },
-            ComboStep { action: make(2, order.clone()), delay: Duration::from_millis(0) },
+            ComboStep {
+                action: make(0, order.clone()),
+                delay: Duration::from_millis(0),
+            },
+            ComboStep {
+                action: make(1, order.clone()),
+                delay: Duration::from_millis(80),
+            },
+            ComboStep {
+                action: make(2, order.clone()),
+                delay: Duration::from_millis(0),
+            },
         ];
 
         let start = Instant::now();
