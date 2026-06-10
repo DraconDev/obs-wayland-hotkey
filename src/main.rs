@@ -11,8 +11,8 @@ mod input;
 mod obs;
 mod service;
 
-use config::config_path;
-use input::{find_keyboards, spawn_keyboard_reader};
+use config::{config_path, ActionItem};
+use input::{find_keyboards_with_filter, spawn_keyboard_reader};
 
 /// Main event loop poll interval (ms).
 const EVENT_LOOP_POLL_MS: u64 = 10;
@@ -49,6 +49,17 @@ enum Commands {
     },
     #[command(about = "Show service status, config state, and OBS connectivity")]
     Status,
+    #[command(
+        about = "Trigger a single OBS action once, without running the daemon. Useful for scripts and systemd timers."
+    )]
+    Action {
+        #[arg(help = "Action name, e.g. toggle_recording, switch_scene")]
+        name: String,
+        #[arg(long = "scene", help = "Scene name, required for switch_scene")]
+        scene: Option<String>,
+        #[arg(long = "config", help = "Path to config file")]
+        config: Option<PathBuf>,
+    },
 }
 
 struct ActionContext {
@@ -72,6 +83,9 @@ struct ActionBinding {
     chord: input::KeyChord,
     label: String,
     steps: Vec<ComboStep>,
+    /// Optional steps to run when the chord transitions from matched to
+    /// unmatched (i.e. the operator releases a key in the chord).
+    release_steps: Vec<ComboStep>,
 }
 
 const ACTION_DEFINITIONS: &[(&str, &str)] = &[
@@ -84,6 +98,7 @@ const ACTION_DEFINITIONS: &[(&str, &str)] = &[
     ("toggle_studio_mode", "Toggle Studio Mode"),
     ("toggle_replay_buffer", "Toggle Replay Buffer"),
     ("save_replay", "Save Replay"),
+    ("switch_scene", "Switch Scene"),
 ];
 
 fn action_label(action: &str) -> &str {
@@ -97,85 +112,82 @@ fn is_known_action(action: &str) -> bool {
     ACTION_DEFINITIONS.iter().any(|(name, _)| *name == action)
 }
 
-fn action_labels(actions: &[String]) -> String {
+fn action_item_label(item: &ActionItem) -> String {
+    let base = action_label(item.name()).to_string();
+    if let Some(scene) = item.scene() {
+        if !scene.is_empty() {
+            return format!("{} ({})", base, scene);
+        }
+    }
+    base
+}
+
+fn action_labels(actions: &[ActionItem]) -> String {
     actions
         .iter()
-        .map(|action| action_label(action))
+        .map(action_item_label)
         .collect::<Vec<_>>()
         .join(" + ")
 }
 
-fn build_action_map(ctx: &ActionContext) -> HashMap<&'static str, Arc<dyn Fn() + Send + Sync>> {
-    HashMap::from([
-        (
-            "toggle_recording",
-            Arc::new({
+/// Build a closure that runs the given action, capturing the parameter it
+/// needs. Returns None if the action is unknown.
+fn build_action_runner(
+    action: &str,
+    scene: Option<&str>,
+    ctx: &ActionContext,
+) -> Option<Arc<dyn Fn() + Send + Sync>> {
+    match action {
+        "toggle_recording" => Some(Arc::new({
+            let c = ctx.client.clone();
+            move || c.toggle_recording()
+        })),
+        "toggle_pause" => Some(Arc::new({
+            let c = ctx.client.clone();
+            move || c.toggle_pause()
+        })),
+        "toggle_streaming" => Some(Arc::new({
+            let c = ctx.client.clone();
+            move || c.toggle_streaming()
+        })),
+        "screenshot" => Some(Arc::new({
+            let c = ctx.client.clone();
+            let src = ctx.screenshot_source.clone();
+            let dir = ctx.screenshot_dir.clone();
+            move || c.screenshot(&src, &dir)
+        })),
+        "toggle_mute_mic" => Some(Arc::new({
+            let c = ctx.client.clone();
+            let mic = ctx.mic_name.clone();
+            move || c.toggle_mute_mic(&mic)
+        })),
+        "set_mic_volume" => Some(Arc::new({
+            let c = ctx.client.clone();
+            let mic = ctx.mic_name.clone();
+            let volume = ctx.mic_volume;
+            move || c.set_mic_volume(&mic, volume)
+        })),
+        "toggle_studio_mode" => Some(Arc::new({
+            let c = ctx.client.clone();
+            move || c.toggle_studio_mode()
+        })),
+        "toggle_replay_buffer" => Some(Arc::new({
+            let c = ctx.client.clone();
+            move || c.toggle_replay_buffer()
+        })),
+        "save_replay" => Some(Arc::new({
+            let c = ctx.client.clone();
+            move || c.save_replay()
+        })),
+        "switch_scene" => {
+            let scene_name = scene.unwrap_or("").to_string();
+            Some(Arc::new({
                 let c = ctx.client.clone();
-                move || c.toggle_recording()
-            }) as _,
-        ),
-        (
-            "toggle_pause",
-            Arc::new({
-                let c = ctx.client.clone();
-                move || c.toggle_pause()
-            }) as _,
-        ),
-        (
-            "toggle_streaming",
-            Arc::new({
-                let c = ctx.client.clone();
-                move || c.toggle_streaming()
-            }) as _,
-        ),
-        (
-            "screenshot",
-            Arc::new({
-                let c = ctx.client.clone();
-                let src = ctx.screenshot_source.clone();
-                let dir = ctx.screenshot_dir.clone();
-                move || c.screenshot(&src, &dir)
-            }) as _,
-        ),
-        (
-            "toggle_mute_mic",
-            Arc::new({
-                let c = ctx.client.clone();
-                let mic = ctx.mic_name.clone();
-                move || c.toggle_mute_mic(&mic)
-            }) as _,
-        ),
-        (
-            "set_mic_volume",
-            Arc::new({
-                let c = ctx.client.clone();
-                let mic = ctx.mic_name.clone();
-                let volume = ctx.mic_volume;
-                move || c.set_mic_volume(&mic, volume)
-            }) as _,
-        ),
-        (
-            "toggle_studio_mode",
-            Arc::new({
-                let c = ctx.client.clone();
-                move || c.toggle_studio_mode()
-            }) as _,
-        ),
-        (
-            "toggle_replay_buffer",
-            Arc::new({
-                let c = ctx.client.clone();
-                move || c.toggle_replay_buffer()
-            }) as _,
-        ),
-        (
-            "save_replay",
-            Arc::new({
-                let c = ctx.client.clone();
-                move || c.save_replay()
-            }) as _,
-        ),
-    ])
+                move || c.set_current_scene(&scene_name)
+            }))
+        }
+        _ => None,
+    }
 }
 
 fn run_steps(steps: Vec<ComboStep>) {
@@ -187,6 +199,42 @@ fn run_steps(steps: Vec<ComboStep>) {
     }
 }
 
+fn build_steps(
+    actions: &[ActionItem],
+    delays_ms: &[u64],
+    ctx: &ActionContext,
+    combo_name: &str,
+    field: &str,
+) -> Option<Vec<ComboStep>> {
+    let mut steps = Vec::with_capacity(actions.len());
+    for (index, item) in actions.iter().enumerate() {
+        let action = item.name();
+        let runner = match build_action_runner(action, item.scene(), ctx) {
+            Some(r) => r,
+            None => {
+                log::warn!(
+                    "Unknown action '{}' in hotkey_combo '{}' {} (index {})",
+                    action,
+                    combo_name,
+                    field,
+                    index
+                );
+                return None;
+            }
+        };
+        let delay_ms = delays_ms.get(index).copied().unwrap_or(0);
+        steps.push(ComboStep {
+            action: runner,
+            delay: Duration::from_millis(delay_ms),
+        });
+    }
+    if steps.is_empty() {
+        None
+    } else {
+        Some(steps)
+    }
+}
+
 fn validate_combo_actions(cfg: &config::AppConfig) -> anyhow::Result<()> {
     let mut combo_names = HashSet::new();
 
@@ -195,24 +243,24 @@ fn validate_combo_actions(cfg: &config::AppConfig) -> anyhow::Result<()> {
             anyhow::bail!("duplicate hotkey_combo name '{}'", combo.name);
         }
 
-        for action in &combo.actions {
-            if !is_known_action(action) {
+        for item in combo.actions.iter().chain(combo.release_actions.iter()) {
+            if !is_known_action(item.name()) {
                 anyhow::bail!(
                     "unknown action '{}' in hotkey_combo '{}'",
-                    action,
+                    item.name(),
                     combo.name
                 );
             }
         }
 
-        if combo
+        let needs_mic = combo
             .actions
             .iter()
-            .any(|action| action == "set_mic_volume")
-            && cfg.mic_name.trim().is_empty()
-        {
+            .chain(combo.release_actions.iter())
+            .any(|item| matches!(item.name(), "set_mic_volume" | "toggle_mute_mic"));
+        if needs_mic && cfg.mic_name.trim().is_empty() {
             anyhow::bail!(
-                "hotkey_combo '{}' uses set_mic_volume but mic_name is empty",
+                "hotkey_combo '{}' uses set_mic_volume or toggle_mute_mic but mic_name is empty",
                 combo.name
             );
         }
@@ -222,7 +270,6 @@ fn validate_combo_actions(cfg: &config::AppConfig) -> anyhow::Result<()> {
 }
 
 fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<ActionBinding> {
-    let action_map = build_action_map(ctx);
     let mut bindings = Vec::new();
 
     let single_action_bindings = [
@@ -255,12 +302,9 @@ fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<Ac
             }
         };
 
-        let action_fn = match action_map.get(action) {
-            Some(action_fn) => action_fn.clone(),
-            None => {
-                log::warn!("Unknown action '{}' for {}", action, action_label(action));
-                continue;
-            }
+        let Some(runner) = build_action_runner(action, None, ctx) else {
+            log::warn!("Unknown action '{}' for {}", action, action_label(action));
+            continue;
         };
 
         bindings.push(ActionBinding {
@@ -269,9 +313,10 @@ fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<Ac
             chord,
             label: action_label(action).to_string(),
             steps: vec![ComboStep {
-                action: action_fn,
+                action: runner,
                 delay: Duration::ZERO,
             }],
+            release_steps: Vec::new(),
         });
     }
 
@@ -290,35 +335,23 @@ fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<Ac
             }
         };
 
-        let mut steps = Vec::with_capacity(combo.actions.len());
-        let mut valid = true;
-        for (index, action) in combo.actions.iter().enumerate() {
-            if !is_known_action(action) {
-                log::warn!(
-                    "Unknown action '{}' in hotkey_combo '{}'",
-                    action,
-                    combo.name
-                );
-                valid = false;
-                break;
-            }
-            let action_fn = action_map
-                .get(action.as_str())
-                .expect("known action must have a runner")
-                .clone();
-            // If the combo declares per-action delays, use them. Otherwise
-            // every step runs immediately. Validation already guarantees
-            // the delays vec is either empty or exactly `actions.len()` long.
-            let delay_ms = combo.action_delays_ms.get(index).copied().unwrap_or(0);
-            steps.push(ComboStep {
-                action: action_fn,
-                delay: Duration::from_millis(delay_ms),
-            });
-        }
-
-        if !valid || steps.is_empty() {
+        let Some(steps) = build_steps(
+            &combo.actions,
+            &combo.action_delays_ms,
+            ctx,
+            &combo.name,
+            "actions",
+        ) else {
             continue;
-        }
+        };
+        let release_steps = build_steps(
+            &combo.release_actions,
+            &combo.release_action_delays_ms,
+            ctx,
+            &combo.name,
+            "release_actions",
+        )
+        .unwrap_or_default();
 
         bindings.push(ActionBinding {
             id: format!("combo:{}", combo.name),
@@ -326,6 +359,7 @@ fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<Ac
             chord,
             label: action_labels(&combo.actions),
             steps,
+            release_steps,
         });
     }
 
@@ -391,7 +425,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         anyhow::bail!("No valid hotkeys configured");
     }
 
-    let keyboard_paths = find_keyboards()?;
+    let keyboard_paths = find_keyboards_with_filter(&cfg.allowed_devices)?;
     if keyboard_paths.is_empty() {
         anyhow::bail!("No keyboard devices found! Make sure you're in the input group.");
     }
@@ -463,13 +497,35 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
                     }
                     0 => {
                         pressed_keys.remove(&event.code);
+                        // Find bindings that were active and whose chord no
+                        // longer matches. Run their release_steps (push-to-
+                        // record / push-to-talk) and drop them from the
+                        // active set.
+                        let mut to_release: Vec<(String, Vec<ComboStep>, String)> = Vec::new();
                         active_bindings.retain(|binding_id| {
-                            action_bindings
+                            let binding = match action_bindings
                                 .iter()
-                                .find(|binding| binding.id == *binding_id)
-                                .map(|binding| !binding.chord.matches(&pressed_keys))
-                                .unwrap_or(true)
+                                .find(|b| b.id == *binding_id)
+                            {
+                                Some(b) => b,
+                                None => return false,
+                            };
+                            if binding.chord.matches(&pressed_keys) {
+                                return true;
+                            }
+                            if !binding.release_steps.is_empty() {
+                                to_release.push((
+                                    binding.id.clone(),
+                                    binding.release_steps.clone(),
+                                    binding.label.clone(),
+                                ));
+                            }
+                            false
                         });
+                        for (id, steps, label) in to_release {
+                            std::thread::spawn(move || run_steps(steps));
+                            log::info!("Released hotkey ({}): {}", id, label);
+                        }
                     }
                     _ => {}
                 }
@@ -576,10 +632,80 @@ fn main() {
         Some(Commands::Status) => {
             service::run_status(&config_path_for_status);
         }
+        Some(Commands::Action { name, scene, config }) => {
+            let action_cfg = config
+                .clone()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_else(|| cfg_path.clone());
+            if let Err(e) = run_one_shot_action(&action_cfg, name, scene.as_deref()) {
+                log::error!("Action failed: {}", e);
+                std::process::exit(1);
+            }
+        }
         None => {
             print_quickstart();
         }
     }
+}
+
+/// Run a single OBS action and exit. Does not start the event loop or watch
+/// any keyboards. Useful for systemd timers, scripts, and one-off triggers.
+fn run_one_shot_action(
+    config_path_str: &str,
+    action_name: &str,
+    scene: Option<&str>,
+) -> anyhow::Result<()> {
+    if !is_known_action(action_name) {
+        anyhow::bail!(
+            "unknown action '{}'. Run `obs-hotkey --help` or see the README for the list of supported actions.",
+            action_name
+        );
+    }
+
+    let config_path = PathBuf::from(config::expand_home(config_path_str));
+    let dir_path = config_path.parent().unwrap_or(&config_path);
+    config::ensure_config(dir_path, &config_path)?;
+    let cfg = config::load_config(&config_path)?;
+
+    if action_name == "switch_scene" {
+        let scene_name = scene.unwrap_or("").trim();
+        if scene_name.is_empty() {
+            anyhow::bail!("switch_scene requires a scene name (use --scene)");
+        }
+    }
+    if matches!(action_name, "set_mic_volume" | "toggle_mute_mic") && cfg.mic_name.trim().is_empty()
+    {
+        anyhow::bail!(
+            "{} requires 'mic_name' to be set in the config",
+            action_name
+        );
+    }
+
+    let ws_url = if cfg.obs_host.is_empty() {
+        "ws://localhost:4455".to_string()
+    } else {
+        cfg.obs_host.clone()
+    };
+
+    let client = obs::OBSClient::new(ws_url);
+    client.connect()?;
+
+    let ctx = ActionContext {
+        client: client.clone(),
+        screenshot_source: cfg.screenshot_source.clone(),
+        screenshot_dir: config::expand_home(&cfg.screenshot_dir),
+        mic_name: cfg.mic_name.clone(),
+        mic_volume: cfg.mic_volume,
+    };
+
+    let runner = build_action_runner(action_name, scene, &ctx)
+        .ok_or_else(|| anyhow::anyhow!("action '{}' has no runner", action_name))?;
+    runner();
+
+    // Allow the background WebSocket read to complete so any failure log
+    // makes it to stderr before we exit.
+    std::thread::sleep(Duration::from_millis(50));
+    Ok(())
 }
 
 #[cfg(test)]

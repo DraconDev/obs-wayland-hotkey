@@ -408,7 +408,10 @@ mod tests {
         assert_eq!(cfg.hotkey_combos[0].key_spec(), "ctrl + f1");
         assert_eq!(
             cfg.hotkey_combos[0].actions,
-            vec!["toggle_recording", "set_mic_volume"]
+            vec![
+                ActionItem::Bare("toggle_recording".to_string()),
+                ActionItem::Bare("set_mic_volume".to_string()),
+            ]
         );
         assert_eq!(cfg.mic_volume, 0.75);
         fs::remove_file(&path).ok();
@@ -497,7 +500,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBJcHhWV3RBQWJhT0NUWTdGVlRTMURheFh2cEhKeHZialhpNkZaSkF2Z1NVCjdOQmpSbGkvTVRMcXpsa09mMy9zVHM4SzJ5d0lqVGJneVpQMWJMUlBHL0EKLT4gWDI1NTE5IDhnMkVNSVVkZnZVekIxZmJ1MlQ0WmJ6K2I3cGEwQlBwYTdYWEtibHRMaVkKNnZSK1VGUG5KdnZJUWlvN2tMTG1FZVhSODNuRWVPQzB0VTYrQnZhQk12YwotPiBYMjU1MTkgV2wvdzVGVllMOWM3QVBBR09BbFhEVVQyTUZaK2VGaDJNUk4veTJRQktndwo2bk1OenJqNEhwNHRNUFNjY0xuK3h0ejBlSDVJbERqeTQ1WU1obFlMTlVvCi0+IFgyNTUxOSBSQ1BvMmlTZlcrZ0lMNUNBMWNWaFJBaFcva2lFV3N6VHp4TnJVMVQ0ZEFjClMxZTBGVUpHRU1ocVpHMjZFYjlNeklFZjlJb2RnWFoyQzBFQ0szc3lYTmsKLT4gWDI1NTE5IElsSVF1dlZxTWlSS3luVlRJL0c2bEY5KzhzOXltczZzelM3djNoRm1keWsKNkVtbGx6WVczelQ3VGhmMFd4dFd1SFJRZTBJSXVoTitMekQyYnhnb2VjOAotPiB3S2k2L2ItZ3JlYXNlIDMoaFJjeVokIHwKRzFZbFA4WXdPL3prNCtXMDdXMUkwemwzRjNCYUxFeFlxU2J0RWF0TjRiOVQvaTM1MjJwTTRyTzg1N1hNenlOMQpCeFRuOGZJcnFFQ2RGODhXbDFLd3VIWVFHVTVYMWlnVGUvOXM4SlpndHIreUZMMUJJcU1kQlEKLS0tIHFzMjdiZVZIdG5ackVONEk5ZjhXNHN3ZmxvU3l6SythNWlmRitNOFJsRjQK3OlBOGer/4+Gi+fEUyjReqLPofNO9c41vcqmVwGZUyKy+dBun0qxDc/LhaNRSlaFs9Uz4ZfWFAJn]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBFRm5mSjJZZXdraEZ6L2lBUzErSlVhd0M2bEIwOTFiaDRPOXljYWpYWGw0Cks2cFpOR2dPaTlhcmltZUwwUHI4d1FtdnhMM2xhRFp3ZXY2ZXZ1TTlHTjgKLT4gWDI1NTE5IHZ5bEpabFZzeGtWNWk5YVRJdVlSbXJJa0VON05uRUVRNFgwSTNrZjhDM0EKZjAvUHQwVVRSWkpCUWt6OUFtVTFuTTZlcTFvV1RRbm0wL3F0YWdaU0ZpWQotPiBYMjU1MTkgNnVYbCs1UEoxaTlyc3FDZEZWSkg0OTJFN0dLTVlVTlhDMW9HVWJsT0RGawpxRHFFaVovOVp0M0o0WXc0VEZiQ2RjUHh2QWtJdVR1ZzJyZFRONmZnSXRZCi0+IFgyNTUxOSAwTFBpcjhLZFZyWG5jOU5lVU9VWTVFbGFFSUN4MU5aaXFmQ2pMaStqZEJvCkp5a3BNMXp2dDZURWlObUpuTWF6akRwU3E5b0ZYWjd0NVRYTUNCUStqeVEKLT4gWDI1NTE5IERQNzZmY3BMSEdQSkVYYWw5a21YWTJXcjRxYWE1TDc3VFp5VVpWdkRaU1UKb3Fwd2J4bDFES3BDUU0wa3ZoWjRtZzliUW1iQ2dENXRhSTllYjNwNWE2VQotPiB3IT8xLWdyZWFzZSApfXIKN1Z2M2ppM05pR0J2K1cwRGdFdDNZbXMrNzVCaDlwdkd4NHZWL0t3bnFHOFRaNm4wUGV6S0dsTTNtSTJ3RGlrVwpNRE9OcXlPb25UbjVKdGdhalZ6OEpHeXVkQXdFUktNcmtmZU90bllGcUwwTEVrWQotLS0ga0oyU01OYnJRQ1N6aFpUb1p3ZkYzTUxTSEdDVFZocXFQaCtueitYVm95VQqUWbc/J16RqVTgmAzatdRqsnlSOxWy/vRmZhUDlpnsNzp6oTKHnembdBuJeR1hOPdrdh4BBmj7xyM=]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -509,7 +512,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBZUnF0ejhoQ1B6cjc2TGxDUXZJcUhKOGVMRERZTGdwUUU2cS9Lam1waDNVCitZOTZSemQzbE5uNzViM3hKdkhlTExjeVNqNDNUQUlaSGFsUGs5elNja3MKLT4gWDI1NTE5IDgwSjhBMEljWkRRRUlqMDhWNGZzd0ZpYUZybDk0L1RSdDZpUjMxdE9TZ0UKQVkvanE5UmV4ZDh5YzZVODlJZGVLWnBBM3htMTZPa0VSYytvekM1WVZGUQotPiBYMjU1MTkgMGoraVVJc2tScFIvQUQwUFNPZ0ZXbis3LzZpYjI4K0VGdnZ0NUoyQUhDcwpIdEI3bDZ2RW12OGxyZkFKanh1OUlGbVliZmZVS3EyQVk0U3JINXVzZFE0Ci0+IFgyNTUxOSBHSUVNRjFKT01WSmtLQUVKUDRibm9JeXNNYmFwZzFEdlBmZlNKVGpaLzFnCnNaQ0JKZWlPM1k1RVNSaituYTBCdFBGaVRYbkFicnNlT3ZVM3pEZkt5aHcKLT4gWDI1NTE5IFUxZDZ3bVdRUEs3Z2hyb05uZExyWlA4WmtLVHVTaTZNV3NHb1JWU3pPZ00KdWxMQ3NjdERlN1ErNFBZSUZSQnBUQmZsaXJ6Zkdnb0VCUFVwQmNCWTZzZwotPiAsL2lRSihtLWdyZWFzZSBFUSAkIHVAIE06CmRDNFZseFRIci9SVDlva1VVZGwxaHJ6L211ZlFuQWYzYjdQNUhJNzlmVDFMRTZqcVd6eUNtSDNuCi0tLSBqdWMzTWJ1NUZOdkdHS3MxbkZFcmdqQTNnbWRFMjE1MTVPZy90dW5LL29JCjpImythmd411EkiTBq5+vQo7bHOagNe6H2C3+HA32sMrXaWB/ZqcfLf5bmhQfFm/6m7y4UZ+cisrkDlAg==]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBOV3NPRldpNFVBTTU3TzJLSVdMS0FqN29KYXVSK0NydUJBdjd3dFBMalNZCjJHZVM5V01nem1FdkJDaHFmKzMvcXNDUVRMb0VhVVZDTnUzdlJCVTE4N2MKLT4gWDI1NTE5IGY0cmFzb2dZN0J2cDJ5S2RqaUh2MHY4SXBXcENoZWlKazhzQXQyVUtBWHMKM3J4YUFydVdJa1ltWXg4UWljS1NrbEhtS2laNlhrUkp3bUxBWE54MEQxVQotPiBYMjU1MTkgdk1BTkhhaFVidEtFSGthUktTemFUT0VkUFJnVkwycjJsY09Ud0FVTDZBUQpaT2VXdnZyc2M1WCtLTU1RWW5WeUFUQVltc2lwb1hVSEhUMUFnUjFzUUxJCi0+IFgyNTUxOSBWMDBvRWVYQ003UzAxalYwYko5eW1OZU9IdzUyandacWpUQzlFOGlmMTFrClpJL3I1NFlmM05YLzAzaVpBeGNvUVRhaElmYnJPczFqb2dOaVdxZVljRjAKLT4gWDI1NTE5IFF0OWozRkJJYkZpVTQrcExuaTBWaU92K08wRVpZRWVvdVZxTTZRL0FSak0KYVZQNjZyU2R5TUR4dE1wbk1QVHRMNkdHWTdSZDVHOXRoRGJRU0haK21pdwotPiBqey1ncmVhc2UgSkJ9ak4wICdbRjFNfkYgTFNsIEFTYApKbEQxbmFGeVRvRmIzTnhYR2lUd1NrWE00THc4NjhtRWZjcnYvOUpER3pVQUhuWnk4U0NECi0tLSAyb2VoakovTE1yd3ZHM0NoL2R4WmUyYzBOOS9sbnlvcHhhWUhHSXhOQnNJCijMhmYHlFxFQ94E/2grCkE9kEt2JKgel8CWDASXO2gbPiR8r0VW6wbqyuotg5o8uxqCQWuoG9U0BPYa6A==]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test2");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -533,5 +536,97 @@ mod tests {
         let result = load_config(&path);
         assert!(result.is_err(), "expected error for unknown field");
         fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn test_load_config_with_scene_combo() {
+        let temp = std::env::temp_dir();
+        let path = temp.join("hotkeys_scene.json");
+        fs::write(
+            &path,
+            r#"{"obs_host":"ws://localhost:4455","hotkeys":{"toggle_recording":"","toggle_pause":"","toggle_streaming":"","screenshot":"","toggle_mute_mic":"","toggle_studio_mode":"","toggle_replay_buffer":"","save_replay":""},"screenshot_source":"","screenshot_dir":"","mic_name":"","hotkey_combos":[{"name":"to_gaming","key":"f13","actions":[{"action":"switch_scene","scene":"Gaming"}]}]}"#,
+        )
+        .unwrap();
+        let cfg = load_config(&path).unwrap();
+        assert_eq!(cfg.hotkey_combos.len(), 1);
+        assert_eq!(cfg.hotkey_combos[0].actions.len(), 1);
+        assert_eq!(cfg.hotkey_combos[0].actions[0].name(), "switch_scene");
+        assert_eq!(cfg.hotkey_combos[0].actions[0].scene(), Some("Gaming"));
+        fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn test_load_config_rejects_switch_scene_without_scene_name() {
+        let temp = std::env::temp_dir();
+        let path = temp.join("hotkeys_scene_bad.json");
+        fs::write(
+            &path,
+            r#"{"obs_host":"ws://localhost:4455","hotkeys":{"toggle_recording":"","toggle_pause":"","toggle_streaming":"","screenshot":"","toggle_mute_mic":"","toggle_studio_mode":"","toggle_replay_buffer":"","save_replay":""},"screenshot_source":"","screenshot_dir":"","mic_name":"","hotkey_combos":[{"name":"to_gaming","key":"f13","actions":[{"action":"switch_scene"}]}]}"#,
+        )
+        .unwrap();
+        let result = load_config(&path);
+        assert!(result.is_err());
+        fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn test_load_config_with_release_actions() {
+        let temp = std::env::temp_dir();
+        let path = temp.join("hotkeys_release.json");
+        fs::write(
+            &path,
+            r#"{"obs_host":"ws://localhost:4455","hotkeys":{"toggle_recording":"","toggle_pause":"","toggle_streaming":"","screenshot":"","toggle_mute_mic":"","toggle_studio_mode":"","toggle_replay_buffer":"","save_replay":""},"screenshot_source":"","screenshot_dir":"","mic_name":"","hotkey_combos":[{"name":"push_to_talk","key":"ctrl + space","actions":["toggle_mute_mic"],"release_actions":["toggle_mute_mic"]}]}"#,
+        )
+        .unwrap();
+        let cfg = load_config(&path).unwrap();
+        assert_eq!(cfg.hotkey_combos.len(), 1);
+        assert_eq!(cfg.hotkey_combos[0].actions.len(), 1);
+        assert_eq!(cfg.hotkey_combos[0].release_actions.len(), 1);
+        assert_eq!(cfg.hotkey_combos[0].release_actions[0].name(), "toggle_mute_mic");
+        fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn test_load_config_rejects_combo_with_only_release_actions_and_no_mic() {
+        // release_actions: set_mic_volume requires mic_name; even if actions is non-empty,
+        // release_actions is validated too.
+        let temp = std::env::temp_dir();
+        let path = temp.join("hotkeys_release_mic.json");
+        fs::write(
+            &path,
+            r#"{"obs_host":"ws://localhost:4455","hotkeys":{"toggle_recording":"","toggle_pause":"","toggle_streaming":"","screenshot":"","toggle_mute_mic":"","toggle_studio_mode":"","toggle_replay_buffer":"","save_replay":""},"screenshot_source":"","screenshot_dir":"","mic_name":"","hotkey_combos":[{"name":"push","key":"f1","actions":["toggle_recording"],"release_actions":["set_mic_volume"]}]}"#,
+        )
+        .unwrap();
+        let result = load_config(&path);
+        assert!(result.is_err());
+        fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn test_load_config_with_allowed_devices() {
+        let temp = std::env::temp_dir();
+        let path = temp.join("hotkeys_devices.json");
+        fs::write(
+            &path,
+            r#"{"obs_host":"ws://localhost:4455","hotkeys":{"toggle_recording":"f1","toggle_pause":"","toggle_streaming":"","screenshot":"","toggle_mute_mic":"","toggle_studio_mode":"","toggle_replay_buffer":"","save_replay":""},"screenshot_source":"","screenshot_dir":"","mic_name":"","allowed_devices":["AT Translated Set 2 keyboard","Stream Deck XL"]}"#,
+        )
+        .unwrap();
+        let cfg = load_config(&path).unwrap();
+        assert_eq!(cfg.allowed_devices, vec!["AT Translated Set 2 keyboard", "Stream Deck XL"]);
+        fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn test_action_item_bare() {
+        let item: ActionItem = serde_json::from_str("\"toggle_recording\"").unwrap();
+        assert_eq!(item.name(), "toggle_recording");
+        assert_eq!(item.scene(), None);
+    }
+
+    #[test]
+    fn test_action_item_detailed() {
+        let item: ActionItem = serde_json::from_str("{\"action\":\"switch_scene\",\"scene\":\"Gaming\"}").unwrap();
+        assert_eq!(item.name(), "switch_scene");
+        assert_eq!(item.scene(), Some("Gaming"));
     }
 }

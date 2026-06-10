@@ -116,7 +116,7 @@ impl KeyToken {
     }
 }
 
-pub fn find_keyboards() -> anyhow::Result<Vec<PathBuf>> {
+pub fn find_keyboards_with_filter(allowlist: &[String]) -> anyhow::Result<Vec<PathBuf>> {
     let mut paths = Vec::new();
     for entry in std::fs::read_dir("/dev/input")? {
         let entry = entry?;
@@ -142,14 +142,28 @@ pub fn find_keyboards() -> anyhow::Result<Vec<PathBuf>> {
         // Detect keyboards by checking for common typing keys rather than
         // KEY_SCROLLLOCK, which many keyboards (laptops, compact boards) do
         // not advertise in their evdev capability bitmap.
-        if supported.contains(KeyCode::KEY_A)
+        if !(supported.contains(KeyCode::KEY_A)
             && supported.contains(KeyCode::KEY_SPACE)
-            && supported.contains(KeyCode::KEY_ENTER)
+            && supported.contains(KeyCode::KEY_ENTER))
         {
-            paths.push(path);
+            continue;
         }
+        let device_name = device.name().unwrap_or("").to_string();
+        if !allowlist.is_empty() && !allowlist.iter().any(|allowed| allowed == &device_name) {
+            log::info!(
+                "skipping keyboard '{}' at {} (not in allowed_devices)",
+                device_name,
+                path.display()
+            );
+            continue;
+        }
+        paths.push(path);
     }
     Ok(paths)
+}
+
+pub fn find_keyboards() -> anyhow::Result<Vec<PathBuf>> {
+    find_keyboards_with_filter(&[])
 }
 
 pub struct KeyEvent {
@@ -172,58 +186,83 @@ pub fn spawn_keyboard_reader(
     let path_clone = path.clone();
 
     thread::spawn(move || {
-        let mut device = match Device::open(&path_clone) {
-            Ok(d) => d,
-            Err(e) => {
-                log::warn!("could not open {}: {}", path_clone.display(), e);
-                return;
+        let path_for_log = path_clone.clone();
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+            run_keyboard_reader(path_clone, close_rx, tx);
+        }));
+        match result {
+            Ok(()) => {
+                log::info!("keyboard thread exiting: {}", path_for_log.display());
             }
-        };
-        let name = device.name().unwrap_or("?").to_string();
-        log::info!(
-            "keyboard thread started: {} at {}",
-            name,
-            path_clone.display()
-        );
-
-        // Use recv_timeout so the loop periodically checks close_rx.
-        // This avoids blocking indefinitely in fetch_events().
-        const TIMEOUT_MS: u32 = 500;
-
-        loop {
-            // Check for shutdown signal first
-            match close_rx.recv_timeout(std::time::Duration::from_millis(TIMEOUT_MS as u64)) {
-                Ok(()) | Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-                    break;
-                }
-                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
-                    // Timeout is fine — keep polling the device
-                }
-            }
-
-            let events = match device.fetch_events() {
-                Ok(e) => e,
-                Err(e) => {
-                    log::warn!("error reading device {}: {}", name, e);
-                    break;
-                }
-            };
-
-            for event in events {
-                if event.event_type() == evdev::EventType::KEY
-                    && (event.value() == 0 || event.value() == 1)
-                {
-                    let _ = tx.send(KeyEvent {
-                        code: event.code(),
-                        value: event.value(),
-                    });
-                }
+            Err(payload) => {
+                let msg = if let Some(s) = payload.downcast_ref::<&'static str>() {
+                    (*s).to_string()
+                } else if let Some(s) = payload.downcast_ref::<String>() {
+                    s.clone()
+                } else {
+                    "non-string panic payload".to_string()
+                };
+                log::error!(
+                    "keyboard thread panicked on {}: {}. The daemon will continue without this device.",
+                    path_for_log.display(),
+                    msg
+                );
             }
         }
-        log::info!("keyboard thread exiting: {}", name);
     });
 
     (DeviceHandle { path, tx: close_tx }, rx)
+}
+
+fn run_keyboard_reader(path: PathBuf, close_rx: Receiver<()>, tx: Sender<KeyEvent>) {
+    let mut device = match Device::open(&path) {
+        Ok(d) => d,
+        Err(e) => {
+            log::warn!("could not open {}: {}", path.display(), e);
+            return;
+        }
+    };
+    let name = device.name().unwrap_or("?").to_string();
+    log::info!(
+        "keyboard thread started: {} at {}",
+        name,
+        path.display()
+    );
+
+    // Use recv_timeout so the loop periodically checks close_rx.
+    // This avoids blocking indefinitely in fetch_events().
+    const TIMEOUT_MS: u32 = 500;
+
+    loop {
+        // Check for shutdown signal first
+        match close_rx.recv_timeout(std::time::Duration::from_millis(TIMEOUT_MS as u64)) {
+            Ok(()) | Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                break;
+            }
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                // Timeout is fine — keep polling the device
+            }
+        }
+
+        let events = match device.fetch_events() {
+            Ok(e) => e,
+            Err(e) => {
+                log::warn!("error reading device {}: {}", name, e);
+                break;
+            }
+        };
+
+        for event in events {
+            if event.event_type() == evdev::EventType::KEY
+                && (event.value() == 0 || event.value() == 1)
+            {
+                let _ = tx.send(KeyEvent {
+                    code: event.code(),
+                    value: event.value(),
+                });
+            }
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -378,5 +417,15 @@ mod tests {
         for (code, name) in KEY_CODE_TO_NAME.iter() {
             assert_eq!(key_name(*code), Some(name.to_string()));
         }
+    }
+
+    #[test]
+    fn test_find_keyboards_with_empty_allowlist_returns_all() {
+        // The empty allowlist must not filter anything out, even if a real
+        // device on the build host happens to have an unexpected name.
+        let result = find_keyboards_with_filter(&[]);
+        // Either we have permission (some keyboards) or we don't (none).
+        // The contract is just that the call does not error.
+        assert!(result.is_ok());
     }
 }
