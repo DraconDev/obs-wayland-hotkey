@@ -319,6 +319,18 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_macro_request() {
+        let request = parse_macro_request(r#"{"macro":"countdown_record"}"#).unwrap();
+        assert_eq!(request, "countdown_record");
+    }
+
+    #[test]
+    fn test_parse_macro_request_missing_macro() {
+        let result = parse_macro_request(r#"{"action":"countdown_record"}"#);
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_authorized_without_token() {
         let cfg = HttpConfig {
             enabled: true,
