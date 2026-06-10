@@ -3,7 +3,9 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::Duration;
 
-use crate::config::{expand_home, real_home};
+use crate::config::{expand_home, real_home, load_config};
+use crate::input::find_keyboards_with_filter;
+use crate::obs::OBSClient;
 
 pub fn is_autostart_enabled() -> bool {
     Command::new("systemctl")
@@ -72,6 +74,24 @@ pub fn in_input_group() -> bool {
     );
 
     false
+}
+
+fn print_check(name: &str, ok: bool, detail: &str) {
+    let status = if ok { "ok" } else { "fail" };
+    println!("  {:<24} {}  {}", name, status, detail);
+}
+
+fn ws_url_from_config_path(config_path: &str) -> String {
+    let expanded = expand_home(config_path);
+    if let Ok(cfg) = load_config(std::path::Path::new(&expanded)) {
+        if cfg.obs_host.is_empty() {
+            "ws://localhost:4455".to_string()
+        } else {
+            cfg.obs_host.clone()
+        }
+    } else {
+        "ws://localhost:4455".to_string()
+    }
 }
 
 pub fn service_unit_path() -> PathBuf {
