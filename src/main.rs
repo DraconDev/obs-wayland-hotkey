@@ -269,17 +269,70 @@ fn run_steps(steps: Vec<ComboStep>) {
     }
 }
 
+pub(crate) fn run_macro_by_name(
+    macro_name: &str,
+    ctx: &ActionContext,
+    cfg: &config::AppConfig,
+) -> anyhow::Result<()> {
+    run_macro_by_name_inner(macro_name, ctx, cfg, &mut Vec::new())
+}
+
+fn run_macro_by_name_inner(
+    macro_name: &str,
+    ctx: &ActionContext,
+    cfg: &config::AppConfig,
+    stack: &mut Vec<String>,
+) -> anyhow::Result<()> {
+    if stack.iter().any(|name| name == macro_name) {
+        let mut cycle = stack.clone();
+        cycle.push(macro_name.to_string());
+        anyhow::bail!("macro cycle detected: {}", cycle.join(" -> "));
+    }
+    let macro_config = cfg
+        .macros
+        .iter()
+        .find(|m| m.name == macro_name)
+        .ok_or_else(|| anyhow::anyhow!("macro '{}' not found", macro_name))?;
+
+    stack.push(macro_name.to_string());
+    for (index, item) in macro_config.actions.iter().enumerate() {
+        let delay_ms = macro_config.action_delays_ms.get(index).copied().unwrap_or(0);
+        if delay_ms > config::MAX_ACTION_DELAY_MS {
+            anyhow::bail!(
+                "macro '{}' action delay {} ms exceeds maximum {} ms",
+                macro_name,
+                delay_ms,
+                config::MAX_ACTION_DELAY_MS
+            );
+        }
+        if delay_ms > 0 {
+            std::thread::sleep(Duration::from_millis(delay_ms));
+        }
+        let action = item.name();
+        if cfg.macros.iter().any(|m| m.name == action) {
+            run_macro_by_name_inner(action, ctx, cfg, stack)?;
+        } else {
+            let runner = build_action_runner(action, item.scene(), ctx, cfg)
+                .ok_or_else(|| anyhow::anyhow!("unknown action '{}' in macro '{}'", action, macro_name))?;
+            runner();
+        }
+    }
+    stack.pop();
+    Ok(())
+}
+
 fn build_steps(
     actions: &[ActionItem],
     delays_ms: &[u64],
     ctx: &ActionContext,
+    cfg: &config::AppConfig,
     combo_name: &str,
     field: &str,
 ) -> Option<Vec<ComboStep>> {
     let mut steps = Vec::with_capacity(actions.len());
     for (index, item) in actions.iter().enumerate() {
         let action = item.name();
-        let runner = match build_action_runner(action, item.scene(), ctx) {
+        let runner = match build_action_runner(action, item.scene(), ctx, cfg) {
             Some(r) => r,
             None => {
                 log::warn!(
@@ -314,19 +367,21 @@ pub(crate) fn validate_combo_actions(cfg: &config::AppConfig) -> anyhow::Result<
         }
 
         for item in combo.actions.iter().chain(combo.release_actions.iter()) {
-            if !is_known_action(item.name()) {
+            if !is_known_action(item.name()) && !cfg.macros.iter().any(|m| m.name == item.name()) {
                 anyhow::bail!(
-                    "unknown action '{}' in hotkey_combo '{}'",
+                    "unknown action or macro '{}' in hotkey_combo '{}'",
                     item.name(),
                     combo.name
                 );
             }
-            if item.name() == "switch_scene" && item.scene().map(str::trim).unwrap_or("").is_empty()
-            {
-                anyhow::bail!(
-                    "hotkey_combo '{}' uses switch_scene without a scene name",
-                    combo.name
-                );
+            if is_known_action(item.name()) {
+                if item.name() == "switch_scene" && item.scene().map(str::trim).unwrap_or("").is_empty()
+                {
+                    anyhow::bail!(
+                        "hotkey_combo '{}' uses switch_scene without a scene name",
+                        combo.name
+                    );
+                }
             }
         }
 
