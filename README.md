@@ -782,4 +782,4 @@ obs-hotkey teardown --purge
 
 ## License
 
-MIT
+AGPLv3 — see [LICENSE](./LICENSE) for the full text.

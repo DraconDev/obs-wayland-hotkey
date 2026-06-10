@@ -2,7 +2,7 @@
 name = "obs-hotkey"
 version = "1.0.57"
 edition = "2021"
-license = "MIT"
+license = "AGPL-3.0-or-later"
 description = "A lightweight Rust daemon for controlling OBS Studio with global hotkeys on Wayland and X11"
 repository = "https://github.com/DraconDev/obs-wayland-hotkey"
 homepage = "https://github.com/DraconDev/obs-wayland-hotkey"

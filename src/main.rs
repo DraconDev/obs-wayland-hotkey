@@ -122,7 +122,7 @@ fn action_label(action: &str) -> &str {
 }
 
 fn is_known_action(action: &str) -> bool {
-    ACTION_DEFINITIONS.iter().any(|(name, _)| *name == action)
+    config::is_known_action_name(action)
 }
 
 fn action_item_label(item: &ActionItem) -> String {
