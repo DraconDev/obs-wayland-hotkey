@@ -26,7 +26,8 @@ If you only need a single `F12` to toggle recording, OBS native hotkeys will do 
 - **Global Hotkeys** — works even when OBS is not focused (the original Wayland use case)
 - **Chord Hotkeys** — use combinations like `ctrl + shift + f1`
 - **Action Combos** — trigger multiple OBS actions from one key chord (the unique value on X11)
-- **Delayed Actions** — schedule actions in a combo with per-step delays (e.g. start recording 3 seconds after a hotkey)
+- **Reusable Macros** — name a sequence once and invoke it from hotkeys, CLI, or HTTP
+- **Delayed Actions** — schedule actions in a combo or macro with per-step delays (e.g. start recording 3 seconds after a hotkey)
 - **Push-to-Release Actions** — run a second set of actions when the chord is released (push-to-record / push-to-talk)
 - **Scene Switching** — dedicated `switch_scene` action for the most common pro workflow
 - **Keyboard Allowlist** — restrict hotkey capture to specific /dev/input devices in multi-keyboard setups
@@ -54,7 +55,8 @@ Use this table to decide whether you need obs-hotkey at all, and which features 
 | `Ctrl+Shift+R` → start recording **and** set mic volume | ❌ one hotkey = one action | ✅ multi-action combo |
 | `Ctrl+Shift+S` → start streaming **and** set mic volume | ❌ | ✅ multi-action combo |
 | Push `F13` to record, release to stop | ❌ OBS does not have a push-to-record action | ✅ `release_actions` |
-| Press once, recording starts in 10 seconds | ❌ | ✅ `action_delays_ms` |
+| Press once, recording starts in 10 seconds | ❌ | ✅ `action_delays_ms` or named macros |
+| Reuse “intro countdown” from a hotkey, timer, or HTTP button | ❌ | ✅ named macros |
 | Switch between multiple scenes via hotkey | ✅ "Switch to scene" hotkey per scene, configured in OBS | ✅ `switch_scene` in one config file |
 | Multi-keyboard, exclude guest USB | ❌ global, catches everything | ✅ `allowed_devices` allowlist |
 | Trigger an action from a systemd timer or shell script | ❌ | ✅ `obs-hotkey action <name>` |
@@ -329,6 +331,71 @@ If `action_delays_ms` is omitted, the combo runs all its actions immediately, li
 
 This is one gesture that gives you a 5-second countdown before recording actually starts.
 
+### Reusable Macros
+
+Macros let you name an action sequence once and reuse it from a hotkey combo, `obs-hotkey action <name>`, or the HTTP listener. This is useful when the same professional workflow is triggered from multiple surfaces.
+
+```json
+{
+  "macros": [
+    {
+      "name": "countdown_record",
+      "actions": [
+        {"action": "switch_scene", "scene": "Intro"},
+        {"action": "start_recording"}
+      ],
+      "action_delays_ms": [0, 10000]
+    }
+  ]
+}
+```
+
+That macro switches to `Intro`, waits 10 seconds, then starts recording. You can invoke it with:
+
+```bash
+obs-hotkey action countdown_record
+```
+
+Or call it from a hotkey combo:
+
+```json
+{
+  "name": "countdown_from_pad",
+  "key": "f13",
+  "actions": ["countdown_record"]
+}
+```
+
+Macros can also call other macros, but recursive macro cycles are rejected at config load. The same `action_delays_ms` rules apply: the array length must match `actions`, and each delay is capped at 10 minutes.
+
+The most useful macro patterns are deterministic start/stop workflows:
+
+```json
+{
+  "macros": [
+    {
+      "name": "go_live",
+      "actions": [
+        {"action": "switch_scene", "scene": "Starting Soon"},
+        {"action": "start_streaming"},
+        {"action": "start_recording"}
+      ],
+      "action_delays_ms": [0, 0, 0]
+    },
+    {
+      "name": "end_show",
+      "actions": [
+        {"action": "stop_recording"},
+        {"action": "stop_streaming"},
+        {"action": "switch_scene", "scene": "BRB"}
+      ]
+    }
+  ]
+}
+```
+
+Prefer `start_recording` / `stop_recording` and `start_streaming` / `stop_streaming` inside macros when you want deterministic behavior. The older `toggle_recording` and `toggle_streaming` actions remain available for simple toggles.
+
 ### Push-to-Release Actions (Push-to-Record / Push-to-Talk)
 
 `hotkey_combos` can declare an optional `release_actions` list. The actions in `actions` run on press; the actions in `release_actions` run when the chord is released. This is the professional pattern for transient controls:
@@ -374,11 +441,12 @@ The names are the kernel-assigned device names reported by evdev. To find yours,
 
 ### One-shot Action CLI
 
-`obs-hotkey action <name>` connects to OBS once, runs a single action, and exits. It does not start the event loop or watch any keyboards.
+`obs-hotkey action <name>` connects to OBS once, runs a single action or named macro, and exits. It does not start the event loop or watch any keyboards.
 
 ```bash
 obs-hotkey action toggle_recording
 obs-hotkey action switch_scene --scene "Gaming"
+obs-hotkey action countdown_record
 ```
 
 This is useful for systemd timers, shell scripts, and integrations where the daemon would be overkill:
@@ -599,6 +667,8 @@ Endpoints:
 | `POST` | `/actions` | `{"action": "switch_scene", "scene": "Gaming"}` | Triggers a named action. |
 | `POST` | `/actions/<name>` | optional `{"scene": "Gaming"}` | Shorthand for a known action. |
 | `POST` | `/actions/<name>?scene=Gaming` | — | Same as above with a query parameter. |
+| `POST` | `/macros` | `{"macro": "countdown_record"}` | Runs a named macro. |
+| `POST` | `/macros/<name>` | — | Shorthand for a named macro. |
 
 **Safety boundaries:**
 
@@ -612,9 +682,12 @@ Example with `curl`:
 curl -X POST http://127.0.0.1:7999/actions \
   -H 'Content-Type: application/json' \
   -d '{"action":"switch_scene","scene":"Gaming"}'
+
+# Run a reusable macro
+curl -X POST http://127.0.0.1:7999/macros/countdown_record
 ```
 
-Example with a Companion “generic HTTP” button: method `POST`, URL `http://127.0.0.1:7999/actions/toggle_recording`, no body.
+Example with a Companion “generic HTTP” button: method `POST`, URL `http://127.0.0.1:7999/actions/toggle_recording`, no body. For macros, use `http://127.0.0.1:7999/macros/countdown_record`.
 
 A full design document — including the OBS WebSocket requests, the failure modes, and the rationale — is in [`docs/tier1-observability.md`](docs/tier1-observability.md).
 
