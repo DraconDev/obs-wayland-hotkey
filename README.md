@@ -525,6 +525,101 @@ Only those two devices will be able to trigger hotkeys. The guest's USB keyboard
 
 ---
 
+## Tier 1: Observability & Integrations
+
+obs-hotkey now ships with a small professional observability and integration surface so you can see what fired, what OBS is doing, and wire obs-hotkey into Companion / Touch Portal / Home Assistant / a stream-deck MIDI controller.
+
+### `obs-hotkey status` (richer)
+
+The `status` subcommand now also queries OBS for live state when OBS is reachable:
+
+```
+  Recording:     active HH:MM:SS
+  Streaming:     inactive
+  Replay:        inactive
+  Scene:         Gaming
+  Mic:           Mic/Audio1 unmuted
+  Mic volume:    1.20x
+```
+
+If OBS is offline or rejects a request, `status` prints a single-line failure summary so the operator knows the daemon is healthy but OBS is not yet reachable.
+
+### `obs-hotkey doctor`
+
+A pre-show checklist for a live broadcast. It is **read-only** — it never mutates OBS state and never records audio/video. It checks:
+
+1. Config exists and parses.
+2. All combos and chords are valid.
+3. The current user is in the `input` group (so the daemon can read `/dev/input/event*`).
+4. At least one keyboard is detected (after the `allowed_devices` filter).
+5. OBS WebSocket is reachable on the configured port.
+6. OBS responds to status requests.
+7. The `notify` command is non-empty.
+8. The `http` config is safe (loopback or token-protected).
+
+A non-zero exit status means at least one check failed — do not start the show.
+
+### Desktop notifications
+
+The daemon now runs a configurable command every time an action triggers, and also after `obs-hotkey action <name>`:
+
+```json
+{
+  "notify": {
+    "enabled": true,
+    "command": ["notify-send", "obs-hotkey", "{message}"]
+  }
+}
+```
+
+`{message}` is replaced with a human-readable string (e.g. `Triggered gaming_scene`). The default command uses `notify-send` on Linux, which works on GNOME, KDE, XFCE, sway, Hyprland, and most other desktops. If you prefer a different tool (e.g. `dunstify`, `kdialog`, or a custom webhook), point `command` at it.
+
+Notifications are best-effort: a failing command is logged but never blocks the action.
+
+### HTTP listener (Companion / Touch Portal bridge)
+
+A tiny localhost HTTP listener is opt-in via the `http` config block:
+
+```json
+{
+  "http": {
+    "enabled": true,
+    "bind": "127.0.0.1:7999",
+    "token": ""
+  }
+}
+```
+
+Endpoints:
+
+| Method | Path | Body | Description |
+| ------ | ---- | ---- | ----------- |
+| `GET` | `/health` | — | Returns `{"ok": true, "service": "obs-hotkey"}`. |
+| `GET` | `/status` | — | Returns the live OBS status (same data as `obs-hotkey status`). |
+| `POST` | `/actions` | `{"action": "switch_scene", "scene": "Gaming"}` | Triggers a named action. |
+| `POST` | `/actions/<name>` | optional `{"scene": "Gaming"}` | Shorthand for a known action. |
+| `POST` | `/actions/<name>?scene=Gaming` | — | Same as above with a query parameter. |
+
+**Safety boundaries:**
+
+- The default bind is `127.0.0.1:7999` (loopback only). The daemon refuses to bind a non-loopback address without a `token`.
+- Auth is either `Authorization: Bearer <token>` or `X-OBS-Hotkey-Token: <token>`. When no token is configured, the listener requires the bind to be loopback.
+- Failures return JSON like `{"ok": false, "error": "..."}` and a 4xx status code. Successful actions return 200.
+
+Example with `curl`:
+
+```bash
+curl -X POST http://127.0.0.1:7999/actions \
+  -H 'Content-Type: application/json' \
+  -d '{"action":"switch_scene","scene":"Gaming"}'
+```
+
+Example with a Companion “generic HTTP” button: method `POST`, URL `http://127.0.0.1:7999/actions/toggle_recording`, no body.
+
+A full design document — including the OBS WebSocket requests, the failure modes, and the rationale — is in [`docs/tier1-observability.md`](docs/tier1-observability.md).
+
+---
+
 ## Roadmap & Non-Goals
 
 What obs-hotkey already does well for a professional operator:
