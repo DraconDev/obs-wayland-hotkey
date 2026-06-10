@@ -711,7 +711,8 @@ What obs-hotkey already does well for a professional operator:
 - Per-action delays up to 10 minutes for countdown workflows.
 - Push-to-release semantics for transient controls.
 - Device allowlist for multi-keyboard setups.
-- One-shot CLI for script and timer integration.
+- One-shot CLI for script and timer integration, including named macro invocation.
+- Reusable macros for hotkey, CLI, and HTTP invocation.
 - Panic-safe reader threads so a single bad device cannot take down the daemon.
 - Clear, fail-fast config validation.
 

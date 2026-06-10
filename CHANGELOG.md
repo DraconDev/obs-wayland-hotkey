@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Existing single-action hotkeys remain backward-compatible and can also use chord syntax.
 
 ### Added (Tier 1 Observability)
-- `obs-hotkey doctor` subcommand that runs a startup diagnostic checklist (config, combos, chords, input group, keyboards, OBS WebSocket, notify, http).
+- Reusable named macros that can be invoked from hotkey combos, `obs-hotkey action <name>`, and the HTTP listener.
 - Richer `obs-hotkey status` output: it now also queries OBS for recording / streaming / replay buffer status, current program scene, and mic mute + volume.
 - Desktop notification on every action trigger (configurable command, defaults to `notify-send`).
 - `obs-hotkey action <name>` now also fires the configured desktop notification.
