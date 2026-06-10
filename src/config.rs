@@ -18,7 +18,11 @@ fn default_mic_volume() -> f64 {
 }
 
 fn default_notify_command() -> Vec<String> {
-    vec!["notify-send".to_string(), "obs-hotkey".to_string(), "{message}".to_string()]
+    vec![
+        "notify-send".to_string(),
+        "obs-hotkey".to_string(),
+        "{message}".to_string(),
+    ]
 }
 
 fn default_http_bind() -> String {
@@ -155,10 +159,25 @@ pub struct AppConfig {
     pub allowed_devices: Vec<String>,
     #[serde(default, rename = "hotkey_combos")]
     pub hotkey_combos: Vec<HotkeyCombo>,
-    #[serde(default, rename = "notify")]
+    #[serde(default = "default_notify_config", rename = "notify")]
     pub notify: NotifyConfig,
-    #[serde(default, rename = "http")]
+    #[serde(default = "default_http_config", rename = "http")]
     pub http: HttpConfig,
+}
+
+fn default_notify_config() -> NotifyConfig {
+    NotifyConfig {
+        enabled: false,
+        command: default_notify_command(),
+    }
+}
+
+fn default_http_config() -> HttpConfig {
+    HttpConfig {
+        enabled: false,
+        bind: default_http_bind(),
+        token: None,
+    }
 }
 
 pub fn default_config() -> AppConfig {
@@ -562,7 +581,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBncnBQeFUwcDlsclU4ZnRWUG9aeitpZG80cWdsQldpellwM2NRRGRNUmlZCnkrTlZocktYMlZtbXhzUldhb0RZMUFpV1MzRFhHbWNESGtMUExnYkZZbU0KLT4gWDI1NTE5IGtXanJJbVRwSEZhNXhseVNFZm1UOWM3Y3AvVjVQc01HSGNIdVVwYVdabUEKN1FtekZ6Mzk4MmxEb1lWcFVOOVoxMXQvdTBJTjRuZGlsdEhLMytvQlAzQQotPiBYMjU1MTkgSHdjU0FqemxubUNuMXo5QlVIaCtKVDEyb1dMK0ljZUJGNnF5VVdUZmlYYwpRamxVM1BxcU1JaGcrUytrZitTaXFKRmNTWnFuWDRmVURLdzRqeTJqdHEwCi0+IFgyNTUxOSBXbHNNM1plYjliZ280c3UxUUhDTGlhRXVLbDVzOG5YbTFJdElCTTVZeWtrCjNsVitNeDg1M1RQRkh6TkhoS1RETnFlb0ZydzBQdVZmbG9Zckx5TDRCb0UKLT4gWS1ncmVhc2UgfFEgcCh8bl1CQCBKLzgsKyBrQE0jTV8+KApCQVVCdWdiaDl6c1l0YW9SQlVhcnl4d1h6eHdXbVQwZnB2bVYvdGpDTnhqUUJCdmFVQVMrNXM5Zk5OY1hMUk9FCjFwQUl3UWZya01wTExkQUZUYTBCCi0tLSBpUFB5blJVYjdyZlBYSWNUK2xIbjhYZHBjWWlpOWhhMW1sdzM4VEtmSjdNCoHt8E4EYqsL8rPOAQJ9ZJodpRTc1K9cQNbg/qoQvML5D1i1D2uImA7GdKKo42/fArjZHkx1ztzPTw==]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBuN0hJZ3NUaDdjL1ZWakt0VTQwZVpFdlB0KzFhVGtVdWEzZ2drRnRkaVgwCitrMmJNTk5CMFcxRWkwc0lhUEpMamU1WW1uV3lTc2J0cU4rM013ZEVSdG8KLT4gWDI1NTE5IFlxU2w3cStVdk51eHBkV0NDRTdaOWVqVm9qMTJYWmNFdGRGVzJiTEZYRW8KVVlHK0ZOd0xkUWVuOWRYWjhOaEUvdGhoYVY5S1l3UDF0S1Y0UWRkU251TQotPiBYMjU1MTkgVzJ4SW9oZVhZWjl2WXM0QytXZGZURHBEQUx6MzJ1Z1Q4QysrSTBINEh3Zwo2RHdwTFFFaTRKeit2NU93ejIyZ1RFaCs0LzNMR092VUpSQk52T0drVlU0Ci0+IFgyNTUxOSA5dTIzOXBIZmZWWDhra1AyRzIzNVlqcDZEL2NGbjVZV0gvNWFORnY0bUVNCmJBOXora0tmbVc5Y2FZMlJyKzJseHRRS2tZTnZmNXhOYmNJZ2NhZHQvZFUKLT4gTi1ncmVhc2UgY29zICpzOX5nMGogPVVVQTBsIDcKbEY4QkR6d2hEZTN4ckJ1STJQNUpwNDRPL0NYZkdFYU1uaE05WUxBSzJKY1BTcUN4TEZzUkx6SUdVVURBTWNNegpVa3Ura3ExY0txVmlkZWgrWWJXNVdxUDZhRkt5dWVCYkRVRzQ4cER3Y1pPU2tzRy9hZGtrMmFXVHc0djdpWlVVClBrWkMKLS0tIGsreGIyOTFxcUtBZHlOc1IycnFybFQ4YlVDdXBHaUt0WDJmSGQvdkZLbFUKKVhS5+sCU2nZBm9HpmVDqs5oio1HnhVVciRXOkpXiTi6+dl1YgN4t5MSEII6RJ8qk9+G/MjbQqU/]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -574,7 +593,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBsVE1oamU5bjNCNDQ3Yk5uaFRaZmZuQmtrTU9DbjY0RytwOE0wSlI4Q0dZCk93UytrS0FwUHdyakpTckViMm5LM2JrcmZoV2hGeFdsVlk4b2E0dUpYQ0UKLT4gWDI1NTE5IERFMXZMMGhQV2NZN3FpZnFkS0thZlZSWGhTbFRrQU5IS0lGRjhIR2t3SEkKT3pod0lMSWdqaU9CV3gyY29zNnpzMC9tdGp0ODBUcWlub0hPOWNQbGRMOAotPiBYMjU1MTkgblVYNDU4WjI4YkREVUxGcjJKZUdpc1F4KzlPbWRkTHlDdkNhd3p2dUNoOAp1ZVNMN1BEU05jeENXaUViWjRIL1ByY0xaMDB4djhCR3U4bWh6MllnYStjCi0+IFgyNTUxOSA0SWdDNktNeHFkbEcwYVV6RHJrTEhlNVRmTEFJMVl0dFVqMTFhdGcvejE4CmhMeiszeEhEQjR3Wkd3a2I3TUZiZjdjY1hMQWZpaFRzUFg0c2NleE90M3cKLT4gZFYwfip6LiQtZ3JlYXNlClg5M1c2bnBqR3AwYUIyMlFkcGY4SmhaVGRMZEMrcWVjOVVENGtSbkxlWVhKWDVaZjhiUHhLZHZoWTdVakpmQ1oKSFdtMitKNC9MS29hY1BDV0F5b0JGYisrYlEKLS0tIERxc3RKWW1KS3NjMFVJbDhjNmU5TWpaU2FjYXcrRzFCNmJhN2VVamVEUWcKNAYs+NK4AfQJNf1xKCrIXJMN6c+as+tCFfF2LzIxMzty3WU/gpOG4MV+K4BMSC5+Ul7xN7GxsDgWG1zv]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBrSEZNWDBPNC9BS2ZLRHJZeHg1Nm0vSmVtRnpBVk9LNTAwUVZ0cUhDWHpRCkRrSU1iL1RkelE4ZnEvemJxSE9ITlRhSUFIbjh3b3VpdnZGengrK0ZsY0UKLT4gWDI1NTE5IDRFSkN5RkdaSjJWSkd5REU1d0p6ZnpXalc2MEYrT3paSWdzVTcxbkcxaWsKTzFlaTdySUVMOGY4Z1lvVlJNbVJmaldNSnpaaU55cGFzOE5oMG01RHhtRQotPiBYMjU1MTkgT2RYcU1aenlMMjQyQmN3aTJCa3JRMEZ0WHZMZmZtM3ZYRGladjI1L3FYdwpYYkorajMxeHd5OENNYmV2eUM5VVZwMmMvMWZzM3FxbXFpTDJxeUVVcFJvCi0+IFgyNTUxOSBjWEpNZGwwc0dsbTIzTkhDNWZXU2MzbVgyK2xMdXFaK0EzMndjL2pxeUNVCnFnM3ZCd1ZJMWJFUXIvZjVpdzQ5WTZIb055UzBJUVBaeDJBazBnbVlYODAKLT4gJ19gRi1ncmVhc2UKOW8xS1FCVXhVSHdjWTByMHRiQTc3dHE5NWxUS2c4ZVp1b3cwYTFIWUxqM25TdwotLS0gcVUraC9zV2dvd0ZsYjNQbDQzY0VKcCtqOTVDeHA1RWhHemJLMDdNcmtHNAppl8osLWjjJn+/5p7K6TdMD4/Or1j5su3vlxa6aBbLTgjIFnpdwTJi7iJ7bPpWlORn142zoXCYvjyG2/A=]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test2");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");

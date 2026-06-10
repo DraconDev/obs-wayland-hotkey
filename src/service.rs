@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::Duration;
 
-use crate::config::{expand_home, real_home, load_config};
+use crate::config::{expand_home, load_config, real_home};
 use crate::input::find_keyboards_with_filter;
 use crate::obs::OBSClient;
 
@@ -498,7 +498,9 @@ pub fn run_status(config_path: &str) {
         .parent()
         .map(|p| p.exists())
         .unwrap_or(false);
-    let cfg = cfg_exists.then(|| load_config(std::path::Path::new(&config_path))).transpose();
+    let cfg = cfg_exists
+        .then(|| load_config(std::path::Path::new(&config_path)))
+        .transpose();
     let ws_url = ws_url_from_config_path(&config_path);
     let obs_ok = probe_obs_websocket_url(&ws_url);
 
@@ -561,9 +563,20 @@ pub fn run_status(config_path: &str) {
                 println!(
                     "  {:<14}  {}  {}",
                     "Recording:",
-                    if status.record_active { ok("") } else { warn("") },
                     if status.record_active {
-                        format!("active{}", status.record_timecode.as_deref().map(|s| format!(" {}", s)).unwrap_or_default())
+                        ok("")
+                    } else {
+                        warn("")
+                    },
+                    if status.record_active {
+                        format!(
+                            "active{}",
+                            status
+                                .record_timecode
+                                .as_deref()
+                                .map(|s| format!(" {}", s))
+                                .unwrap_or_default()
+                        )
                     } else {
                         "inactive".to_string()
                     }
@@ -571,9 +584,20 @@ pub fn run_status(config_path: &str) {
                 println!(
                     "  {:<14}  {}  {}",
                     "Streaming:",
-                    if status.stream_active { ok("") } else { warn("") },
                     if status.stream_active {
-                        format!("active{}", status.stream_timecode.as_deref().map(|s| format!(" {}", s)).unwrap_or_default())
+                        ok("")
+                    } else {
+                        warn("")
+                    },
+                    if status.stream_active {
+                        format!(
+                            "active{}",
+                            status
+                                .stream_timecode
+                                .as_deref()
+                                .map(|s| format!(" {}", s))
+                                .unwrap_or_default()
+                        )
                     } else {
                         "inactive".to_string()
                     }
@@ -581,8 +605,16 @@ pub fn run_status(config_path: &str) {
                 println!(
                     "  {:<14}  {}  {}",
                     "Replay:",
-                    if status.replay_active { ok("") } else { warn("") },
-                    if status.replay_active { "active" } else { "inactive" }
+                    if status.replay_active {
+                        ok("")
+                    } else {
+                        warn("")
+                    },
+                    if status.replay_active {
+                        "active"
+                    } else {
+                        "inactive"
+                    }
                 );
                 println!(
                     "  {:<14}  {}  {}",
@@ -596,7 +628,10 @@ pub fn run_status(config_path: &str) {
                         "Mic:",
                         ok(""),
                         cfg.mic_name,
-                        status.input_muted.map(|m| if m { " muted" } else { " unmuted" }).unwrap_or_default()
+                        status
+                            .input_muted
+                            .map(|m| if m { " muted" } else { " unmuted" })
+                            .unwrap_or_default()
                     );
                     if let Some(volume) = status.input_volume_mul {
                         println!("  {:<14}  {}  {:.2}x", "Mic volume:", ok(""), volume);
@@ -640,14 +675,11 @@ pub fn run_status(config_path: &str) {
 }
 
 fn probe_obs_websocket_url(url: &str) -> bool {
-    let socket_addrs: Vec<std::net::SocketAddr> = match url
-        .strip_prefix("ws://")
-        .unwrap_or(url)
-        .to_socket_addrs()
-    {
-        Ok(addrs) => addrs.collect(),
-        Err(_) => return false,
-    };
+    let socket_addrs: Vec<std::net::SocketAddr> =
+        match url.strip_prefix("ws://").unwrap_or(url).to_socket_addrs() {
+            Ok(addrs) => addrs.collect(),
+            Err(_) => return false,
+        };
     let Some(addr) = socket_addrs.first() else {
         return false;
     };
@@ -721,13 +753,21 @@ pub fn run_doctor(config_path: &str) -> anyhow::Result<()> {
     failed |= chord_validation.is_err();
 
     let input_grp = in_input_group();
-    print_check("Input group", input_grp, if input_grp { "member" } else { "not a member" });
+    print_check(
+        "Input group",
+        input_grp,
+        if input_grp { "member" } else { "not a member" },
+    );
     failed |= !input_grp;
 
     let keyboards = find_keyboards_with_filter(&cfg.allowed_devices);
     match keyboards {
         Ok(paths) => {
-            print_check("Keyboard devices", !paths.is_empty(), &format!("{} found", paths.len()));
+            print_check(
+                "Keyboard devices",
+                !paths.is_empty(),
+                &format!("{} found", paths.len()),
+            );
             failed |= paths.is_empty();
         }
         Err(e) => {
@@ -742,7 +782,11 @@ pub fn run_doctor(config_path: &str) -> anyhow::Result<()> {
         cfg.obs_host.clone()
     };
     let obs_ok = probe_obs_websocket_url(&ws_url);
-    print_check("OBS WebSocket", obs_ok, if obs_ok { "reachable" } else { "unreachable" });
+    print_check(
+        "OBS WebSocket",
+        obs_ok,
+        if obs_ok { "reachable" } else { "unreachable" },
+    );
     failed |= !obs_ok;
 
     if obs_ok {
@@ -766,7 +810,11 @@ pub fn run_doctor(config_path: &str) -> anyhow::Result<()> {
 
     print_check("Notify config", !cfg.notify.command.is_empty(), "ok");
     failed |= cfg.notify.command.is_empty();
-    print_check("HTTP config", !cfg.http.enabled || crate::config::http_config_is_safe(&cfg.http), "ok");
+    print_check(
+        "HTTP config",
+        !cfg.http.enabled || crate::config::http_config_is_safe(&cfg.http),
+        "ok",
+    );
     failed |= cfg.http.enabled && !crate::config::http_config_is_safe(&cfg.http);
 
     println!();

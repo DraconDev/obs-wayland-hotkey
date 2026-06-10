@@ -424,7 +424,11 @@ impl OBSClient {
         let mut errors = Vec::new();
 
         match self.request("GetStreamStatus", None) {
-            Ok(data) => parse_output_status(&data, &mut status.stream_active, &mut status.stream_timecode),
+            Ok(data) => parse_output_status(
+                &data,
+                &mut status.stream_active,
+                &mut status.stream_timecode,
+            ),
             Err(e) => errors.push(format!("GetStreamStatus: {}", e)),
         }
         match self.request("GetRecordStatus", None) {

@@ -331,8 +331,7 @@ pub(crate) fn run_action_by_name(
     if action_name == "switch_scene" && scene.map(str::trim).unwrap_or("").is_empty() {
         anyhow::bail!("switch_scene requires a scene name");
     }
-    if matches!(action_name, "set_mic_volume" | "toggle_mute_mic")
-        && ctx.mic_name.trim().is_empty()
+    if matches!(action_name, "set_mic_volume" | "toggle_mute_mic") && ctx.mic_name.trim().is_empty()
     {
         anyhow::bail!(
             "{} requires 'mic_name' to be set in the config",

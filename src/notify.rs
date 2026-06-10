@@ -9,7 +9,10 @@ pub fn send_notification(cfg: &NotifyConfig, message: &str) {
         return;
     }
 
-    let mut command = cfg.command.iter().map(|arg| arg.replace("{message}", message));
+    let mut command = cfg
+        .command
+        .iter()
+        .map(|arg| arg.replace("{message}", message));
     let program = match command.next() {
         Some(program) => program,
         None => return,

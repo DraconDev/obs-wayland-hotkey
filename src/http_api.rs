@@ -46,7 +46,11 @@ fn handle_connection(
     let parsed = parse_request(&request);
 
     if !authorized(cfg, &parsed.headers) {
-        write_response(&mut stream, 401, json!({"ok": false, "error": "unauthorized"}))?;
+        write_response(
+            &mut stream,
+            401,
+            json!({"ok": false, "error": "unauthorized"}),
+        )?;
         return Ok(());
     }
 
@@ -83,15 +87,31 @@ fn parse_request(raw: &str) -> HttpRequest {
         }
     }
     let body = raw.split("\r\n\r\n").nth(1).unwrap_or_default().to_string();
-    HttpRequest { method, path, headers, body }
+    HttpRequest {
+        method,
+        path,
+        headers,
+        body,
+    }
 }
 
 fn authorized(cfg: &HttpConfig, headers: &HashMap<String, String>) -> bool {
-    let Some(token) = cfg.token.as_ref().map(|t| t.trim()).filter(|t| !t.is_empty()) else {
+    let Some(token) = cfg
+        .token
+        .as_ref()
+        .map(|t| t.trim())
+        .filter(|t| !t.is_empty())
+    else {
         return true;
     };
-    let auth = headers.get("authorization").map(|v| v.as_str()).unwrap_or_default();
-    let header_token = headers.get("x-obs-hotkey-token").map(|v| v.as_str()).unwrap_or_default();
+    let auth = headers
+        .get("authorization")
+        .map(|v| v.as_str())
+        .unwrap_or_default();
+    let header_token = headers
+        .get("x-obs-hotkey-token")
+        .map(|v| v.as_str())
+        .unwrap_or_default();
     auth == format!("Bearer {}", token) || header_token == token
 }
 
@@ -102,14 +122,26 @@ fn route_request(
     notify_cfg: &NotifyConfig,
 ) -> HttpResponse {
     match (request.method.as_str(), request.path.as_str()) {
-        ("GET", "/health") => HttpResponse { status: 200, body: json!({"ok": true, "service": "obs-hotkey"}) },
+        ("GET", "/health") => HttpResponse {
+            status: 200,
+            body: json!({"ok": true, "service": "obs-hotkey"}),
+        },
         ("GET", "/status") => match ctx.client.get_status(&ctx.mic_name) {
-            Ok(status) => HttpResponse { status: 200, body: json!({"ok": true, "status": status}) },
-            Err(e) => HttpResponse { status: 200, body: json!({"ok": true, "status": {"unavailable": true}, "error": e.to_string()}) },
+            Ok(status) => HttpResponse {
+                status: 200,
+                body: json!({"ok": true, "status": status}),
+            },
+            Err(e) => HttpResponse {
+                status: 200,
+                body: json!({"ok": true, "status": {"unavailable": true}, "error": e.to_string()}),
+            },
         },
         ("POST", path) if path == "/actions" => match parse_action_request(&request.body) {
             Ok((action, scene)) => run_http_action(action, scene, ctx, notify_cfg),
-            Err(e) => HttpResponse { status: 400, body: json!({"ok": false, "error": e.to_string()}) },
+            Err(e) => HttpResponse {
+                status: 400,
+                body: json!({"ok": false, "error": e.to_string()}),
+            },
         },
         ("POST", path) if path.starts_with("/actions/") => {
             let action = path.trim_start_matches("/actions/").to_string();
@@ -117,7 +149,10 @@ fn route_request(
                 .or_else(|| parse_scene_from_body(&request.body).ok().flatten());
             run_http_action(action, scene, ctx, notify_cfg)
         }
-        _ => HttpResponse { status: 404, body: json!({"ok": false, "error": "not found"}) },
+        _ => HttpResponse {
+            status: 404,
+            body: json!({"ok": false, "error": "not found"}),
+        },
     }
 }
 
@@ -126,8 +161,15 @@ fn parse_action_request(body: &str) -> anyhow::Result<(String, Option<String>)> 
         anyhow::bail!("empty request body");
     }
     let value: serde_json::Value = serde_json::from_str(body)?;
-    let action = value.get("action").and_then(|v| v.as_str()).ok_or_else(|| anyhow::anyhow!("missing action"))?.to_string();
-    let scene = value.get("scene").and_then(|v| v.as_str()).map(ToString::to_string);
+    let action = value
+        .get("action")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!("missing action"))?
+        .to_string();
+    let scene = value
+        .get("scene")
+        .and_then(|v| v.as_str())
+        .map(ToString::to_string);
     Ok((action, scene))
 }
 
@@ -136,7 +178,10 @@ fn parse_scene_from_body(body: &str) -> anyhow::Result<Option<String>> {
         return Ok(None);
     }
     let value: serde_json::Value = serde_json::from_str(body)?;
-    Ok(value.get("scene").and_then(|v| v.as_str()).map(ToString::to_string))
+    Ok(value
+        .get("scene")
+        .and_then(|v| v.as_str())
+        .map(ToString::to_string))
 }
 
 fn query_param(path: &str, key: &str) -> Option<String> {
@@ -170,17 +215,32 @@ fn percent_decode(input: &str) -> String {
     String::from_utf8_lossy(&output).to_string()
 }
 
-fn run_http_action(action: String, scene: Option<String>, ctx: &ActionContext, notify_cfg: &NotifyConfig) -> HttpResponse {
+fn run_http_action(
+    action: String,
+    scene: Option<String>,
+    ctx: &ActionContext,
+    notify_cfg: &NotifyConfig,
+) -> HttpResponse {
     match run_action_by_name(&action, scene.as_deref(), ctx) {
         Ok(()) => {
             notify::send_notification(notify_cfg, &format!("HTTP action {} triggered", action));
-            HttpResponse { status: 200, body: json!({"ok": true, "message": format!("action {} triggered", action)}) }
+            HttpResponse {
+                status: 200,
+                body: json!({"ok": true, "message": format!("action {} triggered", action)}),
+            }
         }
-        Err(e) => HttpResponse { status: 400, body: json!({"ok": false, "error": e.to_string()}) },
+        Err(e) => HttpResponse {
+            status: 400,
+            body: json!({"ok": false, "error": e.to_string()}),
+        },
     }
 }
 
-fn write_response(stream: &mut std::net::TcpStream, status: u16, body: serde_json::Value) -> anyhow::Result<()> {
+fn write_response(
+    stream: &mut std::net::TcpStream,
+    status: u16,
+    body: serde_json::Value,
+) -> anyhow::Result<()> {
     let reason = match status {
         200 => "OK",
         400 => "Bad Request",
@@ -213,13 +273,21 @@ mod tests {
 
     #[test]
     fn test_authorized_without_token() {
-        let cfg = HttpConfig { enabled: true, bind: "127.0.0.1:7999".to_string(), token: None };
+        let cfg = HttpConfig {
+            enabled: true,
+            bind: "127.0.0.1:7999".to_string(),
+            token: None,
+        };
         assert!(authorized(&cfg, &HashMap::new()));
     }
 
     #[test]
     fn test_authorized_with_bearer_token() {
-        let cfg = HttpConfig { enabled: true, bind: "127.0.0.1:7999".to_string(), token: Some("secret".to_string()) };
+        let cfg = HttpConfig {
+            enabled: true,
+            bind: "127.0.0.1:7999".to_string(),
+            token: Some("secret".to_string()),
+        };
         let mut headers = HashMap::new();
         headers.insert("authorization".to_string(), "Bearer secret".to_string());
         assert!(authorized(&cfg, &headers));
