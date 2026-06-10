@@ -18,6 +18,10 @@
 - **Chord Hotkeys** — use combinations like `ctrl + shift + f1`
 - **Action Combos** — trigger multiple OBS actions from one key chord
 - **Delayed Actions** — schedule actions in a combo with per-step delays (e.g. start recording 3 seconds after a hotkey)
+- **Push-to-Release Actions** — run a second set of actions when the chord is released (push-to-record / push-to-talk)
+- **Scene Switching** — dedicated `switch_scene` action for the most common pro workflow
+- **Keyboard Allowlist** — restrict hotkey capture to specific /dev/input devices in multi-keyboard setups
+- **One-shot CLI** — `obs-hotkey action <name>` triggers a single action from scripts and systemd timers
 - **Mic Volume Presets** — set input volume as part of a combo
 - **Auto-start on Login** — systemd user service integration
 - **Auto-reconnect** — automatically reconnects if OBS restarts
@@ -25,6 +29,7 @@
 - **F13-F24 Support** — use extra keys as stream deck buttons
 - **Hotkey Debouncing** — 50ms debounce prevents accidental double-toggles
 - **Non-blocking Actions** — hotkeys stay responsive during network I/O
+- **Panic-safe Reader Threads** — a panic in one keyboard device cannot kill the daemon
 - **Config Validation** — typos in config are rejected with clear errors
 
 ---
@@ -162,6 +167,7 @@ Edit `~/.config/obs-hotkey/hotkeys.json`:
   "screenshot_dir": "~/Pictures",
   "mic_name": "",
   "mic_volume": 1.0,
+  "allowed_devices": [],
   "hotkey_combos": []
 }
 ```
@@ -185,11 +191,23 @@ Existing single-action hotkeys still work. To trigger multiple OBS actions from 
   "screenshot_dir": "~/Pictures",
   "mic_name": "Microphone",
   "mic_volume": 0.75,
+  "allowed_devices": ["AT Translated Set 2 keyboard"],
   "hotkey_combos": [
     {
       "name": "record_and_set_mic",
       "keys": ["ctrl", "shift", "r"],
       "actions": ["toggle_recording", "set_mic_volume"]
+    },
+    {
+      "name": "to_gaming",
+      "key": "f13",
+      "actions": [{"action": "switch_scene", "scene": "Gaming"}]
+    },
+    {
+      "name": "push_to_mute",
+      "key": "ctrl + space",
+      "actions": ["toggle_mute_mic"],
+      "release_actions": ["toggle_mute_mic"]
     }
   ]
 }
@@ -280,6 +298,80 @@ If `action_delays_ms` is omitted, the combo runs all its actions immediately, li
 ```
 
 This is one gesture that gives you a 5-second countdown before recording actually starts.
+
+### Push-to-Release Actions (Push-to-Record / Push-to-Talk)
+
+`hotkey_combos` can declare an optional `release_actions` list. The actions in `actions` run on press; the actions in `release_actions` run when the chord is released. This is the professional pattern for transient controls:
+
+```json
+{
+  "name": "push_to_mute",
+  "key": "ctrl + space",
+  "actions": ["toggle_mute_mic"],
+  "release_actions": ["toggle_mute_mic"]
+}
+```
+
+The example above mutes the mic while `ctrl + space` is held, and unmutes it on release — the classic push-to-talk pattern. `release_action_delays_ms` works the same way as `action_delays_ms` for the release side.
+
+Push-to-release is best used with idempotent toggle-style actions. If OBS state is not what you expect, both the press and the release will be toggles, so the result depends on the current state. For deterministic start/stop, prefer the `toggle_*` action together with OBS's own state.
+
+### Scene Switching
+
+The `switch_scene` action calls OBS WebSocket `SetCurrentProgramScene` and accepts the scene name via the parameter object form:
+
+```json
+{
+  "name": "to_gaming",
+  "key": "f13",
+  "actions": [{"action": "switch_scene", "scene": "Gaming"}]
+}
+```
+
+Use this to map extra function keys (`F13`–`F24`) or your macro pad to the scenes you switch between most. Config validation rejects `switch_scene` without a scene name so misconfigurations fail at startup.
+
+### Keyboard Allowlist
+
+`allowed_devices` restricts which `/dev/input/event*` devices obs-hotkey monitors. The default is an empty list, which means “monitor every detected keyboard.” In setups with multiple keyboards (laptop + dock + stream deck + guest USB + drawing tablet), restrict hotkey capture to a specific device so guests cannot accidentally start your stream:
+
+```json
+{
+  "allowed_devices": ["AT Translated Set 2 keyboard", "Stream Deck XL"]
+}
+```
+
+The names are the kernel-assigned device names reported by evdev. To find yours, run `cat /sys/class/input/event*/device/name` or read the daemon logs after `obs-hotkey daemon` enumerates them.
+
+### One-shot Action CLI
+
+`obs-hotkey action <name>` connects to OBS once, runs a single action, and exits. It does not start the event loop or watch any keyboards.
+
+```bash
+obs-hotkey action toggle_recording
+obs-hotkey action switch_scene --scene "Gaming"
+```
+
+This is useful for systemd timers, shell scripts, and integrations where the daemon would be overkill:
+
+```ini
+# ~/.config/systemd/user/auto-record.timer
+[Unit]
+Description=Auto-start recording at 20:00
+
+[Timer]
+OnCalendar=*-*-* 20:00:00
+Persistent=true
+
+[Install]
+WantedBy=default.target
+```
+
+```ini
+# ~/.config/systemd/user/auto-record.service
+[Service]
+Type=oneshot
+ExecStart=%h/.cargo/bin/obs-hotkey action toggle_recording
+```
 
 ### Supported Keys
 
