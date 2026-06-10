@@ -476,7 +476,7 @@ fn is_known_action_name(action: &str) -> bool {
 }
 
 fn validate_action_list(
-    combo_name: &str,
+    owner: &str,
     field: &str,
     items: &[ActionItem],
     delays: &[u64],
@@ -486,8 +486,9 @@ fn validate_action_list(
     }
     if !delays.is_empty() && delays.len() != items.len() {
         anyhow::bail!(
-            "hotkey_combo '{}' {}_delays_ms length ({}) must match {} length ({})",
-            combo_name,
+            "{} '{}' {}_delays_ms length ({}) must match {} length ({})",
+            owner,
+            owner,
             field,
             delays.len(),
             field,
@@ -498,8 +499,9 @@ fn validate_action_list(
         if let Some(delay) = delays.get(index) {
             if *delay > MAX_ACTION_DELAY_MS {
                 anyhow::bail!(
-                    "hotkey_combo '{}' {} delay {} ms exceeds maximum {} ms",
-                    combo_name,
+                    "{} '{}' {} delay {} ms exceeds maximum {} ms",
+                    owner,
+                    owner,
                     field,
                     delay,
                     MAX_ACTION_DELAY_MS
@@ -701,7 +703,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBSZkRYdFpGdk5tTU1LREJwTy90MC9ERUFGU0laYWJZZUpFZFZ1eU5MVWowCkpuMzFGK2JuZCtveVc3K2xMQmlJUnNIK2JWc0tTdVI2OFdqQWw5Zlk1WXMKLT4gWDI1NTE5IE1ybmE2M0hSWEpCem00QUhieXZuSE4wS1UvbWxFbzJpdXcyMUdjaTM0am8KTDBYQU9UV0lhSHd6bENvcTN1ODgrUXJrMEVocSthcDdnK1dkYTJMTy9COAotPiBYMjU1MTkgT3hUZytqeCtCZW9QVHRRV3c0aDByY1BwcHBDVXhvUXRIckNmREZXcWJScwpTTlBRS0kvUlVUMng1WVZNaHZlMDc3eUpUa3JleG1UclZlTitvS3hSdFQ4Ci0+IFgyNTUxOSBHZnYwTHpiRFJkRUxtaytQTU5uTHRvYS9CRThMVEpKdms4ZzBEN3FyS3drCnpBREUvakV3N3BUL0NWVFBnbjVYOXF5bzNab2JOdFFINEt2c2kvV0hVR3MKLT4gWDI1NTE5IEY2bWdRMHpoclpJSUNCcW53S1lKRzBBOXI3cHRXcWVzcncvYjEzK25CbWMKd01XOElCdDYwZU92QTFiWk9oQzdxS2ZwYmV0c01aQU9PVHRxTEM1bzE5UQotPiBGJm9TLWdyZWFzZSBPYApJazBxSXdNQWFuUllHNFlvaWs5NUUvVHBlSFJLc0RKR2ptQVFFOGlVcnhTaXozUC8wK3duMmMydQotLS0gN003TVJma0FDQzhvY091Z3pJYnduTy9ZdXZoRS9YbWdnU1F1OGtIbTdIYwp3ZuaaDNzkVmm6OUxdPRPx3Lg8rM+8mnL8sJdoHuYXwBLrGwTO4MYj+las3L7FB2111UYk4Eaj7E8=]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBYeFVqN2E5Z3lMWGFaeU5aZDdQRmcxblFwZnNCT05YR2hJR2tvWkEzdmpFClJURkRrZVJZUVM5MVA0MW1wQzRBVzdhM0M0WS90Q1J4OEpRNjJJb3JhemMKLT4gWDI1NTE5IFN3QnNVeXZRSkZmUnpMVDAwU1AvK2hadUhpdjBpdzV1Vk5kVHE4eiswUkkKbklpL24vYlRqaStyU2hSdnhCZUhvbERwS2pxSnZRQ0ZkNjJqMy8zUnU4MAotPiBYMjU1MTkgdVdZeS8zV2cwNzlPYW9PRnRnQ25meEtvR1hhUXZWellnNzdqZFJRUnd6dwpSd0s5Y3FqMXlYRGlwV3NQNisrK0d2djZLY3NLOXBZek1OM0RoYTVGRTVBCi0+IFgyNTUxOSBhcDVtaERwQ2o5OWhGTExITFlIcTBqTnREVlpMakdNWUE3SEZwUTZWL2h3CmZBdncweTNlZ0VBeWlZNmFmaHFIUXBJTW5uYUZPQmFtb3hWaURNeE5GSHMKLT4gWDI1NTE5IDZyREhxMXkzYk9tV1FKTm91VGc3Z0lyUUpyanBHTW4wNmZ1dDNJMUJPM2sKcmVDK0VnTTlRTUtkcysrY3l6N3d1OGNiS1ZoRnZONlE2WFVucU0vNkxaSQotPiAxLWdyZWFzZSBZQmQgTyBgRVJLXAphQTY4YVJrNkE2VDZ4VmlJNFBsTWFHdlZjck5LMHV0ZFpKci9mTDJXZmdIRm5JRTdyVjRRdTBsKzVFVQotLS0gRCtSd3A0WHVhZjFBY0MxVnZmd2JJejBubDdLSFh2YmZuaHZqQnVKMndEOArG1fi+3ALvGs29yfxf+LdZ4cZCZWKdqWIWowXLt5kDDqhcVpRmWkh5hpnZtWdu9R9ks5YRPYYSpD0=]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -713,7 +715,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBpSTdKTitHZU94ZSt5NmhaM1RUTXRZUCtkM3VFUFZrbC8rMXp0OC9xalRRCkVXb2pLbU5IL3d1Um1TY0Y2WGhzVzhDeGt1bUdVMllidDFrcjVkUzZEVWcKLT4gWDI1NTE5IGs4dFUyYjBJdzFBZFVwTlFYVldzZ3ZsV25JZXV5Y2JEYjZCR1BIbm5ZMmsKS0Y5dUE3d1FRM3JrWkdBQVdma2p3d1c1OGlHV09Ta29uVkFjMXhJRHhxNAotPiBYMjU1MTkgYTV0bk5MT3o2cmtGVGw5YkdTckxLZ2V5bTcwWlo5SENlVkpvRENVZlZqYwpEM1AvNlRQTEpPa1JYMmZRRHVIWU1oSDhJMi9SN0hSbHZPaFU2aS9JVnVRCi0+IFgyNTUxOSAyNEVaY3RFYnhrUU53a1N1SHBzV09vejJiSUdoRm9pQTlRb1ZOZ0o0eXd3CjNyYVFMbnF2ekNQVjZKRzBuYk45Y2hZTG80VUdFSGxWdzdPTk9sZWloNmcKLT4gWDI1NTE5IC90Q2sveFNZeEtva01FNG1FaURIRDRhSEhiS3VOMkhZMWw0RjNLalZpQncKMGlEb0hVSUo4SnNkcFhUcU1rOEorT3lmS3M5a3JMcm5OR3Q2SzZ3MWpUQQotPiB5XStvamMtZ3JlYXNlIHtaIEcjKGEKa3ZjMWIrcTJOU1gyRG5WM1NhY0JMWitneFhZZVJsM0dkWDNNcVNFOC92ejhWNExkbStZL2VkcXBsN3NqdWZqcwpQVEJ1aWdjCi0tLSA3Rmp5OFFobXdEM05wVkZacGxLSG5KaWM5Vzl4aDBTdW10WEtQZDUydEpNCoAuZ7eTkE84kLnddzk/PAWoSXE/hq3ZO4SwyEJaF9biEeZA4EcStktWOE6X/trx8aYxrvBChQnwIPIt3Q==]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBUa2t4UFV6cXRiaXpiRXpnbHJ6Qmd2UUFnRVo4WElPUU9OM0lSZVdaNVE4CktiVlBjRU83NS9MZmVQalBPeFZhU2t0c0pRdUEvUjNwSEh5L3RwTFh1UncKLT4gWDI1NTE5IHk0VWZ5ZFN6NzQzWUxxU0FIS1NsMlRpbnk4N082bEFQTTc1NzhRanhyRVkKSVhBSHRZbHVPZFJjVzJyQnpwS1Q4dFZkTXFpZ1V3WUxuYXlaei9pTVhVVQotPiBYMjU1MTkgbVRTaWI3b1lsbHdkZGZiRjJ2QWhvRE5nb3BYMHFYVUgvZStkMzJxWi9uSQpSM0h2TUNEa2JtTG1laG9yaXJldWhGM1V1WjhOSlZJMG9nMHNMdzVwM0ZZCi0+IFgyNTUxOSBWUCtHYUFVU3F3Tk5VUURpL2RQY2xGcFlFM1MxL0VJTkN1eklFN3V6THhBCnEraVpwdzhyclpNSlBVempMeWdNQm5CaFAvWnRBRzkrR1dXOXVURkFNVEkKLT4gWDI1NTE5IFdZeDNrbTdjbDhKRGR0RytwNU1QYWkyVFoxVVF6SjZwVExCeUdiWXlhR1EKbjBDSVpJNVRHY2RKM2NMVllienY1dGFLaUhtMDkyYlEvQVNrdUpidkdMZwotPiBmdW1PMUQtZ3JlYXNlCmlLc3RIMHZJQjErSk5tVENsczNXYWpXTzhqdU56ck5JNkE4MmYxS2Z1L3dkcmRFWktBCi0tLSBvRVVyN3lham02OERmUDRnUVdHOEYxTjZTYjNncGVYeUE4UEZkZkN1WHB3CllMlxB2G8CMkFrRnWlOQHyGNhsljHIpSoQzpJEii+uWs9fHJDgZBZiUAgZYx+HQ6VZU5EuzkZV7782J8Q==]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test2");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");

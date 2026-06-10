@@ -290,6 +290,20 @@ impl OBSClient {
         }
     }
 
+    pub fn start_recording(&self) {
+        log::info!("Starting recording...");
+        if let Err(e) = self.send_request("StartRecord") {
+            log::warn!("Error starting recording: {}", e);
+        }
+    }
+
+    pub fn stop_recording(&self) {
+        log::info!("Stopping recording...");
+        if let Err(e) = self.send_request("StopRecord") {
+            log::warn!("Error stopping recording: {}", e);
+        }
+    }
+
     pub fn toggle_pause(&self) {
         log::info!("Toggling record pause...");
         if let Err(e) = self.send_request("ToggleRecordPause") {
@@ -301,6 +315,20 @@ impl OBSClient {
         log::info!("Toggling stream...");
         if let Err(e) = self.send_request("ToggleStream") {
             log::warn!("Error toggling stream: {}", e);
+        }
+    }
+
+    pub fn start_streaming(&self) {
+        log::info!("Starting stream...");
+        if let Err(e) = self.send_request("StartStream") {
+            log::warn!("Error starting stream: {}", e);
+        }
+    }
+
+    pub fn stop_streaming(&self) {
+        log::info!("Stopping stream...");
+        if let Err(e) = self.send_request("StopStream") {
+            log::warn!("Error stopping stream: {}", e);
         }
     }
 
@@ -395,6 +423,20 @@ impl OBSClient {
         log::info!("Toggling replay buffer...");
         if let Err(e) = self.send_request("ToggleReplayBuffer") {
             log::warn!("Error toggling replay buffer: {}", e);
+        }
+    }
+
+    pub fn start_replay_buffer(&self) {
+        log::info!("Starting replay buffer...");
+        if let Err(e) = self.send_request("StartReplayBuffer") {
+            log::warn!("Error starting replay buffer: {}", e);
+        }
+    }
+
+    pub fn stop_replay_buffer(&self) {
+        log::info!("Stopping replay buffer...");
+        if let Err(e) = self.send_request("StopReplayBuffer") {
+            log::warn!("Error stopping replay buffer: {}", e);
         }
     }
 

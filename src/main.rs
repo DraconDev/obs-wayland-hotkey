@@ -95,13 +95,19 @@ struct ActionBinding {
 
 const ACTION_DEFINITIONS: &[(&str, &str)] = &[
     ("toggle_recording", "Toggle Recording"),
+    ("start_recording", "Start Recording"),
+    ("stop_recording", "Stop Recording"),
     ("toggle_pause", "Toggle Pause/Resume"),
     ("toggle_streaming", "Toggle Streaming"),
+    ("start_streaming", "Start Streaming"),
+    ("stop_streaming", "Stop Streaming"),
     ("screenshot", "Screenshot"),
     ("toggle_mute_mic", "Toggle Mic Mute"),
     ("set_mic_volume", "Set Mic Volume"),
     ("toggle_studio_mode", "Toggle Studio Mode"),
     ("toggle_replay_buffer", "Toggle Replay Buffer"),
+    ("start_replay_buffer", "Start Replay Buffer"),
+    ("stop_replay_buffer", "Stop Replay Buffer"),
     ("save_replay", "Save Replay"),
     ("switch_scene", "Switch Scene"),
 ];
@@ -127,10 +133,34 @@ fn action_item_label(item: &ActionItem) -> String {
     base
 }
 
+fn macro_label(cfg: &config::AppConfig, macro_name: &str) -> String {
+    cfg.macros
+        .iter()
+        .find(|m| m.name == macro_name)
+        .map(|m| format!("macro:{}", action_labels_with_cfg(cfg, &m.actions)))
+        .unwrap_or_else(|| format!("macro:{}", macro_name))
+}
+
+fn action_item_label_with_cfg(cfg: &config::AppConfig, item: &ActionItem) -> String {
+    if cfg.macros.iter().any(|m| m.name == item.name()) {
+        macro_label(cfg, item.name())
+    } else {
+        action_item_label(item)
+    }
+}
+
 fn action_labels(actions: &[ActionItem]) -> String {
     actions
         .iter()
         .map(action_item_label)
+        .collect::<Vec<_>>()
+        .join(" + ")
+}
+
+fn action_labels_with_cfg(cfg: &config::AppConfig, actions: &[ActionItem]) -> String {
+    actions
+        .iter()
+        .map(|item| action_item_label_with_cfg(cfg, item))
         .collect::<Vec<_>>()
         .join(" + ")
 }
