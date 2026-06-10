@@ -1,6 +1,6 @@
 [package]
 name = "obs-hotkey"
-version = "1.0.57"
+version = "1.0.58"
 edition = "2021"
 license = "AGPL-3.0-or-later"
 description = "A lightweight Rust daemon for controlling OBS Studio with global hotkeys on Wayland and X11"
