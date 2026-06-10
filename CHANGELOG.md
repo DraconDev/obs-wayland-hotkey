@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional localhost-only HTTP listener (`http` config block) exposing `GET /health`, `GET /status`, `POST /actions`, and `POST /actions/<name>` for Companion / Touch Portal / Home Assistant / MIDI-controller bridges.
 - HTTP listener supports an optional `token`; non-loopback binds require a token; `127.0.0.1` binds are accepted without a token for local automation.
 - New `docs/tier1-observability.md` describing the Tier 1 design, behavior, and safety boundaries.
+- New `docs/competitors-and-extensions.md` comparing obs-hotkey with OBS WebSocket CLIs, Companion / Touch Portal / Stream Deck integrations, MIDI-to-OBS tools, Advanced Scene Switcher, and Wayland/X11 hotkey daemons; it turns the research into a must-add / consider / non-goal extension plan.
 
 ### Changed (Tier 1 Observability)
 - `obs-hotkey status` now reports the live OBS state when reachable, and prints a single-line failure summary when OBS is offline.
