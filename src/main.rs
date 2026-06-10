@@ -887,17 +887,17 @@ fn run_one_shot_action(
     action_name: &str,
     scene: Option<&str>,
 ) -> anyhow::Result<()> {
-    if !is_known_action(action_name) {
-        anyhow::bail!(
-            "unknown action '{}'. Run `obs-hotkey --help` or see the README for the list of supported actions.",
-            action_name
-        );
-    }
-
     let config_path = PathBuf::from(config::expand_home(config_path_str));
     let dir_path = config_path.parent().unwrap_or(&config_path);
     config::ensure_config(dir_path, &config_path)?;
     let cfg = config::load_config(&config_path)?;
+
+    if !is_known_action(action_name) && !cfg.macros.iter().any(|m| m.name == action_name) {
+        anyhow::bail!(
+            "unknown action or macro '{}'. Run `obs-hotkey --help` or see the README for the list of supported actions and macros.",
+            action_name
+        );
+    }
 
     let ws_url = if cfg.obs_host.is_empty() {
         "ws://localhost:4455".to_string()
@@ -916,7 +916,20 @@ fn run_one_shot_action(
         mic_volume: cfg.mic_volume,
     };
 
-    run_action_by_name(action_name, scene, &ctx)?;
+    if is_known_action(action_name) {
+        if action_name == "switch_scene" && scene.map(str::trim).unwrap_or("").is_empty() {
+            anyhow::bail!("switch_scene requires a scene name");
+        }
+        if matches!(action_name, "set_mic_volume" | "toggle_mute_mic") && ctx.mic_name.trim().is_empty()
+        {
+            anyhow::bail!(
+                "{} requires 'mic_name' to be set in the config",
+                action_name
+            );
+        }
+    }
+
+    run_action_by_name(action_name, scene, &ctx, &cfg)?;
     notify::send_notification(&cfg.notify, &format!("Action {} triggered", action_name));
 
     // Allow the background WebSocket read to complete so any failure log
