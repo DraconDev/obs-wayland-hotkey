@@ -413,7 +413,7 @@ The focused macro design is in [`docs/macros.md`](docs/macros.md).
 
 The example above mutes the mic while `ctrl + space` is held, and unmutes it on release — the classic push-to-talk pattern. `release_action_delays_ms` works the same way as `action_delays_ms` for the release side.
 
-Push-to-release is best used with idempotent toggle-style actions. If OBS state is not what you expect, both the press and the release will be toggles, so the result depends on the current state. For deterministic start/stop, prefer the `toggle_*` action together with OBS's own state.
+Push-to-release is best used with idempotent toggle-style actions. If OBS state is not what you expect, both the press and the release will be toggles, so the result depends on the current state. For deterministic start/stop, prefer explicit `start_*` / `stop_*` actions inside a macro or combo.
 
 ### Scene Switching
 
