@@ -119,6 +119,7 @@ fn authorized(cfg: &HttpConfig, headers: &HashMap<String, String>) -> bool {
 fn route_request(
     request: HttpRequest,
     _cfg: &HttpConfig,
+    app_cfg: &AppConfig,
     ctx: &ActionContext,
     notify_cfg: &NotifyConfig,
 ) -> HttpResponse {
@@ -138,14 +139,14 @@ fn route_request(
             },
         },
         ("POST", "/actions") => match parse_action_request(&request.body) {
-            Ok((action, scene)) => run_http_action(action, scene, ctx, notify_cfg),
+            Ok((action, scene)) => run_http_action(action, scene, app_cfg, ctx, notify_cfg),
             Err(e) => HttpResponse {
                 status: 400,
                 body: json!({"ok": false, "error": e.to_string()}),
             },
         },
         ("POST", "/macros") => match parse_macro_request(&request.body) {
-            Ok(macro_name) => run_http_macro(macro_name, ctx, notify_cfg),
+            Ok(macro_name) => run_http_macro(macro_name, app_cfg, ctx, notify_cfg),
             Err(e) => HttpResponse {
                 status: 400,
                 body: json!({"ok": false, "error": e.to_string()}),
@@ -155,11 +156,11 @@ fn route_request(
             let action = path.trim_start_matches("/actions/").to_string();
             let scene = query_param(&request.path, "scene")
                 .or_else(|| parse_scene_from_body(&request.body).ok().flatten());
-            run_http_action(action, scene, ctx, notify_cfg)
+            run_http_action(action, scene, app_cfg, ctx, notify_cfg)
         }
         ("POST", path) if path.starts_with("/macros/") => {
             let macro_name = path.trim_start_matches("/macros/").to_string();
-            run_http_macro(macro_name, ctx, notify_cfg)
+            run_http_macro(macro_name, app_cfg, ctx, notify_cfg)
         }
         _ => HttpResponse {
             status: 404,
