@@ -665,7 +665,7 @@ Endpoints:
 | Method | Path | Body | Description |
 | ------ | ---- | ---- | ----------- |
 | `GET` | `/health` | — | Returns `{"ok": true, "service": "obs-hotkey"}`. |
-| `GET` | `/status` | — | Returns the live OBS status (same data as `obs-hotkey status`). |
+| `GET` | `/status` | — | Returns a feedback-friendly OBS status envelope with stable nested fields plus the legacy raw `status` object. |
 | `POST` | `/actions` | `{"action": "switch_scene", "scene": "Gaming"}` | Triggers a named action. |
 | `POST` | `/actions/<name>` | optional `{"scene": "Gaming"}` | Shorthand for a known action. |
 | `POST` | `/actions/<name>?scene=Gaming` | — | Same as above with a query parameter. |
@@ -678,6 +678,30 @@ Endpoints:
 - Auth is either `Authorization: Bearer <token>` or `X-OBS-Hotkey-Token: <token>`. When no token is configured, the listener requires the bind to be loopback.
 - Failures for invalid requests, unknown actions/macros, or auth failures return JSON like `{"ok": false, "error": "..."}` and a 4xx status code. Successful action dispatch returns 200.
 - OBS WebSocket request failures are logged by the action runner and are not converted into HTTP errors, matching the existing action behavior.
+
+The `/status` endpoint returns `200 OK` whether OBS is reachable or not. When OBS is reachable, the response includes `obs.reachable = true` plus nested `recording`, `streaming`, `replay_buffer`, `current_scene`, and optional `input` fields. When OBS is unreachable, the HTTP server itself is still healthy and the response includes `obs.reachable = false` with an error message. The legacy `status` object is retained for compatibility.
+
+```json
+{
+  "ok": true,
+  "service": "obs-hotkey",
+  "obs": {
+    "reachable": true,
+    "recording": {"active": true, "paused": false, "timecode": "00:12:34"},
+    "streaming": {"active": false, "timecode": null},
+    "replay_buffer": {"active": true},
+    "current_scene": "Live",
+    "input": {"name": "Mic", "muted": false, "volume_mul": 1.0}
+  },
+  "status": {
+    "record_active": true,
+    "record_paused": false,
+    "record_timecode": "00:12:34",
+    "replay_active": true,
+    "current_scene": "Live"
+  }
+}
+```
 
 Example with `curl`:
 
@@ -700,7 +724,7 @@ A full design document — including the OBS WebSocket requests, the failure mod
 
 A research pass comparing obs-hotkey to OBS WebSocket CLIs, Companion / Touch Portal / Stream Deck integrations, MIDI-to-OBS tools, Advanced Scene Switcher, and Wayland/X11 hotkey daemons is in [`docs/competitors-and-extensions.md`](docs/competitors-and-extensions.md). The short version: obs-hotkey should not become a full OBS automation plugin or native Stream Deck app; it should extend the safe local bridge path with more named OBS actions, custom request support, feedback-friendly status JSON, macro integration recipes, and discovery helpers.
 
-The distilled value-add recommendation is in [`docs/value-add.md`](docs/value-add.md): the biggest next win is **custom OBS request + feedback-friendly status JSON**, followed by a practical action library, macro integration recipes, discovery helpers, and integration examples.
+The distilled value-add recommendation is in [`docs/value-add.md`](docs/value-add.md): feedback-friendly status JSON is now implemented; the biggest remaining win is **custom OBS request support**, followed by a practical action library, macro integration recipes, discovery helpers, and integration examples.
 
 ---
 
