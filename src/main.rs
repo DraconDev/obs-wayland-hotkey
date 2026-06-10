@@ -768,20 +768,6 @@ fn run_one_shot_action(
     config::ensure_config(dir_path, &config_path)?;
     let cfg = config::load_config(&config_path)?;
 
-    if action_name == "switch_scene" {
-        let scene_name = scene.unwrap_or("").trim();
-        if scene_name.is_empty() {
-            anyhow::bail!("switch_scene requires a scene name (use --scene)");
-        }
-    }
-    if matches!(action_name, "set_mic_volume" | "toggle_mute_mic") && cfg.mic_name.trim().is_empty()
-    {
-        anyhow::bail!(
-            "{} requires 'mic_name' to be set in the config",
-            action_name
-        );
-    }
-
     let ws_url = if cfg.obs_host.is_empty() {
         "ws://localhost:4455".to_string()
     } else {
@@ -799,9 +785,8 @@ fn run_one_shot_action(
         mic_volume: cfg.mic_volume,
     };
 
-    let runner = build_action_runner(action_name, scene, &ctx)
-        .ok_or_else(|| anyhow::anyhow!("action '{}' has no runner", action_name))?;
-    runner();
+    run_action_by_name(action_name, scene, &ctx)?;
+    notify::send_notification(&cfg.notify, &format!("Action {} triggered", action_name));
 
     // Allow the background WebSocket read to complete so any failure log
     // makes it to stderr before we exit.
