@@ -60,12 +60,18 @@ struct ActionContext {
 }
 
 #[derive(Clone)]
+struct ComboStep {
+    action: Arc<dyn Fn() + Send + Sync>,
+    delay: Duration,
+}
+
+#[derive(Clone)]
 struct ActionBinding {
     id: String,
     key_name: String,
     chord: input::KeyChord,
     label: String,
-    actions: Vec<Arc<dyn Fn() + Send + Sync>>,
+    steps: Vec<ComboStep>,
 }
 
 const ACTION_DEFINITIONS: &[(&str, &str)] = &[
@@ -172,9 +178,12 @@ fn build_action_map(ctx: &ActionContext) -> HashMap<&'static str, Arc<dyn Fn() +
     ])
 }
 
-fn run_actions(actions: Vec<Arc<dyn Fn() + Send + Sync>>) {
-    for action in actions {
-        action();
+fn run_steps(steps: Vec<ComboStep>) {
+    for step in steps {
+        if !step.delay.is_zero() {
+            std::thread::sleep(step.delay);
+        }
+        (step.action)();
     }
 }
 
@@ -259,7 +268,10 @@ fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<Ac
             key_name: key_name.to_string(),
             chord,
             label: action_label(action).to_string(),
-            actions: vec![action_fn],
+            steps: vec![ComboStep {
+                action: action_fn,
+                delay: Duration::ZERO,
+            }],
         });
     }
 
@@ -278,9 +290,9 @@ fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<Ac
             }
         };
 
-        let mut actions = Vec::with_capacity(combo.actions.len());
+        let mut steps = Vec::with_capacity(combo.actions.len());
         let mut valid = true;
-        for action in &combo.actions {
+        for (index, action) in combo.actions.iter().enumerate() {
             if !is_known_action(action) {
                 log::warn!(
                     "Unknown action '{}' in hotkey_combo '{}'",
@@ -290,15 +302,25 @@ fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<Ac
                 valid = false;
                 break;
             }
-            actions.push(
-                action_map
-                    .get(action.as_str())
-                    .expect("known action must have a runner")
-                    .clone(),
-            );
+            let action_fn = action_map
+                .get(action.as_str())
+                .expect("known action must have a runner")
+                .clone();
+            // If the combo declares per-action delays, use them. Otherwise
+            // every step runs immediately. Validation already guarantees
+            // the delays vec is either empty or exactly `actions.len()` long.
+            let delay_ms = combo
+                .action_delays_ms
+                .get(index)
+                .copied()
+                .unwrap_or(0);
+            steps.push(ComboStep {
+                action: action_fn,
+                delay: Duration::from_millis(delay_ms),
+            });
         }
 
-        if !valid || actions.is_empty() {
+        if !valid || steps.is_empty() {
             continue;
         }
 
@@ -307,7 +329,7 @@ fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<Ac
             key_name: key_spec,
             chord,
             label: action_labels(&combo.actions),
-            actions,
+            steps,
         });
     }
 
@@ -436,9 +458,9 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
                             if binding.chord.matches(&pressed_keys)
                                 && active_bindings.insert(binding.id.clone())
                             {
-                                let actions = binding.actions.clone();
+                                let steps = binding.steps.clone();
                                 let label = binding.label.clone();
-                                std::thread::spawn(move || run_actions(actions));
+                                std::thread::spawn(move || run_steps(steps));
                                 log::info!("Triggered hotkey: {}", label);
                             }
                         }
@@ -678,7 +700,7 @@ mod tests {
             key_name: "ctrl + f1".to_string(),
             chord,
             label: "Toggle Recording + Set Mic Volume".to_string(),
-            actions: Vec::new(),
+            steps: Vec::new(),
         }];
 
         let banner_bindings = build_banner_bindings(&bindings);
@@ -690,7 +712,7 @@ mod tests {
     }
 
     #[test]
-    fn test_run_actions_executes_combo_actions() {
+    fn test_run_steps_executes_combo_actions() {
         let count = Arc::new(AtomicUsize::new(0));
         let first = Arc::new({
             let count = count.clone();
@@ -705,9 +727,51 @@ mod tests {
             }
         }) as Arc<dyn Fn() + Send + Sync>;
 
-        run_actions(vec![first, second]);
+        run_steps(vec![
+            ComboStep { action: first, delay: Duration::ZERO },
+            ComboStep { action: second, delay: Duration::ZERO },
+        ]);
 
         assert_eq!(count.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn test_run_steps_respects_per_action_delay() {
+        let order = Arc::new(std::sync::Mutex::new(Vec::<(usize, Instant)>::new()));
+        let make = |i: usize, order: Arc<std::sync::Mutex<Vec<(usize, Instant)>>>| {
+            Arc::new(move || {
+                order.lock().unwrap().push((i, Instant::now()));
+            }) as Arc<dyn Fn() + Send + Sync>
+        };
+
+        let steps = vec![
+            ComboStep { action: make(0, order.clone()), delay: Duration::from_millis(0) },
+            ComboStep { action: make(1, order.clone()), delay: Duration::from_millis(80) },
+            ComboStep { action: make(2, order.clone()), delay: Duration::from_millis(0) },
+        ];
+
+        let start = Instant::now();
+        run_steps(steps);
+        let elapsed = start.elapsed();
+
+        let recorded = order.lock().unwrap().clone();
+        assert_eq!(recorded.len(), 3);
+        assert_eq!(recorded[0].0, 0);
+        assert_eq!(recorded[1].0, 1);
+        assert_eq!(recorded[2].0, 2);
+        // Action 1 must run at least 80ms after action 0.
+        let gap = recorded[1].1.duration_since(recorded[0].1);
+        assert!(
+            gap >= Duration::from_millis(70),
+            "expected >=70ms gap, got {:?}",
+            gap
+        );
+        // Total elapsed should be at least 80ms.
+        assert!(
+            elapsed >= Duration::from_millis(70),
+            "expected >=70ms total elapsed, got {:?}",
+            elapsed
+        );
     }
 
     #[test]
@@ -724,6 +788,7 @@ mod tests {
             key: Some("f1".to_string()),
             keys: Vec::new(),
             actions: vec!["not_real".to_string()],
+            action_delays_ms: Vec::new(),
         });
 
         let result = validate_combo_actions(&cfg);
@@ -739,12 +804,14 @@ mod tests {
             key: Some("f1".to_string()),
             keys: Vec::new(),
             actions: vec!["toggle_recording".to_string()],
+            action_delays_ms: Vec::new(),
         });
         cfg.hotkey_combos.push(config::HotkeyCombo {
             name: "dup".to_string(),
             key: Some("f2".to_string()),
             keys: Vec::new(),
             actions: vec!["toggle_streaming".to_string()],
+            action_delays_ms: Vec::new(),
         });
 
         let result = validate_combo_actions(&cfg);
@@ -760,6 +827,7 @@ mod tests {
             key: Some("ctrl + f1".to_string()),
             keys: Vec::new(),
             actions: vec!["toggle_recording".to_string(), "set_mic_volume".to_string()],
+            action_delays_ms: Vec::new(),
         });
 
         let result = validate_combo_actions(&cfg);
