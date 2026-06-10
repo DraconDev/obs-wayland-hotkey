@@ -816,14 +816,29 @@ pub fn run_doctor(config_path: &str) -> anyhow::Result<()> {
         }
     }
 
-    print_check("Notify config", !cfg.notify.command.is_empty(), "ok");
+    print_check(
+        "Notify config",
+        !cfg.notify.command.is_empty(),
+        if cfg.notify.command.is_empty() {
+            "empty"
+        } else {
+            "ok"
+        },
+    );
     failed |= cfg.notify.command.is_empty();
+    let http_ok = !cfg.http.enabled || crate::config::http_config_is_safe(&cfg.http);
     print_check(
         "HTTP config",
-        !cfg.http.enabled || crate::config::http_config_is_safe(&cfg.http),
-        "ok",
+        http_ok,
+        if !cfg.http.enabled {
+            "disabled"
+        } else if http_ok {
+            "ok"
+        } else {
+            "unsafe bind without token"
+        },
     );
-    failed |= cfg.http.enabled && !crate::config::http_config_is_safe(&cfg.http);
+    failed |= !http_ok;
 
     println!();
     if failed {
