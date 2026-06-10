@@ -64,7 +64,7 @@ impl ActionItem {
 }
 
 /// Notification command used by the daemon when an action is triggered.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct NotifyConfig {
     #[serde(default)]
@@ -74,7 +74,7 @@ pub struct NotifyConfig {
 }
 
 /// Localhost HTTP API configuration for Companion/Touch Portal integrations.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct HttpConfig {
     #[serde(default)]
@@ -562,7 +562,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBpMzFkWkIxNzhWd2FxZVVzTmRRdm94MW1oejFPUkp6WGc4QXltN1pTVlNzCk9RT0l3S01JaGwxdXB1ZjNKT3l2YlloTWU1RCtJalVDSlZaNUZvVk9Vc0kKLT4gWDI1NTE5IFZZc0xacTJDeEJqd0RkaW1GSG1kcnRmTmZDU0wvdk9sRVEvUTdHUXFpQVEKcEVHS1VYZ2VtWVp0SnRHN3U3VEErc0Z0cFV4b1g4R0JZaFYyNkx0ZTBpOAotPiBYMjU1MTkgNk9LU2tYMFh6RGEvdkp5d0RKWWpjcCtIdnp5OXdTT0RkTnkzMXlvK1MxUQpxaHJKNkZORzNEMDJCUHhLZE45V1FqTXZVd2ZITmNmcnlQYkZ1SkxJK3owCi0+IFgyNTUxOSBzb2wrb1pwUTNKanB4dXdtZndjMWxvUmNYaTNxdHVUK29mZG9mcXhuTFN3Ci9VS2JIZklpYlJlYnJ6ZEtza0ZTOWRCUUJLeThHOVdaVXN3c0JYVXJhekkKLT4gfiwtIi1ncmVhc2UgOUEvcTsgbl82L1sgU3ZKZGR5Cm1LdVhwVUVWYmpBeE16ZXFkcXZRY1NJb25iZ0VzV0xncTh5bTBoS081QQotLS0gcEw2QUlXTzllbkJKek9Uc0xjWUY5aEZoWDNZdjdlSGNLSmJNZzgvOG1vdwqMS+amtNadgBNC2NKlyzOLcZKYgT8QjiV3AKq3qb5UAlOnJTwdevOvxO2Th8vUTB7SmlreItjLH74=]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBncnBQeFUwcDlsclU4ZnRWUG9aeitpZG80cWdsQldpellwM2NRRGRNUmlZCnkrTlZocktYMlZtbXhzUldhb0RZMUFpV1MzRFhHbWNESGtMUExnYkZZbU0KLT4gWDI1NTE5IGtXanJJbVRwSEZhNXhseVNFZm1UOWM3Y3AvVjVQc01HSGNIdVVwYVdabUEKN1FtekZ6Mzk4MmxEb1lWcFVOOVoxMXQvdTBJTjRuZGlsdEhLMytvQlAzQQotPiBYMjU1MTkgSHdjU0FqemxubUNuMXo5QlVIaCtKVDEyb1dMK0ljZUJGNnF5VVdUZmlYYwpRamxVM1BxcU1JaGcrUytrZitTaXFKRmNTWnFuWDRmVURLdzRqeTJqdHEwCi0+IFgyNTUxOSBXbHNNM1plYjliZ280c3UxUUhDTGlhRXVLbDVzOG5YbTFJdElCTTVZeWtrCjNsVitNeDg1M1RQRkh6TkhoS1RETnFlb0ZydzBQdVZmbG9Zckx5TDRCb0UKLT4gWS1ncmVhc2UgfFEgcCh8bl1CQCBKLzgsKyBrQE0jTV8+KApCQVVCdWdiaDl6c1l0YW9SQlVhcnl4d1h6eHdXbVQwZnB2bVYvdGpDTnhqUUJCdmFVQVMrNXM5Zk5OY1hMUk9FCjFwQUl3UWZya01wTExkQUZUYTBCCi0tLSBpUFB5blJVYjdyZlBYSWNUK2xIbjhYZHBjWWlpOWhhMW1sdzM4VEtmSjdNCoHt8E4EYqsL8rPOAQJ9ZJodpRTc1K9cQNbg/qoQvML5D1i1D2uImA7GdKKo42/fArjZHkx1ztzPTw==]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
@@ -574,7 +574,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBjbnBReWtLVmxKZmR3V1dHMXB4dEdTTGdLVENwMC9odUNrK0d1eWhrc0RNCk1jaDNXbHd4Y3JteGFiY1lvN3V3ZU81UGNaNXJzb1Mydjd3S1RNc3RzU1UKLT4gWDI1NTE5IG1oK2p4S1VBaXhyZlZIS2hBa01ZQ0h2ZmdZd3pHUFBvdzNXTWZ2S0lhbEUKVnN1RVI4NEltVnpYUEY2ZmlOcFBvV3YzbGhrVW9hVVdCU1JtRy94dmR4cwotPiBYMjU1MTkgdUhxbFVmQnZ0ZkdUeUFlUzhFeDdONkNPeCtpMk1sUWpTY0JMVmd3SDN6QQptSlNMRUZvazhXZmp2bkk3cGxtMkQrRDhrMlYraXNUL0ZqV0Y5cEVyYm1RCi0+IFgyNTUxOSB5RzJyQWdMMlg4Rlg4TEVYVktkODFCQjBSODI3eXFod0dKRXZsOER3OFVVCkw0VEFwNjhlL3RBQ0lQQ1RwN0c2OUZBUzAvSEhST0FpUi93QmZoUzQzRUkKLT4gIzV6WjYmLWdyZWFzZQpjblVQZkZqRUJNUktYWFFwSVZlcm9yeXhScnJSSGZ1K1R1YVdxZWRZL01DRitrUUlqblVzc3A4UAotLS0gRWNyS2J4SEtxekdJbGJGZFl4cFkxbVFHcW5wVVNQbzQrSklQZnowNGJNZwqee0TeqmRg5Nl5xsstorx4v79RUG3vFHS2li1yHAcEFehi3KonrPEhMDpfFuUshhjSYwrEcgBWdL0Npe4=]() {
+    fn test_ensu[DRACON_SECRET:YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBsVE1oamU5bjNCNDQ3Yk5uaFRaZmZuQmtrTU9DbjY0RytwOE0wSlI4Q0dZCk93UytrS0FwUHdyakpTckViMm5LM2JrcmZoV2hGeFdsVlk4b2E0dUpYQ0UKLT4gWDI1NTE5IERFMXZMMGhQV2NZN3FpZnFkS0thZlZSWGhTbFRrQU5IS0lGRjhIR2t3SEkKT3pod0lMSWdqaU9CV3gyY29zNnpzMC9tdGp0ODBUcWlub0hPOWNQbGRMOAotPiBYMjU1MTkgblVYNDU4WjI4YkREVUxGcjJKZUdpc1F4KzlPbWRkTHlDdkNhd3p2dUNoOAp1ZVNMN1BEU05jeENXaUViWjRIL1ByY0xaMDB4djhCR3U4bWh6MllnYStjCi0+IFgyNTUxOSA0SWdDNktNeHFkbEcwYVV6RHJrTEhlNVRmTEFJMVl0dFVqMTFhdGcvejE4CmhMeiszeEhEQjR3Wkd3a2I3TUZiZjdjY1hMQWZpaFRzUFg0c2NleE90M3cKLT4gZFYwfip6LiQtZ3JlYXNlClg5M1c2bnBqR3AwYUIyMlFkcGY4SmhaVGRMZEMrcWVjOVVENGtSbkxlWVhKWDVaZjhiUHhLZHZoWTdVakpmQ1oKSFdtMitKNC9MS29hY1BDV0F5b0JGYisrYlEKLS0tIERxc3RKWW1KS3NjMFVJbDhjNmU5TWpaU2FjYXcrRzFCNmJhN2VVamVEUWcKNAYs+NK4AfQJNf1xKCrIXJMN6c+as+tCFfF2LzIxMzty3WU/gpOG4MV+K4BMSC5+Ul7xN7GxsDgWG1zv]() {
         let temp = std::env::temp_dir().join("obs-hotkey-test2");
         let dir = temp.join(".config").join("obs-hotkey");
         let path = dir.join("hotkeys.json");
