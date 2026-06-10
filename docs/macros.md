@@ -104,7 +104,7 @@ curl -X POST http://127.0.0.1:7999/macros \
   -d '{"macro":"countdown_record"}'
 ```
 
-Successful macro execution returns 200. Unknown macros, recursive references, and invalid requests return 400.
+Successful macro execution returns 200. Unknown macros, recursive references, and invalid requests return 400. As with hotkey actions, OBS WebSocket request failures are logged by the action runner rather than converted into HTTP errors.
 
 ## Safety boundaries
 

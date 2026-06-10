@@ -676,7 +676,8 @@ Endpoints:
 
 - The default bind is `127.0.0.1:7999` (loopback only). The daemon refuses to bind a non-loopback address without a `token`.
 - Auth is either `Authorization: Bearer <token>` or `X-OBS-Hotkey-Token: <token>`. When no token is configured, the listener requires the bind to be loopback.
-- Failures return JSON like `{"ok": false, "error": "..."}` and a 4xx status code. Successful actions return 200.
+- Failures for invalid requests, unknown actions/macros, or auth failures return JSON like `{"ok": false, "error": "..."}` and a 4xx status code. Successful action dispatch returns 200.
+- OBS WebSocket request failures are logged by the action runner and are not converted into HTTP errors, matching the existing action behavior.
 
 Example with `curl`:
 
