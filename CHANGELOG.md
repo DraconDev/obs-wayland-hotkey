@@ -5,11 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.57] - 2026-06-10
+## [1.0.58] - 2026-06-10
 
 ### Changed
 - **Product positioning clarified.** The README now leads with an explicit "What obs-hotkey is for" section and a "OBS Native Hotkeys vs obs-hotkey" comparison table. The tool's value on X11 is the multi-action-per-gesture features (action combos, delayed actions, push-to-release, switch_scene with parameter) and the single-config-file workflow. The tool's value on Wayland is global hotkey capture (which OBS itself cannot do). Simple single-key hotkeys such as `Scroll Lock → toggle recording` are explicitly noted as redundant with OBS native hotkeys on X11. No code or config changes — the feature set is unchanged, only the documentation is more honest about where obs-hotkey adds value.
 - **Macro documentation clarified.** Reusable macros are documented as implemented for hotkey, CLI, and HTTP invocation, and HTTP behavior now explicitly distinguishes action dispatch success from OBS WebSocket request failures.
+
+### Fixed
+- **License metadata unified.** `Cargo.toml` and the `License` section of the README now match the actual `LICENSE` file (`AGPL-3.0-or-later`) and `CONTRIBUTING.md`. Previously `Cargo.toml` declared `MIT` while the rest of the project was AGPLv3.
+- **Doctor diagnostics more informative.** The `Notify config` and `HTTP config` checks now show the actual reason instead of a static `ok` when they fail.
 
 ### Added
 - Key chord support for hotkeys, including generic modifiers such as `ctrl`, `shift`, `alt`, `super`, and `meta`.
