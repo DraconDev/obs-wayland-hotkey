@@ -178,6 +178,40 @@ fn run_actions(actions: Vec<Arc<dyn Fn() + Send + Sync>>) {
     }
 }
 
+fn validate_combo_actions(cfg: &config::AppConfig) -> anyhow::Result<()> {
+    let mut combo_names = HashSet::new();
+
+    for combo in &cfg.hotkey_combos {
+        if !combo_names.insert(combo.name.as_str()) {
+            anyhow::bail!("duplicate hotkey_combo name '{}'", combo.name);
+        }
+
+        for action in &combo.actions {
+            if !is_known_action(action) {
+                anyhow::bail!(
+                    "unknown action '{}' in hotkey_combo '{}'",
+                    action,
+                    combo.name
+                );
+            }
+        }
+
+        if combo
+            .actions
+            .iter()
+            .any(|action| action == "set_mic_volume")
+            && cfg.mic_name.trim().is_empty()
+        {
+            anyhow::bail!(
+                "hotkey_combo '{}' uses set_mic_volume but mic_name is empty",
+                combo.name
+            );
+        }
+    }
+
+    Ok(())
+}
+
 fn build_action_bindings(cfg: &config::AppConfig, ctx: &ActionContext) -> Vec<ActionBinding> {
     let action_map = build_action_map(ctx);
     let mut bindings = Vec::new();
@@ -298,6 +332,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
     config::ensure_config(dir_path, &config_path)?;
 
     let cfg = config::load_config(&config_path)?;
+    validate_combo_actions(&cfg)?;
     log::info!("Loaded config from: {}", config_path.display());
 
     let ws_url = if cfg.obs_host.is_empty() {
