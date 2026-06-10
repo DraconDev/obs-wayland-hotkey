@@ -664,7 +664,7 @@ Endpoints:
 
 | Method | Path | Body | Description |
 | ------ | ---- | ---- | ----------- |
-| `GET` | `/health` | — | Returns `{"ok": true, "service": "obs-hotkey"}`. |
+| `GET` | `/health` | — | Returns `{"ok": true, "service": "obs-hotkey", "version": "<version>"}`. |
 | `GET` | `/status` | — | Returns a feedback-friendly OBS status envelope with stable nested fields plus the legacy raw `status` object. |
 | `POST` | `/actions` | `{"action": "switch_scene", "scene": "Gaming"}` | Triggers a named action. |
 | `POST` | `/actions/<name>` | optional `{"scene": "Gaming"}` | Shorthand for a known action. |

@@ -127,7 +127,11 @@ fn route_request(
     match (request.method.as_str(), request.path.as_str()) {
         ("GET", "/health") => HttpResponse {
             status: 200,
-            body: json!({"ok": true, "service": "obs-hotkey"}),
+            body: json!({
+                "ok": true,
+                "service": "obs-hotkey",
+                "version": env!("CARGO_PKG_VERSION")
+            }),
         },
         ("GET", "/status") => match ctx.client.get_status(&ctx.mic_name) {
             Ok(status) => obs_status_response(status, &ctx.mic_name),
