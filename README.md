@@ -8,15 +8,24 @@
 
 **Works on Wayland!** Uses evdev for direct keyboard input capture, bypassing Wayland's security restrictions.
 
+## What obs-hotkey is for
+
+obs-hotkey was originally written as a Wayland helper because OBS native hotkeys are limited to OBS-window focus on Wayland. It does two things:
+
+1. **Global OBS hotkeys on Wayland** (where OBS native hotkeys cannot reach the global desktop), and on X11 as a portability / single-config-file alternative.
+2. **Multi-action key gestures that OBS itself cannot do** — one chord runs several OBS WebSocket calls in order, optionally with delays, optionally with release-side actions.
+
+If you only need a single `F12` to toggle recording, OBS native hotkeys will do that on X11 and on Windows/macOS. If you need `Ctrl+Shift+R` to start recording **and** set your mic volume **and** schedule a replay save five seconds later, obs-hotkey is the tool for the job. See the comparison table below for the full breakdown.
+
 ---
 
 ## Features
 
 - **Wayland & X11 Support** — works on both display servers
 - **Single Static Binary** — no runtime dependencies
-- **Global Hotkeys** — works even when OBS is not focused
+- **Global Hotkeys** — works even when OBS is not focused (the original Wayland use case)
 - **Chord Hotkeys** — use combinations like `ctrl + shift + f1`
-- **Action Combos** — trigger multiple OBS actions from one key chord
+- **Action Combos** — trigger multiple OBS actions from one key chord (the unique value on X11)
 - **Delayed Actions** — schedule actions in a combo with per-step delays (e.g. start recording 3 seconds after a hotkey)
 - **Push-to-Release Actions** — run a second set of actions when the chord is released (push-to-record / push-to-talk)
 - **Scene Switching** — dedicated `switch_scene` action for the most common pro workflow
@@ -31,6 +40,26 @@
 - **Non-blocking Actions** — hotkeys stay responsive during network I/O
 - **Panic-safe Reader Threads** — a panic in one keyboard device cannot kill the daemon
 - **Config Validation** — typos in config are rejected with clear errors
+
+---
+
+## OBS Native Hotkeys vs obs-hotkey
+
+Use this table to decide whether you need obs-hotkey at all, and which features to enable.
+
+| Workflow | OBS native hotkey | obs-hotkey |
+|----------|-------------------|------------|
+| `F12` → toggle recording on X11 | ✅ works | ✅ works (redundant on X11) |
+| `F12` → toggle recording on Wayland | ⚠️ only when OBS is focused | ✅ works globally |
+| `Ctrl+Shift+R` → start recording **and** set mic volume | ❌ one hotkey = one action | ✅ multi-action combo |
+| `Ctrl+Shift+S` → start streaming **and** set mic volume | ❌ | ✅ multi-action combo |
+| Push `F13` to record, release to stop | ❌ OBS does not have a push-to-record action | ✅ `release_actions` |
+| Press once, recording starts in 10 seconds | ❌ | ✅ `action_delays_ms` |
+| Switch between multiple scenes via hotkey | ✅ "Switch to scene" hotkey per scene, configured in OBS | ✅ `switch_scene` in one config file |
+| Multi-keyboard, exclude guest USB | ❌ global, catches everything | ✅ `allowed_devices` allowlist |
+| Trigger an action from a systemd timer or shell script | ❌ | ✅ `obs-hotkey action <name>` |
+
+The two obs-hotkey features with no OBS equivalent are **action combos** (multiple OBS calls per chord) and **delayed actions**. If you need either of those, obs-hotkey earns its keep even on X11. If you only need a single key to start recording, OBS native hotkeys are enough and obs-hotkey is mostly redundant on X11.
 
 ---
 
