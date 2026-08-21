@@ -707,7 +707,7 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         if last_rescan.elapsed() >= Duration::from_secs(DEVICE_RESCAN_SECS) {
             last_rescan = Instant::now();
             readers.retain(|reader| {
-                if reader.rx.is_disconnected() {
+                if !reader._handle.is_alive() {
                     log::warn!(
                         "keyboard removed: {} — will re-attach automatically if it comes back",
                         reader.path.display()
@@ -719,10 +719,10 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
             });
             match find_keyboards_with_filter(&cfg.allowed_devices) {
                 Ok(paths) => {
-                    let tracked: HashSet<&PathBuf> =
-                        readers.iter().map(|r| &r.path).collect();
+                    let mut tracked: HashSet<PathBuf> =
+                        readers.iter().map(|r| r.path.clone()).collect();
                     for path in paths {
-                        if tracked.insert(&path) {
+                        if tracked.insert(path.clone()) {
                             log::info!("keyboard attached: {}", path.display());
                             let (_handle, rx) = spawn_keyboard_reader(path.clone(), 0);
                             readers.push(KeyboardReader { path, _handle, rx });
