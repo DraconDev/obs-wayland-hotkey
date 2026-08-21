@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.60] - 2026-08-21
+
+### Fixed
+- **Keyboard hotplug recovery.** Previously, if a keyboard was unplugged (or its USB link reset), the evdev reader thread hit `ENODEV` and exited permanently — the daemon kept running but could never see that keyboard again, even after it was re-plugged, until a full daemon restart. The daemon now runs a supervisor pass every 3 seconds that reaps dead readers and re-scans `/dev/input`, automatically attaching new or returning keyboards (respecting `allowed_devices`). Verified end-to-end with a virtual uinput keyboard attach/detach/re-attach cycle.
+
 ## [1.0.59] - 2026-06-10
 
 ### Added

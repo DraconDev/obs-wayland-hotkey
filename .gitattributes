@@ -1,28 +1,15 @@
 # --- BEGIN DRACON MANAGED BLOCK ---
 # managed by dracon-warden
 *.age filter=dracon diff=dracon merge=dracon
-*.bash filter=dracon diff=dracon merge=dracon
-*.env filter=dracon diff=dracon merge=dracon
-*.go filter=dracon diff=dracon merge=dracon
-*.js filter=dracon diff=dracon merge=dracon
-*.json filter=dracon diff=dracon merge=dracon
-*.jsx filter=dracon diff=dracon merge=dracon
 *.key filter=dracon diff=dracon merge=dracon
-*.md filter=dracon diff=dracon merge=dracon
 *.pem filter=dracon diff=dracon merge=dracon
-*.py filter=dracon diff=dracon merge=dracon
-*.rs filter=dracon diff=dracon merge=dracon
-*.sh filter=dracon diff=dracon merge=dracon
-*.sql filter=dracon diff=dracon merge=dracon
-*.toml filter=dracon diff=dracon merge=dracon
-*.ts filter=dracon diff=dracon merge=dracon
-*.tsx filter=dracon diff=dracon merge=dracon
-*.yaml filter=dracon diff=dracon merge=dracon
-*.yml filter=dracon diff=dracon merge=dracon
-.cargo/config.toml filter=dracon diff=dracon merge=dracon
 .env filter=dracon diff=dracon merge=dracon
-.env.* filter=dracon diff=dracon merge=dracon
-config.json filter=dracon diff=dracon merge=dracon
+.env.dev filter=dracon diff=dracon merge=dracon
+.env.ovh filter=dracon diff=dracon merge=dracon
+.env.prod filter=dracon diff=dracon merge=dracon
+.env.production filter=dracon diff=dracon merge=dracon
+.env.turso filter=dracon diff=dracon merge=dracon
+affiliate/.env.credentials.md filter=dracon diff=dracon merge=dracon
 config/licenses.json filter=dracon diff=dracon merge=dracon
 config/licenses.test.json filter=dracon diff=dracon merge=dracon
 config/services.json filter=dracon diff=dracon merge=dracon
@@ -31,6 +18,8 @@ plan/pages/snapshots/*.json filter=dracon diff=dracon merge=dracon
 plan/pages/templates/*.json filter=dracon diff=dracon merge=dracon
 secrets/** filter=dracon diff=dracon merge=dracon
 test_secret.txt filter=dracon diff=dracon merge=dracon
+web/ai-hub/src/lib/data/promo-codes.json filter=dracon diff=dracon merge=dracon
+web/ai-hub/src/lib/data/voucher-research.json filter=dracon diff=dracon merge=dracon
 *.dll -filter
 *.dylib -filter
 *.events.jsonl -filter
@@ -61,4 +50,5 @@ flake.lock -filter
 flake.nix -filter
 rust-toolchain.toml -filter
 rustfmt.toml -filter
+state/events/*.jsonl -filter
 # --- END DRACON MANAGED BLOCK ---
