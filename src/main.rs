@@ -20,6 +20,8 @@ use input::{find_keyboards_with_filter, spawn_keyboard_reader};
 const EVENT_LOOP_POLL_MS: u64 = 10;
 /// Minimum time between duplicate key presses (debounce window).
 const DEBOUNCE_MS: u64 = 50;
+/// How often to re-scan /dev/input for keyboard hotplug events (seconds).
+const DEVICE_RESCAN_SECS: u64 = 3;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -665,14 +667,23 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
         }
     });
 
-    let (_device_handles, rx_channels): (Vec<_>, Vec<_>) = keyboard_paths
+    // Live keyboard readers. This vec is dynamic: a supervisor pass runs
+    // every DEVICE_RESCAN_SECS, drops readers whose device disappeared
+    // (reader thread exited), and spawns readers for newly appeared or
+    // re-plugged keyboards so hotkeys survive unplug/replug cycles.
+    struct KeyboardReader {
+        path: PathBuf,
+        _handle: input::DeviceHandle,
+        rx: std::sync::mpsc::Receiver<input::KeyEvent>,
+    }
+
+    let mut readers: Vec<KeyboardReader> = keyboard_paths
         .into_iter()
-        .enumerate()
-        .map(|(i, path)| {
-            let (handle, rx) = spawn_keyboard_reader(path, i);
-            (handle, rx)
+        .map(|path| {
+            let (_handle, rx) = spawn_keyboard_reader(path.clone(), 0);
+            KeyboardReader { path, _handle, rx }
         })
-        .unzip();
+        .collect();
 
     println!(
         "  {} Hotkeys ready — connecting to OBS in background{}",
@@ -683,14 +694,47 @@ fn run_daemon(config_path_str: &str) -> anyhow::Result<()> {
     // Ctrl-C cleanly exits the event loop
     ctrlc::set_handler(|| {}).expect("error setting Ctrl-C handler");
 
+    let mut last_rescan = Instant::now();
     let mut pressed_keys: HashSet<u16> = HashSet::new();
     let mut active_bindings: HashSet<String> = HashSet::new();
     let mut last_press: HashMap<u16, Instant> = HashMap::new();
     let debounce = Duration::from_millis(DEBOUNCE_MS);
 
     loop {
-        for rx in &rx_channels {
-            while let Ok(event) = rx.try_recv() {
+        // Hotplug supervision: reap dead readers and pick up (re)connected
+        // keyboards. Without this, an unplugged keyboard kills its reader
+        // thread permanently and the daemon goes deaf until restart.
+        if last_rescan.elapsed() >= Duration::from_secs(DEVICE_RESCAN_SECS) {
+            last_rescan = Instant::now();
+            readers.retain(|reader| {
+                if reader.rx.is_disconnected() {
+                    log::warn!(
+                        "keyboard removed: {} — will re-attach automatically if it comes back",
+                        reader.path.display()
+                    );
+                    false
+                } else {
+                    true
+                }
+            });
+            match find_keyboards_with_filter(&cfg.allowed_devices) {
+                Ok(paths) => {
+                    let tracked: HashSet<&PathBuf> =
+                        readers.iter().map(|r| &r.path).collect();
+                    for path in paths {
+                        if tracked.insert(&path) {
+                            log::info!("keyboard attached: {}", path.display());
+                            let (_handle, rx) = spawn_keyboard_reader(path.clone(), 0);
+                            readers.push(KeyboardReader { path, _handle, rx });
+                        }
+                    }
+                }
+                Err(e) => log::warn!("keyboard rescan failed: {}", e),
+            }
+        }
+
+        for reader in &readers {
+            while let Ok(event) = reader.rx.try_recv() {
                 match event.value {
                     1 => {
                         if !pressed_keys.insert(event.code) {

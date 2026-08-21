@@ -1,8 +1,9 @@
 use evdev::{Device, KeyCode};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 use std::thread;
 
 pub fn get_key_code(name: &str) -> Option<u16> {
@@ -176,6 +177,17 @@ pub struct DeviceHandle {
     #[allow(dead_code)]
     pub path: PathBuf,
     tx: Sender<()>,
+    /// Set to false once the reader thread has exited (device gone or
+    /// unrecoverable error). Lets the supervisor detect dead readers
+    /// without consuming events from the channel.
+    alive: Arc<AtomicBool>,
+}
+
+impl DeviceHandle {
+    /// Returns true while the reader thread for this device is running.
+    pub fn is_alive(&self) -> bool {
+        self.alive.load(Ordering::Relaxed)
+    }
 }
 
 pub fn spawn_keyboard_reader(
@@ -185,6 +197,8 @@ pub fn spawn_keyboard_reader(
     let (close_tx, close_rx) = mpsc::channel();
     let (tx, rx) = mpsc::channel();
     let path_clone = path.clone();
+    let alive = Arc::new(AtomicBool::new(true));
+    let alive_thread = alive.clone();
 
     thread::spawn(move || {
         let path_for_log = path_clone.clone();
@@ -210,9 +224,10 @@ pub fn spawn_keyboard_reader(
                 );
             }
         }
+        alive_thread.store(false, Ordering::Relaxed);
     });
 
-    (DeviceHandle { path, tx: close_tx }, rx)
+    (DeviceHandle { path, tx: close_tx, alive }, rx)
 }
 
 fn run_keyboard_reader(path: PathBuf, close_rx: Receiver<()>, tx: Sender<KeyEvent>) {
